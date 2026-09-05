@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.dto.academic.AcademicYearRequest;
 import tz.co.chambaka.school.management.dto.academic.AllocationRequest;
 import tz.co.chambaka.school.management.dto.academic.ExamRequest;
@@ -31,6 +32,7 @@ import tz.co.chambaka.school.management.dto.campus.UpdateCampusRequest;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.UpdateSchoolRequest;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
+import tz.co.chambaka.school.management.dto.tenant.RenameOrganizationRequest;
 import tz.co.chambaka.school.management.dto.tenant.UpdateTenantRequest;
 import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
 import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
@@ -60,6 +62,7 @@ import tz.co.chambaka.school.management.service.ParentService;
 import tz.co.chambaka.school.management.service.PasswordResetService;
 import tz.co.chambaka.school.management.service.CampusService;
 import tz.co.chambaka.school.management.service.SchoolService;
+import tz.co.chambaka.school.management.repository.TenantRepository;
 import tz.co.chambaka.school.management.service.TenantService;
 import tz.co.chambaka.school.management.service.SectionService;
 import tz.co.chambaka.school.management.service.StudentService;
@@ -100,6 +103,8 @@ class ControllersTest {
     private SchoolService schoolService;
     @Mock
     private TenantService tenantService;
+    @Mock
+    private TenantRepository tenantRepository;
     @Mock
     private CampusService campusService;
     @Mock
@@ -145,7 +150,7 @@ class ControllersTest {
     void authAndBrandingAndSchool() {
         AuthController auth = new AuthController(authService, passwordResetService);
         auth.login(new LoginRequest("a@b.com", "pw"));
-        auth.registerSchool(new RegisterSchoolRequest("S", "a@b.com", "HaloCampus1!", "A", null, null, null, null, "Org", "Main"));
+        auth.registerSchool(new RegisterSchoolRequest(null, "a@b.com", "HaloCampus1!", "A", null, null, null, null, "Org", null));
         auth.refresh(new RefreshTokenRequest("rt"));
         UserPrincipal admin = Fixtures.principal(Role.ADMIN);
         auth.switchSchool(admin, new tz.co.chambaka.school.management.dto.auth.SwitchSchoolRequest(1L, 20L));
@@ -165,6 +170,24 @@ class ControllersTest {
         BrandingController branding = new BrandingController(schoolService);
         branding.bySlug("chambaka");
         branding.byHost("school.test");
+        PublicConfigController publicConfig = new PublicConfigController(Fixtures.properties(), tenantRepository);
+        assertThat(publicConfig.config().tenancyMode()).isEqualTo("multi");
+        assertThat(publicConfig.config().registrationEnabled()).isTrue();
+        assertThat(publicConfig.config().organizationName()).isNull();
+        SmsProperties singleProps = new SmsProperties(
+                Fixtures.properties().jwt(),
+                Fixtures.properties().cors(),
+                Fixtures.properties().superAdmin(),
+                Fixtures.properties().passwordReset(),
+                new SmsProperties.Tenancy(SmsProperties.Mode.SINGLE, "Halo Campus", "halo"));
+        when(tenantRepository.findBySlug("halo")).thenReturn(java.util.Optional.of(Fixtures.tenant()));
+        PublicConfigController singleConfig = new PublicConfigController(singleProps, tenantRepository);
+        assertThat(singleConfig.config().tenancyMode()).isEqualTo("single");
+        assertThat(singleConfig.config().registrationEnabled()).isFalse();
+        assertThat(singleConfig.config().organizationName()).isEqualTo(Fixtures.tenant().getName());
+        when(tenantRepository.findBySlug("halo")).thenReturn(java.util.Optional.empty());
+        assertThat(new PublicConfigController(singleProps, tenantRepository).config().organizationName())
+                .isEqualTo("Halo Campus");
 
         SchoolController schools = new SchoolController(schoolService, tenantResolver);
         schools.listAll();
@@ -315,10 +338,11 @@ class ControllersTest {
         tenants.platformSchools(10L);
         tenants.platformAddSchool(10L, new CreateSchoolRequest("S", "Main", null, null, null, null, null));
         tenants.current();
+        tenants.updateCurrent(new RenameOrganizationRequest("Halo Group"));
         tenants.currentSchools();
         tenants.addSchool(new CreateSchoolRequest("S2", null, null, null, null, null, null));
         tenants.currentCampuses();
-        tenants.schoolCampuses(1L, Fixtures.principal(Role.TENANT_ADMIN));
+        tenants.schoolCampuses(1L);
         verify(tenantService).list();
 
         CampusController campuses = new CampusController(campusService, tenantService, tenantResolver);

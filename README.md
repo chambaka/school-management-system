@@ -1,6 +1,6 @@
 # Chambaka School Management System
 
-White-label SaaS backend for running many schools on one platform. Each school is a tenant with its own branding, users, academics, attendance, fees, and notices.
+White-label SaaS backend for running many organizations on one platform. A **platform admin** manages multiple **tenants**. Each tenant owns one or more **schools**. Each school has one or more **campuses**. School data (users, academics, attendance, fees, notices) stays isolated by `school_id`.
 
 Package: `tz.co.chambaka.school.management`
 
@@ -23,10 +23,10 @@ Package: `tz.co.chambaka.school.management`
 
 ## What it does
 
-- Multi-tenant SaaS: one database, isolated by `school_id`
+- Multi-tenant SaaS by default: one database. Organizations are `tenants`; operational data is isolated by `school_id`; locations are `campuses`. Flip `sms.tenancy.mode` to `single` for one organization with many schools.
 - White-label branding (logo, colors, timezone, currency, custom domain)
-- School signup and JWT authentication
-- Roles: `SUPER_ADMIN`, `ADMIN`, `TEACHER`, `STUDENT`, `PARENT`
+- Organization signup (tenant + tenant admin) and JWT authentication; schools are added from the organization dashboard
+- Roles: `SUPER_ADMIN`, `TENANT_ADMIN`, `ADMIN`, `TEACHER`, `STUDENT`, `PARENT`
 - Academic structure: years, classes, sections, subjects, timetable
 - Exams, grades, and report cards
 - Student and teacher attendance
@@ -43,7 +43,7 @@ Package: `tz.co.chambaka.school.management`
 | Language | Java 21 |
 | Framework | Spring Boot 3.5 |
 | Security | Spring Security + JWT (access + refresh) |
-| Persistence | Spring Data JPA, Flyway |
+| Persistence | Spring Data JPA (Hibernate `ddl-auto=update`). Flyway is off. |
 | Database | MySQL 8 |
 | Mapping | MapStruct |
 | API docs | springdoc OpenAPI / Swagger UI |
@@ -62,6 +62,15 @@ User
  └── Parent
 ```
 
+Tenancy (Hibernate creates `tenants`, `schools`, `campuses`):
+
+```
+SUPER_ADMIN  (platform)
+ └── Tenant  (organization)
+      └── School
+           └── Campus  (one or more; first is Main)
+```
+
 School structure (class teacher sits on **Section**, not on the class):
 
 ```
@@ -76,12 +85,13 @@ Teacher
       └── SchoolClass / Section
 ```
 
-Every school-owned row has `school_id`. The JWT puts `schoolId` into `TenantContext`. Services always query that tenant.
+Every school-owned row has `school_id`. Users also carry `tenant_id` and optional `campus_id`. The JWT puts `tenantId`, `schoolId`, and `campusId` into `TenantContext`. SIS services query the active school.
 
 | Role | Purpose |
 | --- | --- |
-| `SUPER_ADMIN` | Platform operator. Manages all schools. |
-| `ADMIN` | School administrator. |
+| `SUPER_ADMIN` | Platform operator. Manages all tenants (and their schools). In single-tenant mode, bound to the default organization and uses the schools dashboard. |
+| `TENANT_ADMIN` | Organization admin. Creates schools and campuses; can switch active school. |
+| `ADMIN` | School administrator for one school. |
 | `TEACHER` | Teaching staff. |
 | `STUDENT` | Learner. |
 | `PARENT` | Guardian linked to one or more students. |
@@ -119,23 +129,24 @@ If you do not already have that database, `docker compose up -d` starts a separa
 
 | Resource | URL |
 | --- | --- |
-| API | http://localhost:8080 |
-| Health | http://localhost:8080/actuator/health |
-| Swagger UI | http://localhost:8080/swagger-ui.html |
-| OpenAPI JSON | http://localhost:8080/v3/api-docs |
+| API | http://localhost:8989 |
+| Health | http://localhost:8989/actuator/health |
+| Swagger UI | http://localhost:8989/swagger-ui.html |
+| OpenAPI JSON | http://localhost:8989/v3/api-docs |
+| Halo Vue PWA | http://localhost:5173 (sibling repo `school_management_system_vue`) |
 
 Default platform admin (created on first boot if none exists):
 
 - Email: `oscar.d@example.net`
 - Password: `ChangeMe123!`
 
-Create a school tenant:
+Create an organization (tenant + `TENANT_ADMIN`). Schools are added later from the organization dashboard (`POST /api/v1/tenants/current/schools`):
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/register-school \
+curl -X POST http://localhost:8989/api/v1/auth/register-school \
   -H 'Content-Type: application/json' \
   -d '{
-    "schoolName": "Chambaka Secondary",
+    "tenantName": "Chambaka Education Group",
     "adminName": "School Admin",
     "adminEmail": "yuki.t@example.com",
     "password": "HaloCampus1!",
@@ -145,6 +156,8 @@ curl -X POST http://localhost:8080/api/v1/auth/register-school \
   }'
 ```
 
+`tenantName` is required. Existing schools are backfilled to a tenant (`{slug}-org`) and a primary campus.
+
 Use the returned `accessToken` as `Authorization: Bearer <token>`.
 
 Frontend white-label (no login):
@@ -152,7 +165,30 @@ Frontend white-label (no login):
 ```text
 GET /api/v1/public/branding/chambaka-secondary
 GET /api/v1/public/branding?host=school.example.com
+GET /api/v1/public/config
 ```
+
+### Tenancy mode
+
+Default is **multi** (SaaS: many organizations). Set `sms.tenancy.mode` to `single` for one organization with many schools.
+
+```yaml
+sms:
+  tenancy:
+    mode: ${SMS_TENANCY_MODE:multi}              # multi | single
+    default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:Halo Campus}
+    default-tenant-slug: ${SMS_DEFAULT_TENANT_SLUG:halo}
+```
+
+In **single** mode the API:
+
+- Creates the default tenant on boot (by slug) and binds `SUPER_ADMIN` to it
+- Rejects `POST /api/v1/auth/register-school` and `POST /api/v1/platform/tenants`
+- Denies `/api/v1/platform/**`
+- Keeps `/api/v1/tenants/current/schools` so you add schools from the organization dashboard
+- Rename the organization with `PUT /api/v1/tenants/current` (`{ "name": "…" }`). The slug stays the same.
+
+`GET /api/v1/public/config` returns `{ "tenancyMode": "single"|"multi", "registrationEnabled": false|true }` so the Vue app can hide Register and platform screens without a rebuild.
 
 ### Tests
 
@@ -181,7 +217,7 @@ Profiles:
 | Variable | Default (dev) | Required in prod | Meaning |
 | --- | --- | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | `dev` | `prod` | Active profile |
-| `SERVER_PORT` | `8080` | no | HTTP port |
+| `SERVER_PORT` | `8989` | no | HTTP port |
 | `MYSQL_HOST` | `localhost` | yes | Database host |
 | `MYSQL_PORT` | `3306` | yes | Database port |
 | `MYSQL_DATABASE` | `db_school_sms` | yes | Database name |
@@ -203,9 +239,11 @@ Profiles:
 
 | Area | Base path |
 | --- | --- |
-| Auth | `/api/v1/auth` |
+| Auth | `/api/v1/auth` (`switch-school` for tenant/platform admins) |
 | Branding | `/api/v1/public/branding` |
-| School | `/api/v1/schools`, `/api/v1/platform/schools` |
+| Tenants | `/api/v1/tenants/current`, `/api/v1/platform/tenants` |
+| Schools | `/api/v1/schools`, `/api/v1/platform/schools` |
+| Campuses | `/api/v1/campuses` |
 | Years / classes / sections / subjects | `/api/v1/academic-years`, `/classes`, `/sections`, `/subjects` |
 | People | `/api/v1/teachers`, `/students`, `/parents` |
 | Academics | `/api/v1/allocations`, `/timetable`, `/exams`, `/grades` |
@@ -217,14 +255,15 @@ Profiles:
 
 Full method-level docs live in Swagger. Typical flow:
 
-1. `POST /api/v1/auth/register-school` or platform login
-2. Create academic year → class → section
-3. Create teachers, students, parents; link parents
-4. Allocate subjects, timetable, exams, grades
-5. Mark attendance
-6. Define fees, generate invoices, record payments
-7. Publish notices
-8. Trace a change with the `X-Correction-Id` response header and the audit APIs
+1. `POST /api/v1/auth/register-school` (organization) or platform login
+2. Tenant admin: add schools / campuses from the organization dashboard; `POST /api/v1/auth/switch-school` to work in one school
+3. Create academic year → class → section
+4. Create teachers, students, parents; link parents
+5. Allocate subjects, timetable, exams, grades
+6. Mark attendance
+7. Define fees, generate invoices, record payments
+8. Publish notices
+9. Trace a change with the `X-Correction-Id` response header and the audit APIs
 
 ### Forgot password
 
@@ -237,7 +276,7 @@ Three public steps, matching the Halo reset screens. The API never says whether 
 `GET /api/v1/auth/password-rules` returns the Nexus meter rules (10+ characters, upper, lower, digit, special `!@#$%^&*`, not the email/name, not a common password). The same policy is enforced on register, change-password, and reset.
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/forgot-password \
+curl -X POST http://localhost:8989/api/v1/auth/forgot-password \
   -H 'Content-Type: application/json' \
   -d '{"email":"yuki.t@example.com"}'
 ```
@@ -253,12 +292,12 @@ Every HTTP request gets a **correction ID**. Use it to join application logs wit
 - Send `X-Correction-Id` (or `X-Correlation-Id`) if the client already has one. Otherwise the API generates a UUID.
 - The same value is returned on every response as `X-Correction-Id`.
 - Error bodies include `correctionId`.
-- Logs include `correctionId`, `schoolId`, and `userId` on each line.
+- Logs include `correctionId`, `tenantId`, `schoolId`, `campusId`, and `userId` on each line.
 
 Valid incoming IDs are 8–64 characters of `A–Z`, `a–z`, `0–9`, `.`, `_`, or `-`. Invalid values are replaced.
 
 ```bash
-curl -i http://localhost:8080/api/v1/auth/login \
+curl -i http://localhost:8989/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -H 'X-Correction-Id: support-ticket-1042' \
   -d '{"email":"yuki.t@example.com","password":"HaloCampus1!"}'
@@ -268,16 +307,16 @@ Look for `X-Correction-Id` in the response, then search journal logs or the audi
 
 ### What is recorded
 
-Events are stored in `audit_events` (Flyway `V2__audit_events.sql`). Each row has scope, actor, action, resource, HTTP path, status, IP, user agent, and the request correction ID.
+Events are stored in `audit_events`. Each row has scope, actor, action, resource, HTTP path, status, IP, user agent, and the request correction ID.
 
 | Scope | Who / what |
 | --- | --- |
 | `TENANT` | School users changing data in their school |
-| `PLATFORM` | `SUPER_ADMIN` actions, school registration, and platform-wide login failures |
+| `PLATFORM` | `SUPER_ADMIN` actions, organization registration, and platform-wide login failures |
 
 | Action | When |
 | --- | --- |
-| `LOGIN`, `LOGIN_FAILED`, `TOKEN_REFRESH`, `PASSWORD_CHANGE`, `REGISTER_SCHOOL` | Auth service (explicit) |
+| `LOGIN`, `LOGIN_FAILED`, `TOKEN_REFRESH`, `PASSWORD_CHANGE`, `REGISTER_SCHOOL`, `REGISTER_TENANT` | Auth service (explicit) |
 | `CREATE`, `UPDATE`, `DELETE` | `POST` / `PUT` / `PATCH` / `DELETE` on tenant or platform APIs |
 | `ACCESS_DENIED`, `ERROR` | 401/403 and 5xx (except auth paths already covered above) |
 
@@ -304,11 +343,11 @@ Optional query params: `correctionId`, `action`, `resourceType`, `actorEmail`, `
 ```bash
 # Tenant trail
 curl -H "Authorization: Bearer $TOKEN" \
-  'http://localhost:8080/api/v1/audit-events?action=CREATE&resourceType=Student&size=20'
+  'http://localhost:8989/api/v1/audit-events?action=CREATE&resourceType=Student&size=20'
 
 # Everything for one correction ID (platform)
 curl -H "Authorization: Bearer $PLATFORM_TOKEN" \
-  http://localhost:8080/api/v1/platform/audit-events/support-ticket-1042
+  http://localhost:8989/api/v1/platform/audit-events/support-ticket-1042
 ```
 
 ---
@@ -340,7 +379,7 @@ GRANT ALL PRIVILEGES ON school_sms.* TO 'sms'@'%';
 FLUSH PRIVILEGES;
 ```
 
-Restrict `'%'` to the app server IP when you can. Flyway applies `V1__init.sql` and later migrations (`V2__audit_events.sql` for the audit trail) on startup.
+Restrict `'%'` to the app server IP when you can. Hibernate updates the schema on startup (`spring.jpa.hibernate.ddl-auto=update`). Flyway is disabled.
 
 ### 3. Build the artifact
 
@@ -495,7 +534,7 @@ Keep MySQL on a named volume or a managed database. Do not put production secret
 1. Confirm `GET https://api.example.com/actuator/health` returns `{"status":"UP"}`.
 2. Log in as the platform admin from `SMS_SUPER_ADMIN_*`.
 3. Change that password immediately (`POST /api/v1/auth/change-password`).
-4. Create the first school with `POST /api/v1/auth/register-school`, or have the school self-register.
+4. Create the first organization with `POST /api/v1/auth/register-school`, or create a tenant from `/api/v1/platform/tenants` and add schools under it.
 5. Point each school frontend at `GET /api/v1/public/branding/{slug}` (or `?host=`) so it can white-label before login.
 
 ### 9. Updates
@@ -507,7 +546,7 @@ sudo cp target/sms-1.0.0-SNAPSHOT.jar /opt/chambaka-sms/sms.jar
 sudo systemctl start chambaka-sms
 ```
 
-Flyway runs pending migrations on startup. Take a MySQL dump before upgrading:
+Hibernate may alter tables on startup. Take a MySQL dump before upgrading:
 
 ```bash
 mysqldump -u sms -p school_sms > school_sms-$(date +%F).sql
@@ -517,7 +556,7 @@ mysqldump -u sms -p school_sms > school_sms-$(date +%F).sql
 
 1. Stop the service.
 2. Restore the previous JAR.
-3. If a migration ran, restore the dump taken in step 9 (do not edit applied Flyway versions by hand).
+3. If the schema changed, restore the dump taken in step 9.
 4. Start the service.
 
 ---

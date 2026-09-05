@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.service;
 
+import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.dto.auth.AuthResponse;
 import tz.co.chambaka.school.management.dto.auth.ChangePasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.LoginRequest;
@@ -57,6 +58,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final UserMapper userMapper;
     private final AuditService auditService;
+    private final SmsProperties smsProperties;
 
     public AuthService(
             AuthenticationManager authenticationManager,
@@ -69,7 +71,8 @@ public class AuthService {
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             UserMapper userMapper,
-            AuditService auditService
+            AuditService auditService,
+            SmsProperties smsProperties
     ) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
@@ -82,6 +85,7 @@ public class AuthService {
         this.jwtService = jwtService;
         this.userMapper = userMapper;
         this.auditService = auditService;
+        this.smsProperties = smsProperties;
     }
 
     @Transactional
@@ -125,15 +129,16 @@ public class AuthService {
 
     @Transactional
     public AuthResponse registerSchool(RegisterSchoolRequest request) {
+        if (smsProperties.singleTenant()) {
+            throw new BusinessException("Organization self-registration is disabled in single-tenant mode");
+        }
         PasswordPolicy.requireValid(request.password(), request.adminEmail(), request.adminName());
         if (userRepository.existsByEmailIgnoreCase(request.adminEmail())) {
             throw new DuplicateResourceException("Email is already registered");
         }
-        TenantService.ProvisionedOrganization org = tenantService.provisionNewOrganization(request);
+        Tenant tenant = tenantService.provisionNewOrganization(request);
         User admin = User.builder()
-                .tenantId(org.tenant().getId())
-                .schoolId(org.school().getId())
-                .campusId(org.campus().getId())
+                .tenantId(tenant.getId())
                 .name(request.adminName())
                 .email(request.adminEmail().toLowerCase())
                 .password(passwordEncoder.encode(request.password()))
@@ -142,10 +147,9 @@ public class AuthService {
                 .enabled(true)
                 .build();
         admin = userRepository.save(admin);
-        log.info("Registered tenant id={} school id={} slug={} adminUserId={}",
-                org.tenant().getId(), org.school().getId(), org.school().getSlug(), admin.getId());
+        log.info("Registered tenant id={} slug={} adminUserId={}", tenant.getId(), tenant.getSlug(), admin.getId());
         auditService.recordAuth(AuditAction.REGISTER_TENANT, admin,
-                "Registered organization " + org.tenant().getName() + " with school " + org.school().getName());
+                "Registered organization " + tenant.getName());
         return issueTokens(admin);
     }
 

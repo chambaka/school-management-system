@@ -1,10 +1,12 @@
 package tz.co.chambaka.school.management.service;
 
+import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.dto.auth.RegisterSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
 import tz.co.chambaka.school.management.dto.tenant.UpdateTenantRequest;
 import tz.co.chambaka.school.management.exception.ApiException;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.mapper.SchoolMapper;
 import tz.co.chambaka.school.management.model.Campus;
@@ -40,6 +42,8 @@ class TenantServiceTest {
     private CampusRepository campusRepository;
     @Mock
     private SchoolMapper schoolMapper;
+    @Mock
+    private SmsProperties smsProperties;
     @InjectMocks
     private TenantService tenantService;
 
@@ -66,6 +70,13 @@ class TenantServiceTest {
         assertThat(tenant.getName()).isEqualTo("Renamed");
         assertThat(tenant.getStatus()).isEqualTo(TenantStatus.ACTIVE);
         assertThat(tenant.getSubscriptionPlan()).isEqualTo("PRO");
+        assertThat(tenantService.rename(10L, "  Halo Group  ").name()).isEqualTo("Halo Group");
+    }
+
+    @Test
+    void renameRequiresName() {
+        assertThatThrownBy(() -> tenantService.rename(10L, "  "))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test
@@ -97,18 +108,27 @@ class TenantServiceTest {
     }
 
     @Test
-    void provisionNewOrganization() {
-        stubSaves();
+    void provisionNewOrganizationCreatesTenantOnly() {
         when(tenantRepository.existsBySlug("chambaka-group")).thenReturn(true, false);
-        when(schoolRepository.existsBySlug("chambaka-secondary")).thenReturn(false);
-        when(campusRepository.findFirstBySchoolIdAndPrimaryCampusTrue(1L))
-                .thenReturn(Optional.of(Fixtures.campus()));
-        var org = tenantService.provisionNewOrganization(new RegisterSchoolRequest(
-                "Chambaka Secondary", "a@b.com", "HaloCampus1!", "A", "07", null, null, "TZ",
-                "Chambaka Group", null));
-        assertThat(org.tenant().getId()).isEqualTo(10L);
-        assertThat(org.school().getTenantId()).isEqualTo(10L);
-        assertThat(org.campus().getCode()).isEqualTo("MAIN");
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> {
+            Tenant tenant = inv.getArgument(0);
+            tenant.setId(10L);
+            return tenant;
+        });
+        Tenant tenant = tenantService.provisionNewOrganization(new RegisterSchoolRequest(
+                "Ignored school", "a@b.com", "HaloCampus1!", "A", "07", null, null, "TZ",
+                "Chambaka Group", "Main campus"));
+        assertThat(tenant.getId()).isEqualTo(10L);
+        assertThat(tenant.getName()).isEqualTo("Chambaka Group");
+        org.mockito.Mockito.verify(schoolRepository, org.mockito.Mockito.never()).save(any());
+        org.mockito.Mockito.verify(campusRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void provisionRequiresOrganizationName() {
+        assertThatThrownBy(() -> tenantService.provisionNewOrganization(new RegisterSchoolRequest(
+                null, "a@b.com", "HaloCampus1!", "A", null, null, null, null, "  ", null)))
+                .isInstanceOf(tz.co.chambaka.school.management.exception.BusinessException.class);
     }
 
     @Test
@@ -127,27 +147,56 @@ class TenantServiceTest {
     }
 
     @Test
-    void provisionMissingPrimaryCampus() {
-        stubSaves();
-        when(tenantRepository.existsBySlug(any())).thenReturn(false);
-        when(schoolRepository.existsBySlug(any())).thenReturn(false);
-        when(campusRepository.findFirstBySchoolIdAndPrimaryCampusTrue(1L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> tenantService.provisionNewOrganization(new RegisterSchoolRequest(
-                "X", "a@b.com", "HaloCampus1!", "A", null, null, null, null, null, null)))
-                .isInstanceOf(ResourceNotFoundException.class);
+    void createRejectedInSingleTenant() {
+        when(smsProperties.singleTenant()).thenReturn(true);
+        assertThatThrownBy(() -> tenantService.create(new CreateTenantRequest("Org", null, null, null, null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("single-tenant");
     }
 
-    private void stubSaves() {
+    @Test
+    void provisionRejectedInSingleTenant() {
+        when(smsProperties.singleTenant()).thenReturn(true);
+        assertThatThrownBy(() -> tenantService.provisionNewOrganization(new RegisterSchoolRequest(
+                null, "a@b.com", "HaloCampus1!", "A", null, null, null, null, "X", null)))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void ensureDefaultTenantCreatesWhenMissing() {
+        when(smsProperties.tenancy()).thenReturn(new SmsProperties.Tenancy(
+                SmsProperties.Mode.SINGLE, "Halo Campus", "halo"));
+        when(tenantRepository.findBySlug("halo")).thenReturn(Optional.empty());
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> {
             Tenant tenant = inv.getArgument(0);
             tenant.setId(10L);
             return tenant;
         });
-        when(schoolRepository.save(any(School.class))).thenAnswer(inv -> {
-            School school = inv.getArgument(0);
-            school.setId(1L);
-            return school;
-        });
-        when(campusRepository.save(any(Campus.class))).thenAnswer(inv -> inv.getArgument(0));
+        Tenant tenant = tenantService.ensureDefaultTenant();
+        assertThat(tenant.getSlug()).isEqualTo("halo");
+        assertThat(tenant.getStatus()).isEqualTo(TenantStatus.ACTIVE);
+    }
+
+    @Test
+    void ensureDefaultTenantReusesExisting() {
+        when(smsProperties.tenancy()).thenReturn(new SmsProperties.Tenancy(
+                SmsProperties.Mode.SINGLE, "Halo Campus", "halo"));
+        when(tenantRepository.findBySlug("halo")).thenReturn(Optional.of(Fixtures.tenant()));
+        assertThat(tenantService.ensureDefaultTenant().getId()).isEqualTo(10L);
+        org.mockito.Mockito.verify(tenantRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void requireDefaultTenantMissing() {
+        when(smsProperties.tenancy()).thenReturn(SmsProperties.Tenancy.defaults());
+        when(tenantRepository.findBySlug("halo")).thenReturn(Optional.empty());
+        assertThatThrownBy(tenantService::requireDefaultTenant).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void requireDefaultTenantFound() {
+        when(smsProperties.tenancy()).thenReturn(SmsProperties.Tenancy.defaults());
+        when(tenantRepository.findBySlug("halo")).thenReturn(Optional.of(Fixtures.tenant()));
+        assertThat(tenantService.requireDefaultTenant().getId()).isEqualTo(10L);
     }
 }

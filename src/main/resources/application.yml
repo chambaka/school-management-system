@@ -14,7 +14,7 @@ spring:
         jdbc:
           time_zone: UTC
   flyway:
-    enabled: true
+    enabled: false
 
 server:
   port: ${SERVER_PORT:8989}
@@ -57,3 +57,7 @@ sms:
   password-reset:
     ttl: ${SMS_PASSWORD_RESET_TTL:PT30M}
     include-debug-code: ${SMS_PASSWORD_RESET_DEBUG:false}
+  tenancy:
+    mode: ${SMS_TENANCY_MODE:multi}
+    default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:Halo Campus}
+    default-tenant-slug: ${SMS_DEFAULT_TENANT_SLUG:halo}

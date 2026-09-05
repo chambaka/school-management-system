@@ -4,10 +4,9 @@ import tz.co.chambaka.school.management.dto.campus.CampusResponse;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
+import tz.co.chambaka.school.management.dto.tenant.RenameOrganizationRequest;
 import tz.co.chambaka.school.management.dto.tenant.TenantResponse;
 import tz.co.chambaka.school.management.dto.tenant.UpdateTenantRequest;
-import tz.co.chambaka.school.management.security.CurrentUser;
-import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.CampusService;
 import tz.co.chambaka.school.management.service.TenantService;
 import tz.co.chambaka.school.management.tenant.TenantResolver;
@@ -80,37 +79,40 @@ public class TenantController {
     }
 
     @GetMapping("/tenants/current")
-    @PreAuthorize("hasRole('TENANT_ADMIN')")
+    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
     public TenantResponse current() {
         return tenantService.get(tenantResolver.requireTenantId());
     }
 
+    @PutMapping("/tenants/current")
+    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
+    public TenantResponse updateCurrent(@Valid @RequestBody RenameOrganizationRequest request) {
+        return tenantService.rename(tenantResolver.requireTenantId(), request.name());
+    }
+
     @GetMapping("/tenants/current/schools")
-    @PreAuthorize("hasRole('TENANT_ADMIN')")
+    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
     public List<SchoolResponse> currentSchools() {
         return tenantService.listSchools(tenantResolver.requireTenantId());
     }
 
     @PostMapping("/tenants/current/schools")
-    @PreAuthorize("hasRole('TENANT_ADMIN')")
+    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     public SchoolResponse addSchool(@Valid @RequestBody CreateSchoolRequest request) {
         return tenantService.addSchool(tenantResolver.requireTenantId(), request);
     }
 
     @GetMapping("/tenants/current/campuses")
-    @PreAuthorize("hasRole('TENANT_ADMIN')")
+    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
     public List<CampusResponse> currentCampuses() {
         return campusService.listByTenant(tenantResolver.requireTenantId());
     }
 
     @GetMapping("/tenants/current/schools/{schoolId}/campuses")
-    @PreAuthorize("hasRole('TENANT_ADMIN')")
-    public List<CampusResponse> schoolCampuses(
-            @PathVariable Long schoolId,
-            @CurrentUser UserPrincipal principal
-    ) {
-        tenantService.requireSchoolInTenant(principal.getTenantId(), schoolId);
+    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
+    public List<CampusResponse> schoolCampuses(@PathVariable Long schoolId) {
+        tenantService.requireSchoolInTenant(tenantResolver.requireTenantId(), schoolId);
         return campusService.listBySchool(schoolId);
     }
 }

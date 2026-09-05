@@ -41,25 +41,29 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/register-school",
-                                "/api/v1/auth/refresh",
-                                "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/forgot-password/verify",
-                                "/api/v1/auth/reset-password",
-                                "/api/v1/auth/password-rules",
-                                "/api/v1/public/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/actuator/health"
-                        ).permitAll()
-                        .requestMatchers("/api/v1/platform/**").hasRole("SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/notices/**").authenticated()
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(
+                            "/api/v1/auth/login",
+                            "/api/v1/auth/register-school",
+                            "/api/v1/auth/refresh",
+                            "/api/v1/auth/forgot-password",
+                            "/api/v1/auth/forgot-password/verify",
+                            "/api/v1/auth/reset-password",
+                            "/api/v1/auth/password-rules",
+                            "/api/v1/public/**",
+                            "/v3/api-docs/**",
+                            "/swagger-ui/**",
+                            "/swagger-ui.html",
+                            "/actuator/health"
+                    ).permitAll();
+                    if (smsProperties.singleTenant()) {
+                        auth.requestMatchers("/api/v1/platform/**").denyAll();
+                    } else {
+                        auth.requestMatchers("/api/v1/platform/**").hasRole("SUPER_ADMIN");
+                    }
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/notices/**").authenticated()
+                            .anyRequest().authenticated();
+                })
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

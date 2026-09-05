@@ -49,7 +49,7 @@ public class AuthController {
 
     @PostMapping("/register-school")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Onboard a new organization, first school, campus, and tenant admin")
+    @Operation(summary = "Onboard a new organization and its tenant admin. Schools are added later.")
     public AuthResponse registerSchool(@Valid @RequestBody RegisterSchoolRequest request) {
         return authService.registerSchool(request);
     }

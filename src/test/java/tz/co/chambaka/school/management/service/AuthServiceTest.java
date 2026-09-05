@@ -1,5 +1,7 @@
 package tz.co.chambaka.school.management.service;
 
+import tz.co.chambaka.school.management.config.SmsProperties;
+import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.dto.auth.ChangePasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.LoginRequest;
 import tz.co.chambaka.school.management.dto.auth.RefreshTokenRequest;
@@ -73,6 +75,8 @@ class AuthServiceTest {
     private UserMapper userMapper;
     @Mock
     private AuditService auditService;
+    @Mock
+    private SmsProperties smsProperties;
 
     @InjectMocks
     private AuthService authService;
@@ -172,34 +176,33 @@ class AuthServiceTest {
     @Test
     void registerSchool() {
         when(userRepository.existsByEmailIgnoreCase("yuki.t@example.com")).thenReturn(false);
-        when(tenantService.provisionNewOrganization(any())).thenReturn(
-                new TenantService.ProvisionedOrganization(Fixtures.tenant(), Fixtures.school(), Fixtures.campus()));
+        when(tenantService.provisionNewOrganization(any())).thenReturn(Fixtures.tenant());
         when(passwordEncoder.encode("HaloCampus1!")).thenReturn("enc");
         User admin = Fixtures.user(2L, Role.TENANT_ADMIN);
         when(userRepository.save(any(User.class))).thenReturn(admin);
         stubTokens(admin);
         var response = authService.registerSchool(new RegisterSchoolRequest(
-                "Chambaka Secondary", "yuki.t@example.com", "HaloCampus1!", "Admin", "07", null, null, "TZ",
-                "Chambaka Group", "Main campus"));
+                null, "yuki.t@example.com", "HaloCampus1!", "Admin", "07", null, null, "TZ",
+                "Chambaka Group", null));
         assertThat(response.accessToken()).isEqualTo("access");
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
         assertThat(captor.getValue().getRole()).isEqualTo(Role.TENANT_ADMIN);
         assertThat(captor.getValue().getTenantId()).isEqualTo(Fixtures.TENANT_ID);
-        assertThat(captor.getValue().getCampusId()).isEqualTo(Fixtures.CAMPUS_ID);
+        assertThat(captor.getValue().getSchoolId()).isNull();
+        assertThat(captor.getValue().getCampusId()).isNull();
         verify(auditService).recordAuth(eq(AuditAction.REGISTER_TENANT), eq(admin), anyString());
     }
 
     @Test
     void registerUsesProvidedTimezoneCurrency() {
         when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(false);
-        when(tenantService.provisionNewOrganization(any())).thenReturn(
-                new TenantService.ProvisionedOrganization(Fixtures.tenant(), Fixtures.school(), Fixtures.campus()));
+        when(tenantService.provisionNewOrganization(any())).thenReturn(Fixtures.tenant());
         when(passwordEncoder.encode(anyString())).thenReturn("enc");
         when(userRepository.save(any(User.class))).thenReturn(Fixtures.user(2L, Role.TENANT_ADMIN));
         stubTokens(Fixtures.user(2L, Role.TENANT_ADMIN));
         authService.registerSchool(new RegisterSchoolRequest(
-                "X", "a@b.com", "HaloCampus1!", "A", null, "UTC", "USD", null, null, null));
+                null, "a@b.com", "HaloCampus1!", "A", null, "UTC", "USD", null, "X", null));
         verify(tenantService).provisionNewOrganization(any());
     }
 
@@ -207,16 +210,25 @@ class AuthServiceTest {
     void registerDuplicateEmail() {
         when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(true);
         assertThatThrownBy(() -> authService.registerSchool(new RegisterSchoolRequest(
-                "X", "a@b.com", "HaloCampus1!", "A", null, null, null, null, null, null)))
+                null, "a@b.com", "HaloCampus1!", "A", null, null, null, null, "X", null)))
                 .isInstanceOf(DuplicateResourceException.class);
     }
 
     @Test
     void registerRejectsWeakPassword() {
         assertThatThrownBy(() -> authService.registerSchool(new RegisterSchoolRequest(
-                "X", "a@b.com", "secret12", "A", null, null, null, null, null, null)))
+                null, "a@b.com", "secret12", "A", null, null, null, null, "X", null)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("at least 10");
+    }
+
+    @Test
+    void registerRejectedInSingleTenant() {
+        when(smsProperties.singleTenant()).thenReturn(true);
+        assertThatThrownBy(() -> authService.registerSchool(new RegisterSchoolRequest(
+                null, "a@b.com", "HaloCampus1!", "A", null, null, null, null, "X", null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("single-tenant");
     }
 
     @Test

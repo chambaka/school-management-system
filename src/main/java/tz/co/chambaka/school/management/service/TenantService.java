@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.service;
 
+import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.dto.auth.RegisterSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
@@ -7,6 +8,7 @@ import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
 import tz.co.chambaka.school.management.dto.tenant.TenantResponse;
 import tz.co.chambaka.school.management.dto.tenant.UpdateTenantRequest;
 import tz.co.chambaka.school.management.exception.ApiException;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.mapper.SchoolMapper;
 import tz.co.chambaka.school.management.model.Campus;
@@ -38,17 +40,20 @@ public class TenantService {
     private final SchoolRepository schoolRepository;
     private final CampusRepository campusRepository;
     private final SchoolMapper schoolMapper;
+    private final SmsProperties smsProperties;
 
     public TenantService(
             TenantRepository tenantRepository,
             SchoolRepository schoolRepository,
             CampusRepository campusRepository,
-            SchoolMapper schoolMapper
+            SchoolMapper schoolMapper,
+            SmsProperties smsProperties
     ) {
         this.tenantRepository = tenantRepository;
         this.schoolRepository = schoolRepository;
         this.campusRepository = campusRepository;
         this.schoolMapper = schoolMapper;
+        this.smsProperties = smsProperties;
     }
 
     @Transactional(readOnly = true)
@@ -63,6 +68,7 @@ public class TenantService {
 
     @Transactional
     public TenantResponse create(CreateTenantRequest request) {
+        rejectExtraOrganizations();
         return toResponse(createTenant(
                 request.name(),
                 request.email(),
@@ -103,6 +109,18 @@ public class TenantService {
         return toResponse(tenant);
     }
 
+    @Transactional
+    public TenantResponse rename(Long id, String name) {
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isBlank()) {
+            throw new BusinessException("Organization name is required");
+        }
+        Tenant tenant = require(id);
+        tenant.setName(trimmed);
+        log.info("Renamed tenant id={} name={}", tenant.getId(), tenant.getName());
+        return toResponse(tenant);
+    }
+
     @Transactional(readOnly = true)
     public List<SchoolResponse> listSchools(Long tenantId) {
         require(tenantId);
@@ -120,27 +138,41 @@ public class TenantService {
     }
 
     @Transactional
-    public ProvisionedOrganization provisionNewOrganization(RegisterSchoolRequest request) {
+    public Tenant provisionNewOrganization(RegisterSchoolRequest request) {
+        rejectExtraOrganizations();
         String tenantName = blankTo(request.tenantName(), request.schoolName());
-        Tenant tenant = createTenant(
+        if (tenantName == null || tenantName.isBlank()) {
+            throw new BusinessException("Organization name is required");
+        }
+        return createTenant(
                 tenantName,
                 request.adminEmail(),
                 request.phone(),
                 request.country(),
                 request.timezone(),
                 request.currency());
-        School school = provisionSchool(
-                tenant,
-                request.schoolName(),
-                request.campusName(),
-                request.adminEmail(),
-                request.phone(),
-                request.timezone(),
-                request.currency(),
-                request.country());
-        Campus campus = campusRepository.findFirstBySchoolIdAndPrimaryCampusTrue(school.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Primary campus not found"));
-        return new ProvisionedOrganization(tenant, school, campus);
+    }
+
+    @Transactional
+    public Tenant ensureDefaultTenant() {
+        SmsProperties.Tenancy tenancy = smsProperties.tenancy();
+        return tenantRepository.findBySlug(tenancy.defaultTenantSlug()).orElseGet(() -> {
+            Tenant tenant = new Tenant();
+            tenant.setName(tenancy.defaultTenantName());
+            tenant.setSlug(tenancy.defaultTenantSlug());
+            tenant.setTimezone("Africa/Dar_es_Salaam");
+            tenant.setCurrency("TZS");
+            tenant.setStatus(TenantStatus.ACTIVE);
+            tenant.setSubscriptionPlan("STARTER");
+            tenant = tenantRepository.save(tenant);
+            log.info("Ensured default tenant id={} slug={}", tenant.getId(), tenant.getSlug());
+            return tenant;
+        });
+    }
+
+    public Tenant requireDefaultTenant() {
+        return tenantRepository.findBySlug(smsProperties.tenancy().defaultTenantSlug())
+                .orElseThrow(() -> new ResourceNotFoundException("Default tenant is not configured"));
     }
 
     public Tenant require(Long id) {
@@ -255,10 +287,14 @@ public class TenantService {
         return slug;
     }
 
+    private void rejectExtraOrganizations() {
+        if (smsProperties.singleTenant()) {
+            throw new BusinessException("Creating organizations is disabled in single-tenant mode");
+        }
+    }
+
     private static String blankTo(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }
 
-    public record ProvisionedOrganization(Tenant tenant, School school, Campus campus) {
-    }
 }

@@ -1,13 +1,24 @@
 package tz.co.chambaka.school.management.tenant;
 
+import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.exception.ApiException;
+import tz.co.chambaka.school.management.model.Tenant;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.repository.TenantRepository;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 @Component
 public class TenantResolver {
+
+    private final SmsProperties smsProperties;
+    private final TenantRepository tenantRepository;
+
+    public TenantResolver(SmsProperties smsProperties, TenantRepository tenantRepository) {
+        this.smsProperties = smsProperties;
+        this.tenantRepository = tenantRepository;
+    }
 
     public Long requireSchoolId() {
         Long schoolId = TenantContext.getSchoolId();
@@ -19,10 +30,15 @@ public class TenantResolver {
 
     public Long requireTenantId() {
         Long tenantId = TenantContext.getTenantId();
-        if (tenantId == null) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Tenant context is required");
+        if (tenantId != null) {
+            return tenantId;
         }
-        return tenantId;
+        if (smsProperties.singleTenant()) {
+            return tenantRepository.findBySlug(smsProperties.tenancy().defaultTenantSlug())
+                    .map(Tenant::getId)
+                    .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "Tenant context is required"));
+        }
+        throw new ApiException(HttpStatus.FORBIDDEN, "Tenant context is required");
     }
 
     public Long resolve(Long requestedSchoolId, UserPrincipal principal) {
