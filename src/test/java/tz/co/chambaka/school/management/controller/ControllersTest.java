@@ -1,0 +1,277 @@
+package tz.co.chambaka.school.management.controller;
+
+import tz.co.chambaka.school.management.dto.academic.AcademicYearRequest;
+import tz.co.chambaka.school.management.dto.academic.AllocationRequest;
+import tz.co.chambaka.school.management.dto.academic.ExamRequest;
+import tz.co.chambaka.school.management.dto.academic.ExamSubjectRequest;
+import tz.co.chambaka.school.management.dto.academic.GradeRequest;
+import tz.co.chambaka.school.management.dto.academic.SchoolClassRequest;
+import tz.co.chambaka.school.management.dto.academic.SectionRequest;
+import tz.co.chambaka.school.management.dto.academic.SubjectRequest;
+import tz.co.chambaka.school.management.dto.academic.TimetableRequest;
+import tz.co.chambaka.school.management.dto.attendance.MarkStudentAttendanceRequest;
+import tz.co.chambaka.school.management.dto.attendance.MarkTeacherAttendanceRequest;
+import tz.co.chambaka.school.management.dto.auth.ChangePasswordRequest;
+import tz.co.chambaka.school.management.dto.auth.LoginRequest;
+import tz.co.chambaka.school.management.dto.auth.RefreshTokenRequest;
+import tz.co.chambaka.school.management.dto.auth.RegisterSchoolRequest;
+import tz.co.chambaka.school.management.dto.finance.FeeStructureRequest;
+import tz.co.chambaka.school.management.dto.finance.GenerateInvoicesRequest;
+import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
+import tz.co.chambaka.school.management.dto.notice.NoticeRequest;
+import tz.co.chambaka.school.management.dto.parent.CreateParentRequest;
+import tz.co.chambaka.school.management.dto.parent.LinkParentRequest;
+import tz.co.chambaka.school.management.dto.school.UpdateSchoolRequest;
+import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
+import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
+import tz.co.chambaka.school.management.dto.teacher.CreateTeacherRequest;
+import tz.co.chambaka.school.management.dto.teacher.UpdateTeacherRequest;
+import tz.co.chambaka.school.management.model.enums.ExamType;
+import tz.co.chambaka.school.management.model.enums.FeeFrequency;
+import tz.co.chambaka.school.management.model.enums.FeeType;
+import tz.co.chambaka.school.management.model.enums.NoticeAudience;
+import tz.co.chambaka.school.management.model.enums.PaymentMethod;
+import tz.co.chambaka.school.management.model.enums.RelationshipType;
+import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.security.UserPrincipal;
+import tz.co.chambaka.school.management.audit.AuditQueryService;
+import tz.co.chambaka.school.management.model.enums.AuditAction;
+import tz.co.chambaka.school.management.model.enums.AuditScope;
+import tz.co.chambaka.school.management.service.AcademicYearService;
+import tz.co.chambaka.school.management.service.AllocationService;
+import tz.co.chambaka.school.management.service.AttendanceService;
+import tz.co.chambaka.school.management.service.AuthService;
+import tz.co.chambaka.school.management.service.ClassService;
+import tz.co.chambaka.school.management.service.ExamService;
+import tz.co.chambaka.school.management.service.FinanceService;
+import tz.co.chambaka.school.management.service.GradeService;
+import tz.co.chambaka.school.management.service.NoticeService;
+import tz.co.chambaka.school.management.service.ParentService;
+import tz.co.chambaka.school.management.service.SchoolService;
+import tz.co.chambaka.school.management.service.SectionService;
+import tz.co.chambaka.school.management.service.StudentService;
+import tz.co.chambaka.school.management.service.SubjectService;
+import tz.co.chambaka.school.management.service.TeacherService;
+import tz.co.chambaka.school.management.service.TimetableService;
+import tz.co.chambaka.school.management.support.Fixtures;
+import tz.co.chambaka.school.management.tenant.TenantResolver;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+
+import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class ControllersTest {
+
+    @Mock
+    private TenantResolver tenantResolver;
+    @Mock
+    private AuthService authService;
+    @Mock
+    private SchoolService schoolService;
+    @Mock
+    private AcademicYearService academicYearService;
+    @Mock
+    private ClassService classService;
+    @Mock
+    private SectionService sectionService;
+    @Mock
+    private SubjectService subjectService;
+    @Mock
+    private TeacherService teacherService;
+    @Mock
+    private StudentService studentService;
+    @Mock
+    private ParentService parentService;
+    @Mock
+    private AllocationService allocationService;
+    @Mock
+    private TimetableService timetableService;
+    @Mock
+    private ExamService examService;
+    @Mock
+    private GradeService gradeService;
+    @Mock
+    private AttendanceService attendanceService;
+    @Mock
+    private FinanceService financeService;
+    @Mock
+    private NoticeService noticeService;
+    @Mock
+    private AuditQueryService auditQueryService;
+
+    @BeforeEach
+    void tenant() {
+        org.mockito.Mockito.lenient().when(tenantResolver.requireSchoolId()).thenReturn(1L);
+    }
+
+    @Test
+    void authAndBrandingAndSchool() {
+        AuthController auth = new AuthController(authService);
+        auth.login(new LoginRequest("a@b.com", "pw"));
+        auth.registerSchool(new RegisterSchoolRequest("S", "a@b.com", "password1", "A", null, null, null, null));
+        auth.refresh(new RefreshTokenRequest("rt"));
+        UserPrincipal admin = Fixtures.principal(Role.ADMIN);
+        auth.me(admin);
+        auth.changePassword(admin, new ChangePasswordRequest("old", "newpass12"));
+        verify(authService).me(10L);
+
+        BrandingController branding = new BrandingController(schoolService);
+        branding.bySlug("chambaka");
+        branding.byHost("school.test");
+
+        SchoolController schools = new SchoolController(schoolService, tenantResolver);
+        schools.listAll();
+        schools.current(admin);
+        schools.updateCurrent(new UpdateSchoolRequest(null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null));
+        schools.updatePlatform(1L, new UpdateSchoolRequest("N", null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null));
+        verify(schoolService).list();
+
+        AuditEventController tenantAudit = new AuditEventController(auditQueryService, tenantResolver);
+        tenantAudit.list(null, null, null, null, null, null, PageRequest.of(0, 10));
+        tenantAudit.byCorrectionId("corr-1");
+        PlatformAuditController platformAudit = new PlatformAuditController(auditQueryService);
+        platformAudit.list(AuditScope.PLATFORM, 1L, "corr-1", AuditAction.LOGIN, "Auth", "a@b.com",
+                null, null, PageRequest.of(0, 10));
+        platformAudit.byCorrectionId("corr-1");
+        verify(auditQueryService).byCorrectionId("corr-1");
+        verify(auditQueryService).byCorrectionIdForSchool("corr-1", 1L);
+    }
+
+    @Test
+    void structurePeopleAcademics() {
+        AcademicYearController years = new AcademicYearController(academicYearService, tenantResolver);
+        AcademicYearRequest yearReq = new AcademicYearRequest("2026", LocalDate.now(), LocalDate.now().plusDays(1), true);
+        years.list();
+        years.create(yearReq);
+        years.update(1L, yearReq);
+        years.setCurrent(1L);
+
+        ClassController classes = new ClassController(classService, tenantResolver);
+        SchoolClassRequest classReq = new SchoolClassRequest(1L, "F1", "F1", 1);
+        classes.list(null);
+        classes.create(classReq);
+        classes.update(1L, classReq);
+
+        SectionController sections = new SectionController(sectionService, tenantResolver);
+        SectionRequest sectionReq = new SectionRequest(1L, "A", 40, 1L);
+        sections.list(1L);
+        sections.create(sectionReq);
+        sections.update(1L, sectionReq);
+
+        SubjectController subjects = new SubjectController(subjectService, tenantResolver);
+        SubjectRequest subjectReq = new SubjectRequest("Math", "M", null);
+        subjects.list();
+        subjects.create(subjectReq);
+        subjects.update(1L, subjectReq);
+
+        TeacherController teachers = new TeacherController(teacherService, tenantResolver);
+        when(teacherService.requireByUser(10L)).thenReturn(Fixtures.teacher());
+        teachers.list(PageRequest.of(0, 10));
+        teachers.me(Fixtures.principal(Role.TEACHER));
+        teachers.get(1L);
+        teachers.create(new CreateTeacherRequest("T", "t@x.com", "password1", null, "E1", null, null, null, null));
+        teachers.update(1L, new UpdateTeacherRequest(null, null, null, null, null, null, null));
+
+        StudentController students = new StudentController(studentService, parentService, gradeService, tenantResolver);
+        when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
+        students.list(null, PageRequest.of(0, 10));
+        students.me(Fixtures.principal(Role.STUDENT));
+        students.get(1L);
+        students.create(new CreateStudentRequest("S", "s@x.com", "password1", null, "A1",
+                null, null, null, null, null, null, null, null, null, null));
+        students.update(1L, new UpdateStudentRequest(null, null, null, null, null, null, null, null, null, null, null, null));
+        students.linkParent(1L, new LinkParentRequest(1L, RelationshipType.MOTHER, true));
+        students.parents(1L);
+        students.reportCard(Fixtures.principal(Role.ADMIN), 1L, 1L);
+        students.reportCard(Fixtures.principal(Role.PARENT), 1L, 1L);
+        verify(parentService).assertLinked(10L, 1L);
+        students.myReportCard(Fixtures.principal(Role.STUDENT), 1L);
+        verify(gradeService, times(3)).reportCard(1L, 1L, 1L);
+
+        ParentController parents = new ParentController(parentService, tenantResolver);
+        when(parentService.requireByUser(10L)).thenReturn(Fixtures.parent());
+        parents.list(PageRequest.of(0, 10));
+        parents.create(new CreateParentRequest("P", "p@x.com", "password1", null, null, null));
+        parents.myChildren(Fixtures.principal(Role.PARENT));
+    }
+
+    @Test
+    void examsAttendanceFinanceNotices() {
+        AllocationController allocations = new AllocationController(allocationService, tenantResolver);
+        allocations.list(1L, null);
+        allocations.create(new AllocationRequest(1L, 1L, 1L, 1L, 1L));
+        allocations.delete(1L);
+
+        TimetableController timetable = new TimetableController(timetableService, tenantResolver);
+        timetable.bySection(1L);
+        timetable.byTeacher(1L);
+        timetable.create(new TimetableRequest(1L, 1L, 1L, 1L, DayOfWeek.MONDAY,
+                LocalTime.of(8, 0), LocalTime.of(9, 0), "R"));
+        timetable.delete(1L);
+
+        ExamController exams = new ExamController(examService, tenantResolver);
+        exams.list(null);
+        exams.create(new ExamRequest(1L, 1L, "Mid", ExamType.MIDTERM, LocalDate.now(), LocalDate.now().plusDays(1)));
+        exams.publish(1L, true);
+        exams.subjects(1L);
+        exams.addSubject(1L, new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null));
+
+        GradeController grades = new GradeController(gradeService, tenantResolver);
+        grades.byExam(1L);
+        grades.record(Fixtures.principal(Role.TEACHER), new GradeRequest(1L, 1L, 1L, BigDecimal.TEN, null));
+
+        AttendanceController attendance = new AttendanceController(attendanceService, studentService, tenantResolver);
+        when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
+        attendance.markStudents(Fixtures.principal(Role.TEACHER), new MarkStudentAttendanceRequest(1L, LocalDate.now(), List.of()));
+        attendance.markTeachers(Fixtures.principal(Role.ADMIN), new MarkTeacherAttendanceRequest(LocalDate.now(), List.of()));
+        attendance.dailyStudents(1L, LocalDate.now());
+        attendance.dailyTeachers(LocalDate.now());
+        attendance.studentSummary(1L, LocalDate.now(), LocalDate.now());
+        attendance.mySummary(Fixtures.principal(Role.STUDENT), LocalDate.now(), LocalDate.now());
+
+        FeeController fees = new FeeController(financeService, tenantResolver);
+        fees.list(1L);
+        fees.create(new FeeStructureRequest(1L, 1L, "T", FeeType.TUITION, FeeFrequency.TERM, BigDecimal.TEN, null));
+
+        InvoiceController invoices = new InvoiceController(financeService, studentService, tenantResolver);
+        when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
+        when(financeService.outstandingBalance(1L, 1L)).thenReturn(BigDecimal.TEN);
+        invoices.list(PageRequest.of(0, 10));
+        invoices.generate(new GenerateInvoicesRequest(1L, 1L, List.of(1L), null));
+        invoices.get(1L);
+        invoices.byStudent(1L);
+        assertThat(invoices.balance(1L)).containsEntry("outstanding", BigDecimal.TEN);
+        invoices.mine(Fixtures.principal(Role.STUDENT));
+
+        PaymentController payments = new PaymentController(financeService, tenantResolver);
+        payments.record(Fixtures.principal(Role.ADMIN), new RecordPaymentRequest(1L, BigDecimal.ONE, PaymentMethod.CASH, null));
+        payments.get(1L);
+        payments.byInvoice(1L);
+
+        NoticeController notices = new NoticeController(noticeService, tenantResolver);
+        NoticeRequest noticeReq = new NoticeRequest("T", "C", NoticeAudience.ALL, null, true, null, null);
+        notices.list(Fixtures.principal(Role.ADMIN));
+        notices.list(Fixtures.principal(Role.SUPER_ADMIN));
+        notices.list(Fixtures.principal(Role.STUDENT));
+        notices.create(Fixtures.principal(Role.ADMIN), noticeReq);
+        notices.update(1L, noticeReq);
+        verify(noticeService).listForAudience(eq(1L), eq(Role.STUDENT));
+    }
+}

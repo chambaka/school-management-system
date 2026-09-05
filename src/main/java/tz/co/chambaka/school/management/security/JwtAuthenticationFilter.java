@@ -1,0 +1,77 @@
+package tz.co.chambaka.school.management.security;
+
+import tz.co.chambaka.school.management.logging.RequestContext;
+import tz.co.chambaka.school.management.logging.RequestMdc;
+import tz.co.chambaka.school.management.tenant.TenantContext;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
+
+    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+        this.jwtService = jwtService;
+        this.userDetailsService = userDetailsService;
+    }
+
+    @Override
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
+    ) throws ServletException, IOException {
+        try {
+            String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+            if (header != null && header.startsWith("Bearer ")) {
+                String token = header.substring(7);
+                Claims claims = jwtService.parse(token);
+                String email = claims.get("email", String.class);
+                if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    var userDetails = userDetailsService.loadUserByUsername(email);
+                    if (userDetails instanceof UserPrincipal principal && userDetails.isEnabled()) {
+                        var authentication = new UsernamePasswordAuthenticationToken(
+                                principal, null, principal.getAuthorities());
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        TenantContext.setSchoolId(principal.getSchoolId());
+                        RequestMdc.putActor(principal);
+                        log.debug("Authenticated userId={} role={} schoolId={}",
+                                principal.getId(), principal.getRole(), principal.getSchoolId());
+                    }
+                }
+            }
+            filterChain.doFilter(request, response);
+        } catch (JwtException ex) {
+            log.warn("Rejected JWT: {}", ex.getMessage());
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            String correctionId = RequestContext.getCorrectionId();
+            String cidJson = correctionId == null ? "" : ",\"correctionId\":\"" + correctionId + "\"";
+            response.getWriter().write(
+                    "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Invalid or expired token\"" + cidJson + "}");
+        } finally {
+            TenantContext.clear();
+        }
+    }
+}

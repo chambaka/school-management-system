@@ -1,0 +1,23 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: sms-mysql
+    restart: unless-stopped
+    ports:
+      - "3310:3306"
+    environment:
+      MYSQL_DATABASE: school_sms
+      MYSQL_USER: sms
+      MYSQL_PASSWORD: sms
+      MYSQL_ROOT_PASSWORD: root
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=caching_sha2_password
+    volumes:
+      - sms_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-usms", "-psms"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  sms_mysql_data:
