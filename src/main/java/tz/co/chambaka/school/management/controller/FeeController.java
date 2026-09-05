@@ -32,14 +32,14 @@ public class FeeController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public List<FeeStructureResponse> list(@RequestParam Long academicYearId) {
         return financeService.listFees(tenantResolver.requireSchoolId(), academicYearId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public FeeStructureResponse create(@Valid @RequestBody FeeStructureRequest request) {
         return financeService.createFee(tenantResolver.requireSchoolId(), request);
     }

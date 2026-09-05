@@ -54,10 +54,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 principal, null, principal.getAuthorities());
                         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authentication);
+                        TenantContext.setTenantId(principal.getTenantId());
                         TenantContext.setSchoolId(principal.getSchoolId());
+                        TenantContext.setCampusId(principal.getCampusId());
                         RequestMdc.putActor(principal);
-                        log.debug("Authenticated userId={} role={} schoolId={}",
-                                principal.getId(), principal.getRole(), principal.getSchoolId());
+                        log.debug("Authenticated userId={} role={} tenantId={} schoolId={} campusId={}",
+                                principal.getId(), principal.getRole(), principal.getTenantId(),
+                                principal.getSchoolId(), principal.getCampusId());
                     }
                 }
             }

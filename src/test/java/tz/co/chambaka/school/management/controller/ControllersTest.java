@@ -12,16 +12,26 @@ import tz.co.chambaka.school.management.dto.academic.TimetableRequest;
 import tz.co.chambaka.school.management.dto.attendance.MarkStudentAttendanceRequest;
 import tz.co.chambaka.school.management.dto.attendance.MarkTeacherAttendanceRequest;
 import tz.co.chambaka.school.management.dto.auth.ChangePasswordRequest;
+import tz.co.chambaka.school.management.dto.auth.ForgotPasswordRequest;
+import tz.co.chambaka.school.management.dto.auth.ForgotPasswordResponse;
 import tz.co.chambaka.school.management.dto.auth.LoginRequest;
 import tz.co.chambaka.school.management.dto.auth.RefreshTokenRequest;
 import tz.co.chambaka.school.management.dto.auth.RegisterSchoolRequest;
+import tz.co.chambaka.school.management.dto.auth.ResetPasswordRequest;
+import tz.co.chambaka.school.management.dto.auth.VerifyResetCodeRequest;
+import tz.co.chambaka.school.management.dto.auth.VerifyResetCodeResponse;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureRequest;
 import tz.co.chambaka.school.management.dto.finance.GenerateInvoicesRequest;
 import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
 import tz.co.chambaka.school.management.dto.notice.NoticeRequest;
 import tz.co.chambaka.school.management.dto.parent.CreateParentRequest;
 import tz.co.chambaka.school.management.dto.parent.LinkParentRequest;
+import tz.co.chambaka.school.management.dto.campus.CreateCampusRequest;
+import tz.co.chambaka.school.management.dto.campus.UpdateCampusRequest;
+import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.UpdateSchoolRequest;
+import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
+import tz.co.chambaka.school.management.dto.tenant.UpdateTenantRequest;
 import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
 import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
 import tz.co.chambaka.school.management.dto.teacher.CreateTeacherRequest;
@@ -47,7 +57,10 @@ import tz.co.chambaka.school.management.service.FinanceService;
 import tz.co.chambaka.school.management.service.GradeService;
 import tz.co.chambaka.school.management.service.NoticeService;
 import tz.co.chambaka.school.management.service.ParentService;
+import tz.co.chambaka.school.management.service.PasswordResetService;
+import tz.co.chambaka.school.management.service.CampusService;
 import tz.co.chambaka.school.management.service.SchoolService;
+import tz.co.chambaka.school.management.service.TenantService;
 import tz.co.chambaka.school.management.service.SectionService;
 import tz.co.chambaka.school.management.service.StudentService;
 import tz.co.chambaka.school.management.service.SubjectService;
@@ -82,7 +95,13 @@ class ControllersTest {
     @Mock
     private AuthService authService;
     @Mock
+    private PasswordResetService passwordResetService;
+    @Mock
     private SchoolService schoolService;
+    @Mock
+    private TenantService tenantService;
+    @Mock
+    private CampusService campusService;
     @Mock
     private AcademicYearService academicYearService;
     @Mock
@@ -117,18 +136,31 @@ class ControllersTest {
     @BeforeEach
     void tenant() {
         org.mockito.Mockito.lenient().when(tenantResolver.requireSchoolId()).thenReturn(1L);
+        org.mockito.Mockito.lenient().when(tenantResolver.requireTenantId()).thenReturn(10L);
+        org.mockito.Mockito.lenient().when(tenantResolver.resolve(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(1L);
     }
 
     @Test
     void authAndBrandingAndSchool() {
-        AuthController auth = new AuthController(authService);
+        AuthController auth = new AuthController(authService, passwordResetService);
         auth.login(new LoginRequest("a@b.com", "pw"));
-        auth.registerSchool(new RegisterSchoolRequest("S", "a@b.com", "password1", "A", null, null, null, null));
+        auth.registerSchool(new RegisterSchoolRequest("S", "a@b.com", "HaloCampus1!", "A", null, null, null, null, "Org", "Main"));
         auth.refresh(new RefreshTokenRequest("rt"));
         UserPrincipal admin = Fixtures.principal(Role.ADMIN);
+        auth.switchSchool(admin, new tz.co.chambaka.school.management.dto.auth.SwitchSchoolRequest(1L, 20L));
         auth.me(admin);
-        auth.changePassword(admin, new ChangePasswordRequest("old", "newpass12"));
+        auth.changePassword(admin, new ChangePasswordRequest("old", "HaloCampus1!"));
+        when(passwordResetService.requestReset(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new ForgotPasswordResponse("ok", "a***@b.com", 1800, "123456"));
+        when(passwordResetService.verifyCode(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new VerifyResetCodeResponse("sess", 1800));
+        assertThat(auth.passwordRules().minLength()).isEqualTo(10);
+        auth.forgotPassword(new ForgotPasswordRequest("a@b.com"));
+        auth.verifyResetCode(new VerifyResetCodeRequest("a@b.com", "123456"));
+        auth.resetPassword(new ResetPasswordRequest("sess", "HaloCampus1!"));
         verify(authService).me(10L);
+        verify(passwordResetService).resetPassword(org.mockito.ArgumentMatchers.any());
 
         BrandingController branding = new BrandingController(schoolService);
         branding.bySlug("chambaka");
@@ -269,9 +301,32 @@ class ControllersTest {
         NoticeRequest noticeReq = new NoticeRequest("T", "C", NoticeAudience.ALL, null, true, null, null);
         notices.list(Fixtures.principal(Role.ADMIN));
         notices.list(Fixtures.principal(Role.SUPER_ADMIN));
+        notices.list(Fixtures.principal(Role.TENANT_ADMIN));
         notices.list(Fixtures.principal(Role.STUDENT));
         notices.create(Fixtures.principal(Role.ADMIN), noticeReq);
         notices.update(1L, noticeReq);
         verify(noticeService).listForAudience(eq(1L), eq(Role.STUDENT));
+
+        TenantController tenants = new TenantController(tenantService, campusService, tenantResolver);
+        tenants.listAll();
+        tenants.create(new CreateTenantRequest("Org", null, null, null, null, null));
+        tenants.get(10L);
+        tenants.update(10L, new UpdateTenantRequest(null, null, null, null, null, null, null, null));
+        tenants.platformSchools(10L);
+        tenants.platformAddSchool(10L, new CreateSchoolRequest("S", "Main", null, null, null, null, null));
+        tenants.current();
+        tenants.currentSchools();
+        tenants.addSchool(new CreateSchoolRequest("S2", null, null, null, null, null, null));
+        tenants.currentCampuses();
+        tenants.schoolCampuses(1L, Fixtures.principal(Role.TENANT_ADMIN));
+        verify(tenantService).list();
+
+        CampusController campuses = new CampusController(campusService, tenantService, tenantResolver);
+        UserPrincipal tenantAdmin = Fixtures.principal(Role.TENANT_ADMIN);
+        campuses.list(null, tenantAdmin);
+        campuses.create(null, new CreateCampusRequest("East", "EAST", null, null, null, null, false), tenantAdmin);
+        campuses.update(20L, null, new UpdateCampusRequest("East", null, null, null, null, null, null), tenantAdmin);
+        campuses.delete(20L, null, tenantAdmin);
+        verify(campusService, times(2)).listBySchool(1L);
     }
 }

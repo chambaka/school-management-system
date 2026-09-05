@@ -6,7 +6,9 @@ import org.slf4j.MDC;
 public final class RequestMdc {
 
     public static final String CORRECTION_ID = "correctionId";
+    public static final String TENANT_ID = "tenantId";
     public static final String SCHOOL_ID = "schoolId";
+    public static final String CAMPUS_ID = "campusId";
     public static final String USER_ID = "userId";
     public static final String USER_EMAIL = "userEmail";
     public static final String ROLE = "role";
@@ -23,7 +25,9 @@ public final class RequestMdc {
             return;
         }
         put(USER_ID, principal.getId() == null ? null : String.valueOf(principal.getId()));
+        put(TENANT_ID, principal.getTenantId() == null ? null : String.valueOf(principal.getTenantId()));
         put(SCHOOL_ID, principal.getSchoolId() == null ? null : String.valueOf(principal.getSchoolId()));
+        put(CAMPUS_ID, principal.getCampusId() == null ? null : String.valueOf(principal.getCampusId()));
         put(USER_EMAIL, principal.getEmail());
         put(ROLE, principal.getRole() == null ? null : principal.getRole().name());
     }

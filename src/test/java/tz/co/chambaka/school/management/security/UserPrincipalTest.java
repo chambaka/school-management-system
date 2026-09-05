@@ -14,7 +14,9 @@ class UserPrincipalTest {
         User user = Fixtures.user(2L, Role.TEACHER);
         UserPrincipal principal = new UserPrincipal(user);
         assertThat(principal.getId()).isEqualTo(2L);
+        assertThat(principal.getTenantId()).isEqualTo(10L);
         assertThat(principal.getSchoolId()).isEqualTo(1L);
+        assertThat(principal.getCampusId()).isEqualTo(20L);
         assertThat(principal.getUsername()).isEqualTo(user.getEmail());
         assertThat(principal.getPassword()).isEqualTo("hashed");
         assertThat(principal.getRole()).isEqualTo(Role.TEACHER);

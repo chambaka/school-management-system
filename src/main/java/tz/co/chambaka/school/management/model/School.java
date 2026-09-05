@@ -17,6 +17,9 @@ import java.time.Instant;
 @Table(name = "schools")
 public class School extends BaseEntity {
 
+    @Column(name = "tenant_id", nullable = false)
+    private Long tenantId;
+
     @Column(nullable = false, length = 150)
     private String name;
 

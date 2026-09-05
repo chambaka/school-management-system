@@ -14,7 +14,9 @@ import java.util.List;
 public class UserPrincipal implements UserDetails {
 
     private final Long id;
+    private final Long tenantId;
     private final Long schoolId;
+    private final Long campusId;
     private final String email;
     private final String password;
     private final Role role;
@@ -23,7 +25,9 @@ public class UserPrincipal implements UserDetails {
 
     public UserPrincipal(User user) {
         this.id = user.getId();
+        this.tenantId = user.getTenantId();
         this.schoolId = user.getSchoolId();
+        this.campusId = user.getCampusId();
         this.email = user.getEmail();
         this.password = user.getPassword();
         this.role = user.getRole();

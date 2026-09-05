@@ -27,6 +27,7 @@ public final class AuditPathClassifier {
 
     public static AuditScope scope(String path, Role role, AuditAction action) {
         if (action == AuditAction.REGISTER_SCHOOL
+                || action == AuditAction.REGISTER_TENANT
                 || (path != null && path.startsWith("/api/v1/platform/"))
                 || role == Role.SUPER_ADMIN) {
             return AuditScope.PLATFORM;
@@ -105,6 +106,8 @@ public final class AuditPathClassifier {
     private static String toSingularType(String segment) {
         return switch (segment) {
             case "schools" -> "School";
+            case "tenants" -> "Tenant";
+            case "campuses" -> "Campus";
             case "students" -> "Student";
             case "teachers" -> "Teacher";
             case "parents" -> "Parent";

@@ -34,20 +34,20 @@ public class ClassController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public List<SchoolClassResponse> list(@RequestParam(required = false) Long academicYearId) {
         return classService.list(tenantResolver.requireSchoolId(), academicYearId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public SchoolClassResponse create(@Valid @RequestBody SchoolClassRequest request) {
         return classService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public SchoolClassResponse update(@PathVariable Long id, @Valid @RequestBody SchoolClassRequest request) {
         return classService.update(tenantResolver.requireSchoolId(), id, request);
     }

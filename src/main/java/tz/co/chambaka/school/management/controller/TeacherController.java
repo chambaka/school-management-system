@@ -36,7 +36,7 @@ public class TeacherController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public PageResponse<TeacherResponse> list(Pageable pageable) {
         return teacherService.list(tenantResolver.requireSchoolId(), pageable);
     }
@@ -48,20 +48,20 @@ public class TeacherController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public TeacherResponse get(@PathVariable Long id) {
         return teacherService.get(tenantResolver.requireSchoolId(), id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public TeacherResponse create(@Valid @RequestBody CreateTeacherRequest request) {
         return teacherService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public TeacherResponse update(@PathVariable Long id, @Valid @RequestBody UpdateTeacherRequest request) {
         return teacherService.update(tenantResolver.requireSchoolId(), id, request);
     }

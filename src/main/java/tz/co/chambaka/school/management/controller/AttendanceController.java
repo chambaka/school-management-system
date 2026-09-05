@@ -45,7 +45,7 @@ public class AttendanceController {
     }
 
     @PostMapping("/students")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public List<StudentAttendanceResponse> markStudents(
             @CurrentUser UserPrincipal principal,
             @Valid @RequestBody MarkStudentAttendanceRequest request
@@ -54,7 +54,7 @@ public class AttendanceController {
     }
 
     @PostMapping("/teachers")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public List<TeacherAttendanceResponse> markTeachers(
             @CurrentUser UserPrincipal principal,
             @Valid @RequestBody MarkTeacherAttendanceRequest request
@@ -63,7 +63,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/students/daily")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public List<StudentAttendanceResponse> dailyStudents(
             @RequestParam Long sectionId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
@@ -72,7 +72,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/teachers/daily")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public List<TeacherAttendanceResponse> dailyTeachers(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
@@ -80,7 +80,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/students/{studentId}/summary")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public AttendanceSummaryResponse studentSummary(
             @PathVariable Long studentId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,

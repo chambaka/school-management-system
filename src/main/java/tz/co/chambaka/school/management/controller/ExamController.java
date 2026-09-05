@@ -35,33 +35,33 @@ public class ExamController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT','PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','STUDENT','PARENT')")
     public List<ExamResponse> list(@RequestParam(required = false) Long academicYearId) {
         return examService.list(tenantResolver.requireSchoolId(), academicYearId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public ExamResponse create(@Valid @RequestBody ExamRequest request) {
         return examService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PostMapping("/{id}/publish")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public ExamResponse publish(@PathVariable Long id, @RequestParam boolean published) {
         return examService.publish(tenantResolver.requireSchoolId(), id, published);
     }
 
     @GetMapping("/{id}/subjects")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public List<ExamSubjectResponse> subjects(@PathVariable Long id) {
         return examService.listSubjects(tenantResolver.requireSchoolId(), id);
     }
 
     @PostMapping("/{id}/subjects")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public ExamSubjectResponse addSubject(@PathVariable Long id, @Valid @RequestBody ExamSubjectRequest request) {
         return examService.addSubject(tenantResolver.requireSchoolId(), id, request);
     }

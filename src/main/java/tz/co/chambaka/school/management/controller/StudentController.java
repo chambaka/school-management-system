@@ -53,7 +53,7 @@ public class StudentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public PageResponse<StudentResponse> list(@RequestParam(required = false) Long classId, Pageable pageable) {
         return studentService.list(tenantResolver.requireSchoolId(), classId, pageable);
     }
@@ -65,39 +65,39 @@ public class StudentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public StudentResponse get(@PathVariable Long id) {
         return studentService.get(tenantResolver.requireSchoolId(), id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public StudentResponse create(@Valid @RequestBody CreateStudentRequest request) {
         return studentService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public StudentResponse update(@PathVariable Long id, @Valid @RequestBody UpdateStudentRequest request) {
         return studentService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @PostMapping("/{id}/parents")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public StudentParentResponse linkParent(@PathVariable Long id, @Valid @RequestBody LinkParentRequest request) {
         return parentService.link(tenantResolver.requireSchoolId(), id, request);
     }
 
     @GetMapping("/{id}/parents")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public List<StudentParentResponse> parents(@PathVariable Long id) {
         return parentService.listByStudent(tenantResolver.requireSchoolId(), id);
     }
 
     @GetMapping("/{id}/report-card")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','PARENT')")
     public ReportCardResponse reportCard(
             @CurrentUser UserPrincipal principal,
             @PathVariable Long id,

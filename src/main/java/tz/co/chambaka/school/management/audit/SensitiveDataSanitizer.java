@@ -8,13 +8,14 @@ public final class SensitiveDataSanitizer {
 
     private static final Set<String> SENSITIVE_KEYS = Set.of(
             "password", "currentpassword", "newpassword", "oldpassword",
-            "refreshtoken", "accesstoken", "token", "secret", "authorization"
+            "refreshtoken", "accesstoken", "resettoken", "token", "secret",
+            "authorization", "debugcode"
     );
 
     private static final Pattern JSON_SECRET = Pattern.compile(
-            "(?i)(\"(?:password|currentPassword|newPassword|oldPassword|refreshToken|accessToken|token|secret)\"\\s*:\\s*\")([^\"]*)(\")");
+            "(?i)(\"(?:password|currentPassword|newPassword|oldPassword|refreshToken|accessToken|resetToken|token|secret|debugCode)\"\\s*:\\s*\")([^\"]*)(\")");
     private static final Pattern FORM_SECRET = Pattern.compile(
-            "(?i)((?:password|currentPassword|newPassword|refreshToken|token)=)([^&]*)");
+            "(?i)((?:password|currentPassword|newPassword|refreshToken|resetToken|token)=)([^&]*)");
 
     private SensitiveDataSanitizer() {
     }

@@ -33,20 +33,20 @@ public class SubjectController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public List<SubjectResponse> list() {
         return subjectService.list(tenantResolver.requireSchoolId());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public SubjectResponse create(@Valid @RequestBody SubjectRequest request) {
         return subjectService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public SubjectResponse update(@PathVariable Long id, @Valid @RequestBody SubjectRequest request) {
         return subjectService.update(tenantResolver.requireSchoolId(), id, request);
     }

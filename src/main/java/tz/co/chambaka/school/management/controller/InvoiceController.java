@@ -45,32 +45,32 @@ public class InvoiceController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public PageResponse<InvoiceResponse> list(Pageable pageable) {
         return financeService.listInvoices(tenantResolver.requireSchoolId(), pageable);
     }
 
     @PostMapping("/generate")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public List<InvoiceResponse> generate(@Valid @RequestBody GenerateInvoicesRequest request) {
         return financeService.generateInvoices(tenantResolver.requireSchoolId(), request);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','PARENT','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT','STUDENT')")
     public InvoiceResponse get(@PathVariable Long id) {
         return financeService.getInvoice(tenantResolver.requireSchoolId(), id);
     }
 
     @GetMapping("/students/{studentId}")
-    @PreAuthorize("hasAnyRole('ADMIN','PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT')")
     public List<InvoiceResponse> byStudent(@PathVariable Long studentId) {
         return financeService.studentInvoices(tenantResolver.requireSchoolId(), studentId);
     }
 
     @GetMapping("/students/{studentId}/balance")
-    @PreAuthorize("hasAnyRole('ADMIN','PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT')")
     public Map<String, BigDecimal> balance(@PathVariable Long studentId) {
         return Map.of("outstanding", financeService.outstandingBalance(tenantResolver.requireSchoolId(), studentId));
     }

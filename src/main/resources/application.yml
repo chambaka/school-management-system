@@ -54,3 +54,6 @@ sms:
     email: ${SMS_SUPER_ADMIN_EMAIL:oscar.d@example.net}
     password: ${SMS_SUPER_ADMIN_PASSWORD:ChangeMe123!}
     name: ${SMS_SUPER_ADMIN_NAME:Platform Admin}
+  password-reset:
+    ttl: ${SMS_PASSWORD_RESET_TTL:PT30M}
+    include-debug-code: ${SMS_PASSWORD_RESET_DEBUG:false}

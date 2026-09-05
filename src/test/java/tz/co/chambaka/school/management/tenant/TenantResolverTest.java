@@ -56,4 +56,28 @@ class TenantResolverTest {
     void schoolUserUsesOwnTenant() {
         assertThat(resolver.resolve(999L, Fixtures.principal(Role.ADMIN))).isEqualTo(1L);
     }
+
+    @Test
+    void requireTenantId() {
+        TenantContext.setTenantId(10L);
+        assertThat(resolver.requireTenantId()).isEqualTo(10L);
+    }
+
+    @Test
+    void requireTenantIdMissing() {
+        assertThatThrownBy(resolver::requireTenantId)
+                .isInstanceOf(ApiException.class)
+                .extracting(ex -> ((ApiException) ex).getStatus())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void tenantAdminCanRequestSchool() {
+        assertThat(resolver.resolve(99L, Fixtures.principal(Role.TENANT_ADMIN))).isEqualTo(99L);
+    }
+
+    @Test
+    void tenantAdminFallsBackToHomeSchool() {
+        assertThat(resolver.resolve(null, Fixtures.principal(Role.TENANT_ADMIN))).isEqualTo(1L);
+    }
 }

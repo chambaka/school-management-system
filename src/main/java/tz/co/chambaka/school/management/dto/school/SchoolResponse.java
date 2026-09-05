@@ -6,6 +6,7 @@ import java.time.Instant;
 
 public record SchoolResponse(
         Long id,
+        Long tenantId,
         String name,
         String slug,
         String email,

@@ -138,7 +138,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register-school \
     "schoolName": "Chambaka Secondary",
     "adminName": "School Admin",
     "adminEmail": "yuki.t@example.com",
-    "password": "ChangeMe123!",
+    "password": "HaloCampus1!",
     "currency": "TZS",
     "timezone": "Africa/Dar_es_Salaam",
     "country": "Tanzania"
@@ -194,6 +194,8 @@ Profiles:
 | `SMS_SUPER_ADMIN_EMAIL` | `oscar.d@example.net` | yes | Seeded only if no `SUPER_ADMIN` exists |
 | `SMS_SUPER_ADMIN_PASSWORD` | `ChangeMe123!` | yes | Seeded only if no `SUPER_ADMIN` exists |
 | `SMS_SUPER_ADMIN_NAME` | `Platform Admin` | no | Display name for the seed account |
+| `SMS_PASSWORD_RESET_TTL` | `PT30M` | no | Forgot-password code lifetime |
+| `SMS_PASSWORD_RESET_DEBUG` | `false` (`true` in `dev`) | no | Include `debugCode` in forgot-password responses |
 
 ---
 
@@ -224,6 +226,22 @@ Full method-level docs live in Swagger. Typical flow:
 7. Publish notices
 8. Trace a change with the `X-Correction-Id` response header and the audit APIs
 
+### Forgot password
+
+Three public steps, matching the Halo reset screens. The API never says whether the email exists.
+
+1. `POST /api/v1/auth/forgot-password` `{ "email": "yuki.t@example.com" }` — generic message, masked email, 30-minute expiry. In `dev`, the JSON also includes `debugCode`.
+2. `POST /api/v1/auth/forgot-password/verify` `{ "email": "...", "code": "123456" }` — returns `resetToken`.
+3. `POST /api/v1/auth/reset-password` `{ "resetToken": "...", "newPassword": "HaloCampus1!" }` — revokes refresh tokens.
+
+`GET /api/v1/auth/password-rules` returns the Nexus meter rules (10+ characters, upper, lower, digit, special `!@#$%^&*`, not the email/name, not a common password). The same policy is enforced on register, change-password, and reset.
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/forgot-password \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"yuki.t@example.com"}'
+```
+
 ---
 
 ## Logging and audit trail
@@ -243,7 +261,7 @@ Valid incoming IDs are 8–64 characters of `A–Z`, `a–z`, `0–9`, `.`, `_`,
 curl -i http://localhost:8080/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -H 'X-Correction-Id: support-ticket-1042' \
-  -d '{"email":"yuki.t@example.com","password":"ChangeMe123!"}'
+  -d '{"email":"yuki.t@example.com","password":"HaloCampus1!"}'
 ```
 
 Look for `X-Correction-Id` in the response, then search journal logs or the audit APIs for that value.

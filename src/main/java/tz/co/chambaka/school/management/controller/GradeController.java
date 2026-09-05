@@ -34,14 +34,14 @@ public class GradeController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public List<GradeResponse> byExam(@RequestParam Long examId) {
         return gradeService.byExam(tenantResolver.requireSchoolId(), examId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public GradeResponse record(@CurrentUser UserPrincipal principal, @Valid @RequestBody GradeRequest request) {
         return gradeService.record(tenantResolver.requireSchoolId(), request, principal.getId());
     }

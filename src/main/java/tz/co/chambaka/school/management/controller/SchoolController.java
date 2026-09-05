@@ -38,13 +38,13 @@ public class SchoolController {
     }
 
     @GetMapping("/schools/current")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT','PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','STUDENT','PARENT')")
     public SchoolResponse current(@CurrentUser UserPrincipal principal) {
         return schoolService.get(tenantResolver.requireSchoolId());
     }
 
     @PutMapping("/schools/current")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public SchoolResponse updateCurrent(@Valid @RequestBody UpdateSchoolRequest request) {
         return schoolService.update(tenantResolver.requireSchoolId(), request);
     }

@@ -36,14 +36,14 @@ public class ParentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public PageResponse<ParentResponse> list(Pageable pageable) {
         return parentService.list(tenantResolver.requireSchoolId(), pageable);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public ParentResponse create(@Valid @RequestBody CreateParentRequest request) {
         return parentService.create(tenantResolver.requireSchoolId(), request);
     }

@@ -34,27 +34,27 @@ public class TimetableController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','STUDENT')")
     public List<TimetableResponse> bySection(@RequestParam Long sectionId) {
         return timetableService.bySection(tenantResolver.requireSchoolId(), sectionId);
     }
 
     @GetMapping("/teacher/{teacherId}")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public List<TimetableResponse> byTeacher(@PathVariable Long teacherId) {
         return timetableService.byTeacher(tenantResolver.requireSchoolId(), teacherId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public TimetableResponse create(@Valid @RequestBody TimetableRequest request) {
         return timetableService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public void delete(@PathVariable Long id) {
         timetableService.delete(tenantResolver.requireSchoolId(), id);
     }

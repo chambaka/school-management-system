@@ -14,7 +14,11 @@ class SensitiveDataSanitizerTest {
                 .contains("***")
                 .doesNotContain("secret");
         assertThat(SensitiveDataSanitizer.sanitize("password=hunter2&x=1")).doesNotContain("hunter2");
+        assertThat(SensitiveDataSanitizer.sanitize("{\"resetToken\":\"sess\",\"debugCode\":\"123456\"}"))
+                .doesNotContain("sess")
+                .doesNotContain("123456");
         assertThat(SensitiveDataSanitizer.isSensitiveKey("refresh_token")).isTrue();
+        assertThat(SensitiveDataSanitizer.isSensitiveKey("resetToken")).isTrue();
         assertThat(SensitiveDataSanitizer.isSensitiveKey("email")).isFalse();
         assertThat(SensitiveDataSanitizer.isSensitiveKey(null)).isFalse();
         assertThat(SensitiveDataSanitizer.truncate("abc", 10)).isEqualTo("abc");

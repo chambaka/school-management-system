@@ -2,9 +2,12 @@ package tz.co.chambaka.school.management.support;
 
 import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.dto.auth.UserProfileResponse;
+import tz.co.chambaka.school.management.dto.campus.CampusResponse;
 import tz.co.chambaka.school.management.dto.school.BrandingResponse;
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
+import tz.co.chambaka.school.management.dto.tenant.TenantResponse;
 import tz.co.chambaka.school.management.model.AcademicYear;
+import tz.co.chambaka.school.management.model.Campus;
 import tz.co.chambaka.school.management.model.Exam;
 import tz.co.chambaka.school.management.model.ExamSubject;
 import tz.co.chambaka.school.management.model.Parent;
@@ -14,11 +17,13 @@ import tz.co.chambaka.school.management.model.Section;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.Subject;
 import tz.co.chambaka.school.management.model.Teacher;
+import tz.co.chambaka.school.management.model.Tenant;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.ExamType;
 import tz.co.chambaka.school.management.model.enums.Gender;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.model.enums.SchoolStatus;
+import tz.co.chambaka.school.management.model.enums.TenantStatus;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 
 import java.math.BigDecimal;
@@ -28,7 +33,9 @@ import java.util.List;
 
 public final class Fixtures {
 
+    public static final Long TENANT_ID = 10L;
     public static final Long SCHOOL_ID = 1L;
+    public static final Long CAMPUS_ID = 20L;
 
     private Fixtures() {
     }
@@ -43,8 +50,11 @@ public final class Fixtures {
     }
 
     public static User user(Long id, Role role) {
+        boolean platform = role == Role.SUPER_ADMIN;
         User user = User.builder()
-                .schoolId(role == Role.SUPER_ADMIN ? null : SCHOOL_ID)
+                .tenantId(platform ? null : TENANT_ID)
+                .schoolId(platform ? null : SCHOOL_ID)
+                .campusId(platform ? null : CAMPUS_ID)
                 .name("User " + role)
                 .email(role.name().toLowerCase() + "@example.com")
                 .password("hashed")
@@ -60,9 +70,45 @@ public final class Fixtures {
         return new UserPrincipal(user(10L, role));
     }
 
+    public static Tenant tenant() {
+        Tenant tenant = new Tenant();
+        tenant.setId(TENANT_ID);
+        tenant.setName("Chambaka Group");
+        tenant.setSlug("chambaka-group");
+        tenant.setEmail("org@example.com");
+        tenant.setStatus(TenantStatus.ACTIVE);
+        tenant.setTimezone("Africa/Dar_es_Salaam");
+        tenant.setCurrency("TZS");
+        return tenant;
+    }
+
+    public static Campus campus() {
+        Campus campus = new Campus();
+        campus.setId(CAMPUS_ID);
+        campus.setTenantId(TENANT_ID);
+        campus.setSchoolId(SCHOOL_ID);
+        campus.setName("Main campus");
+        campus.setCode("MAIN");
+        campus.setPrimaryCampus(true);
+        campus.setTimezone("Africa/Dar_es_Salaam");
+        return campus;
+    }
+
+    public static TenantResponse tenantResponse() {
+        return new TenantResponse(
+                TENANT_ID, "Chambaka Group", "chambaka-group", "org@example.com", null, "TZ",
+                "Africa/Dar_es_Salaam", "TZS", TenantStatus.ACTIVE, "STARTER", null, 1);
+    }
+
+    public static CampusResponse campusResponse() {
+        return new CampusResponse(CAMPUS_ID, TENANT_ID, SCHOOL_ID, "Main campus", "MAIN",
+                null, null, null, "Africa/Dar_es_Salaam", true);
+    }
+
     public static School school() {
         School school = new School();
         school.setId(SCHOOL_ID);
+        school.setTenantId(TENANT_ID);
         school.setName("Chambaka Secondary");
         school.setSlug("chambaka-secondary");
         school.setEmail("school@example.com");
@@ -74,7 +120,7 @@ public final class Fixtures {
 
     public static SchoolResponse schoolResponse() {
         return new SchoolResponse(
-                SCHOOL_ID, "Chambaka", "chambaka", "a@b.com", null, null, null, null, null,
+                SCHOOL_ID, TENANT_ID, "Chambaka", "chambaka", "a@b.com", null, null, null, null, null,
                 "#000", "#111", "#222", null, "Africa/Dar_es_Salaam", "en", "TZS", "TZ",
                 SchoolStatus.ACTIVE, "STARTER", null, true, true, true);
     }
@@ -85,8 +131,8 @@ public final class Fixtures {
     }
 
     public static UserProfileResponse profile(User user) {
-        return new UserProfileResponse(user.getId(), user.getSchoolId(), user.getName(),
-                user.getEmail(), user.getRole(), user.getPhone(), user.getAvatarUrl(), user.isEnabled());
+        return new UserProfileResponse(user.getId(), user.getTenantId(), user.getSchoolId(), user.getCampusId(),
+                user.getName(), user.getEmail(), user.getRole(), user.getPhone(), user.getAvatarUrl(), user.isEnabled());
     }
 
     public static AcademicYear year() {

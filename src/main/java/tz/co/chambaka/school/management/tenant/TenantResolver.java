@@ -17,6 +17,14 @@ public class TenantResolver {
         return schoolId;
     }
 
+    public Long requireTenantId() {
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Tenant context is required");
+        }
+        return tenantId;
+    }
+
     public Long resolve(Long requestedSchoolId, UserPrincipal principal) {
         if (principal.getRole() == Role.SUPER_ADMIN) {
             if (requestedSchoolId != null) {
@@ -28,6 +36,12 @@ public class TenantResolver {
             }
             throw new ApiException(HttpStatus.BAD_REQUEST, "schoolId is required for platform administrators");
         }
-        return principal.getSchoolId();
+        if (principal.getRole() == Role.TENANT_ADMIN && requestedSchoolId != null) {
+            return requestedSchoolId;
+        }
+        if (principal.getSchoolId() != null) {
+            return principal.getSchoolId();
+        }
+        throw new ApiException(HttpStatus.FORBIDDEN, "School context is required");
     }
 }

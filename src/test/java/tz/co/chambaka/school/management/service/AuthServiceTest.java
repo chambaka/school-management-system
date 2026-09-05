@@ -4,6 +4,7 @@ import tz.co.chambaka.school.management.dto.auth.ChangePasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.LoginRequest;
 import tz.co.chambaka.school.management.dto.auth.RefreshTokenRequest;
 import tz.co.chambaka.school.management.dto.auth.RegisterSchoolRequest;
+import tz.co.chambaka.school.management.dto.auth.SwitchSchoolRequest;
 import tz.co.chambaka.school.management.exception.ApiException;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
@@ -11,11 +12,14 @@ import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.mapper.UserMapper;
 import tz.co.chambaka.school.management.model.RefreshToken;
 import tz.co.chambaka.school.management.model.School;
+import tz.co.chambaka.school.management.model.Tenant;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.model.enums.SchoolStatus;
+import tz.co.chambaka.school.management.model.enums.TenantStatus;
 import tz.co.chambaka.school.management.repository.RefreshTokenRepository;
 import tz.co.chambaka.school.management.repository.SchoolRepository;
+import tz.co.chambaka.school.management.repository.TenantRepository;
 import tz.co.chambaka.school.management.repository.UserRepository;
 import tz.co.chambaka.school.management.audit.AuditService;
 import tz.co.chambaka.school.management.model.enums.AuditAction;
@@ -40,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,6 +57,12 @@ class AuthServiceTest {
     private UserRepository userRepository;
     @Mock
     private SchoolRepository schoolRepository;
+    @Mock
+    private TenantRepository tenantRepository;
+    @Mock
+    private TenantService tenantService;
+    @Mock
+    private CampusService campusService;
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
     @Mock
@@ -71,6 +82,7 @@ class AuthServiceTest {
         User user = Fixtures.user(2L, Role.ADMIN);
         School school = Fixtures.school();
         when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        stubActiveTenant();
         when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
         stubTokens(user);
         var response = authService.login(new LoginRequest("admin@example.com", "pw"));
@@ -104,9 +116,31 @@ class AuthServiceTest {
         School school = Fixtures.school();
         school.setStatus(SchoolStatus.SUSPENDED);
         when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        stubActiveTenant();
         when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
         assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
                 .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void loginSuspendedTenant() {
+        User user = Fixtures.user(2L, Role.ADMIN);
+        Tenant tenant = Fixtures.tenant();
+        tenant.setStatus(TenantStatus.SUSPENDED);
+        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(tenantRepository.findById(Fixtures.TENANT_ID)).thenReturn(Optional.of(tenant));
+        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("Organization");
+    }
+
+    @Test
+    void loginMissingTenant() {
+        User user = Fixtures.user(2L, Role.ADMIN);
+        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(tenantRepository.findById(Fixtures.TENANT_ID)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -120,6 +154,7 @@ class AuthServiceTest {
     void loginMissingSchool() {
         User user = Fixtures.user(2L, Role.ADMIN);
         when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        stubActiveTenant();
         when(schoolRepository.findById(1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -137,44 +172,82 @@ class AuthServiceTest {
     @Test
     void registerSchool() {
         when(userRepository.existsByEmailIgnoreCase("yuki.t@example.com")).thenReturn(false);
-        when(schoolRepository.existsBySlug("chambaka-secondary")).thenReturn(true, false);
-        School saved = Fixtures.school();
-        when(schoolRepository.save(any(School.class))).thenReturn(saved);
-        when(passwordEncoder.encode("secret12")).thenReturn("enc");
-        User admin = Fixtures.user(2L, Role.ADMIN);
+        when(tenantService.provisionNewOrganization(any())).thenReturn(
+                new TenantService.ProvisionedOrganization(Fixtures.tenant(), Fixtures.school(), Fixtures.campus()));
+        when(passwordEncoder.encode("HaloCampus1!")).thenReturn("enc");
+        User admin = Fixtures.user(2L, Role.TENANT_ADMIN);
         when(userRepository.save(any(User.class))).thenReturn(admin);
         stubTokens(admin);
         var response = authService.registerSchool(new RegisterSchoolRequest(
-                "Chambaka Secondary", "yuki.t@example.com", "secret12", "Admin", "07", null, null, "TZ"));
+                "Chambaka Secondary", "yuki.t@example.com", "HaloCampus1!", "Admin", "07", null, null, "TZ",
+                "Chambaka Group", "Main campus"));
         assertThat(response.accessToken()).isEqualTo("access");
-        ArgumentCaptor<School> captor = ArgumentCaptor.forClass(School.class);
-        verify(schoolRepository).save(captor.capture());
-        assertThat(captor.getValue().getTimezone()).isEqualTo("Africa/Dar_es_Salaam");
-        assertThat(captor.getValue().getCurrency()).isEqualTo("TZS");
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertThat(captor.getValue().getRole()).isEqualTo(Role.TENANT_ADMIN);
+        assertThat(captor.getValue().getTenantId()).isEqualTo(Fixtures.TENANT_ID);
+        assertThat(captor.getValue().getCampusId()).isEqualTo(Fixtures.CAMPUS_ID);
+        verify(auditService).recordAuth(eq(AuditAction.REGISTER_TENANT), eq(admin), anyString());
     }
 
     @Test
     void registerUsesProvidedTimezoneCurrency() {
         when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(false);
-        when(schoolRepository.existsBySlug(anyString())).thenReturn(false);
-        when(schoolRepository.save(any(School.class))).thenReturn(Fixtures.school());
+        when(tenantService.provisionNewOrganization(any())).thenReturn(
+                new TenantService.ProvisionedOrganization(Fixtures.tenant(), Fixtures.school(), Fixtures.campus()));
         when(passwordEncoder.encode(anyString())).thenReturn("enc");
-        when(userRepository.save(any(User.class))).thenReturn(Fixtures.user(2L, Role.ADMIN));
-        stubTokens(Fixtures.user(2L, Role.ADMIN));
+        when(userRepository.save(any(User.class))).thenReturn(Fixtures.user(2L, Role.TENANT_ADMIN));
+        stubTokens(Fixtures.user(2L, Role.TENANT_ADMIN));
         authService.registerSchool(new RegisterSchoolRequest(
-                "X", "a@b.com", "secret12", "A", null, "UTC", "USD", null));
-        ArgumentCaptor<School> captor = ArgumentCaptor.forClass(School.class);
-        verify(schoolRepository).save(captor.capture());
-        assertThat(captor.getValue().getTimezone()).isEqualTo("UTC");
-        assertThat(captor.getValue().getCurrency()).isEqualTo("USD");
+                "X", "a@b.com", "HaloCampus1!", "A", null, "UTC", "USD", null, null, null));
+        verify(tenantService).provisionNewOrganization(any());
     }
 
     @Test
     void registerDuplicateEmail() {
         when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(true);
         assertThatThrownBy(() -> authService.registerSchool(new RegisterSchoolRequest(
-                "X", "a@b.com", "secret12", "A", null, null, null, null)))
+                "X", "a@b.com", "HaloCampus1!", "A", null, null, null, null, null, null)))
                 .isInstanceOf(DuplicateResourceException.class);
+    }
+
+    @Test
+    void registerRejectsWeakPassword() {
+        assertThatThrownBy(() -> authService.registerSchool(new RegisterSchoolRequest(
+                "X", "a@b.com", "secret12", "A", null, null, null, null, null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("at least 10");
+    }
+
+    @Test
+    void switchSchoolAsTenantAdmin() {
+        User user = Fixtures.user(2L, Role.TENANT_ADMIN);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
+        when(campusService.requirePrimary(1L)).thenReturn(Fixtures.campus());
+        stubTokens(user);
+        authService.switchSchool(2L, new SwitchSchoolRequest(1L, null));
+        assertThat(user.getSchoolId()).isEqualTo(1L);
+        assertThat(user.getCampusId()).isEqualTo(Fixtures.CAMPUS_ID);
+        verify(refreshTokenRepository).deleteByUserId(2L);
+    }
+
+    @Test
+    void switchSchoolAsPlatformAdminWithCampus() {
+        User user = Fixtures.user(1L, Role.SUPER_ADMIN);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
+        when(campusService.requireInSchool(20L, 1L)).thenReturn(Fixtures.campus());
+        stubTokens(user);
+        authService.switchSchool(1L, new SwitchSchoolRequest(1L, 20L));
+        assertThat(user.getTenantId()).isEqualTo(Fixtures.TENANT_ID);
+    }
+
+    @Test
+    void switchSchoolForbiddenForTeacher() {
+        when(userRepository.findById(3L)).thenReturn(Optional.of(Fixtures.user(3L, Role.TEACHER)));
+        assertThatThrownBy(() -> authService.switchSchool(3L, new SwitchSchoolRequest(1L, null)))
+                .isInstanceOf(ApiException.class);
     }
 
     @Test
@@ -229,8 +302,8 @@ class AuthServiceTest {
         assertThat(authService.me(2L).email()).isEqualTo(user.getEmail());
 
         when(passwordEncoder.matches("old", "hashed")).thenReturn(true);
-        when(passwordEncoder.encode("newpass12")).thenReturn("newhash");
-        authService.changePassword(2L, new ChangePasswordRequest("old", "newpass12"));
+        when(passwordEncoder.encode("HaloCampus1!")).thenReturn("newhash");
+        authService.changePassword(2L, new ChangePasswordRequest("old", "HaloCampus1!"));
         assertThat(user.getPassword()).isEqualTo("newhash");
         verify(refreshTokenRepository).deleteByUserId(2L);
     }
@@ -240,7 +313,16 @@ class AuthServiceTest {
         User user = Fixtures.user(2L, Role.ADMIN);
         when(userRepository.findById(2L)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("no", "hashed")).thenReturn(false);
-        assertThatThrownBy(() -> authService.changePassword(2L, new ChangePasswordRequest("no", "newpass12")))
+        assertThatThrownBy(() -> authService.changePassword(2L, new ChangePasswordRequest("no", "HaloCampus1!")))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void changePasswordRejectsWeakPassword() {
+        User user = Fixtures.user(2L, Role.ADMIN);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("old", "hashed")).thenReturn(true);
+        assertThatThrownBy(() -> authService.changePassword(2L, new ChangePasswordRequest("old", "newpass12")))
                 .isInstanceOf(BusinessException.class);
     }
 
@@ -255,6 +337,17 @@ class AuthServiceTest {
         when(userRepository.findById(9L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> authService.changePassword(9L, new ChangePasswordRequest("a", "bbbbbbbb")))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void switchSchoolMissingUser() {
+        when(userRepository.findById(9L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> authService.switchSchool(9L, new SwitchSchoolRequest(1L, null)))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    private void stubActiveTenant() {
+        when(tenantRepository.findById(Fixtures.TENANT_ID)).thenReturn(Optional.of(Fixtures.tenant()));
     }
 
     private void stubTokens(User user) {

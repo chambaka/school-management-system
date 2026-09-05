@@ -35,19 +35,19 @@ public class PaymentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public PaymentResponse record(@CurrentUser UserPrincipal principal, @Valid @RequestBody RecordPaymentRequest request) {
         return financeService.recordPayment(tenantResolver.requireSchoolId(), request, principal.getId());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','PARENT','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT','STUDENT')")
     public PaymentResponse get(@PathVariable Long id) {
         return financeService.getPayment(tenantResolver.requireSchoolId(), id);
     }
 
     @GetMapping("/invoice/{invoiceId}")
-    @PreAuthorize("hasAnyRole('ADMIN','PARENT','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT','STUDENT')")
     public List<PaymentResponse> byInvoice(@PathVariable Long invoiceId) {
         return financeService.paymentsForInvoice(tenantResolver.requireSchoolId(), invoiceId);
     }

@@ -5,24 +5,29 @@ import tz.co.chambaka.school.management.dto.auth.ChangePasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.LoginRequest;
 import tz.co.chambaka.school.management.dto.auth.RefreshTokenRequest;
 import tz.co.chambaka.school.management.dto.auth.RegisterSchoolRequest;
+import tz.co.chambaka.school.management.dto.auth.SwitchSchoolRequest;
 import tz.co.chambaka.school.management.dto.auth.UserProfileResponse;
 import tz.co.chambaka.school.management.exception.ApiException;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.mapper.UserMapper;
+import tz.co.chambaka.school.management.model.Campus;
 import tz.co.chambaka.school.management.model.RefreshToken;
 import tz.co.chambaka.school.management.model.School;
+import tz.co.chambaka.school.management.model.Tenant;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.model.enums.SchoolStatus;
+import tz.co.chambaka.school.management.model.enums.TenantStatus;
 import tz.co.chambaka.school.management.repository.RefreshTokenRepository;
 import tz.co.chambaka.school.management.repository.SchoolRepository;
+import tz.co.chambaka.school.management.repository.TenantRepository;
 import tz.co.chambaka.school.management.repository.UserRepository;
 import tz.co.chambaka.school.management.audit.AuditService;
 import tz.co.chambaka.school.management.model.enums.AuditAction;
 import tz.co.chambaka.school.management.security.JwtService;
-import tz.co.chambaka.school.management.util.SlugUtil;
+import tz.co.chambaka.school.management.security.PasswordPolicy;
 import tz.co.chambaka.school.management.util.TokenHash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,8 +40,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -46,6 +49,9 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
+    private final TenantRepository tenantRepository;
+    private final TenantService tenantService;
+    private final CampusService campusService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -56,6 +62,9 @@ public class AuthService {
             AuthenticationManager authenticationManager,
             UserRepository userRepository,
             SchoolRepository schoolRepository,
+            TenantRepository tenantRepository,
+            TenantService tenantService,
+            CampusService campusService,
             RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
@@ -65,6 +74,9 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.schoolRepository = schoolRepository;
+        this.tenantRepository = tenantRepository;
+        this.tenantService = tenantService;
+        this.campusService = campusService;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -88,6 +100,14 @@ public class AuthService {
             log.warn("Login blocked disabled account userId={}", user.getId());
             throw new ApiException(HttpStatus.FORBIDDEN, "Account is disabled");
         }
+        if (user.getTenantId() != null) {
+            Tenant tenant = tenantRepository.findById(user.getTenantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
+            if (tenant.getStatus() == TenantStatus.SUSPENDED) {
+                log.warn("Login blocked suspended tenant tenantId={} userId={}", tenant.getId(), user.getId());
+                throw new ApiException(HttpStatus.FORBIDDEN, "Organization account is suspended");
+            }
+        }
         if (user.getSchoolId() != null) {
             School school = schoolRepository.findById(user.getSchoolId())
                     .orElseThrow(() -> new ResourceNotFoundException("School not found"));
@@ -97,42 +117,64 @@ public class AuthService {
             }
         }
         user.setLastLoginAt(Instant.now());
-        log.info("Login succeeded userId={} role={} schoolId={}", user.getId(), user.getRole(), user.getSchoolId());
+        log.info("Login succeeded userId={} role={} tenantId={} schoolId={}",
+                user.getId(), user.getRole(), user.getTenantId(), user.getSchoolId());
         auditService.recordAuth(AuditAction.LOGIN, user, "User logged in");
         return issueTokens(user);
     }
 
     @Transactional
     public AuthResponse registerSchool(RegisterSchoolRequest request) {
+        PasswordPolicy.requireValid(request.password(), request.adminEmail(), request.adminName());
         if (userRepository.existsByEmailIgnoreCase(request.adminEmail())) {
             throw new DuplicateResourceException("Email is already registered");
         }
-        School school = new School();
-        school.setName(request.schoolName());
-        school.setSlug(uniqueSlug(request.schoolName()));
-        school.setEmail(request.adminEmail());
-        school.setPhone(request.phone());
-        school.setTimezone(request.timezone() != null ? request.timezone() : "Africa/Dar_es_Salaam");
-        school.setCurrency(request.currency() != null ? request.currency() : "TZS");
-        school.setCountry(request.country());
-        school.setStatus(SchoolStatus.TRIAL);
-        school.setTrialEndsAt(Instant.now().plus(14, ChronoUnit.DAYS));
-        school = schoolRepository.save(school);
-
+        TenantService.ProvisionedOrganization org = tenantService.provisionNewOrganization(request);
         User admin = User.builder()
-                .schoolId(school.getId())
+                .tenantId(org.tenant().getId())
+                .schoolId(org.school().getId())
+                .campusId(org.campus().getId())
                 .name(request.adminName())
                 .email(request.adminEmail().toLowerCase())
                 .password(passwordEncoder.encode(request.password()))
-                .role(Role.ADMIN)
+                .role(Role.TENANT_ADMIN)
                 .phone(request.phone())
                 .enabled(true)
                 .build();
         admin = userRepository.save(admin);
-        log.info("Registered school id={} slug={} adminUserId={}", school.getId(), school.getSlug(), admin.getId());
-        auditService.recordAuth(AuditAction.REGISTER_SCHOOL, admin,
-                "Registered school " + school.getName() + " (" + school.getSlug() + ")");
+        log.info("Registered tenant id={} school id={} slug={} adminUserId={}",
+                org.tenant().getId(), org.school().getId(), org.school().getSlug(), admin.getId());
+        auditService.recordAuth(AuditAction.REGISTER_TENANT, admin,
+                "Registered organization " + org.tenant().getName() + " with school " + org.school().getName());
         return issueTokens(admin);
+    }
+
+    @Transactional
+    public AuthResponse switchSchool(Long userId, SwitchSchoolRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
+        if (user.getRole() != Role.TENANT_ADMIN && user.getRole() != Role.SUPER_ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Only tenant or platform admins can switch school");
+        }
+        School school;
+        if (user.getRole() == Role.TENANT_ADMIN) {
+            school = tenantService.requireSchoolInTenant(user.getTenantId(), request.schoolId());
+        } else {
+            school = schoolRepository.findById(request.schoolId())
+                    .orElseThrow(() -> ResourceNotFoundException.of("School", request.schoolId()));
+        }
+        Campus campus;
+        if (request.campusId() != null) {
+            campus = campusService.requireInSchool(request.campusId(), school.getId());
+        } else {
+            campus = campusService.requirePrimary(school.getId());
+        }
+        user.setTenantId(school.getTenantId());
+        user.setSchoolId(school.getId());
+        user.setCampusId(campus.getId());
+        refreshTokenRepository.deleteByUserId(userId);
+        log.info("Switched active school userId={} schoolId={} campusId={}", userId, school.getId(), campus.getId());
+        return issueTokens(user);
     }
 
     @Transactional
@@ -168,6 +210,7 @@ public class AuthService {
         if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
             throw new BusinessException("Current password is incorrect");
         }
+        PasswordPolicy.requireValid(request.newPassword(), user.getEmail(), user.getName());
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         refreshTokenRepository.deleteByUserId(userId);
         log.info("Password changed userId={}", userId);
@@ -185,19 +228,5 @@ public class AuthService {
         refreshTokenRepository.save(refreshToken);
         return new AuthResponse(access, refreshValue, jwtService.accessTokenTtlSeconds(), "Bearer",
                 userMapper.toProfile(user));
-    }
-
-    private String uniqueSlug(String name) {
-        String base = SlugUtil.slugify(name);
-        String slug = base;
-        int attempt = 0;
-        while (schoolRepository.existsBySlug(slug)) {
-            attempt++;
-            slug = base + "-" + UUID.randomUUID().toString().substring(0, 6);
-            if (attempt > 8) {
-                break;
-            }
-        }
-        return slug;
     }
 }

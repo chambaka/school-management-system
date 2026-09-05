@@ -37,7 +37,9 @@ public class NoticeController {
     @GetMapping
     public List<NoticeResponse> list(@CurrentUser UserPrincipal principal) {
         Long schoolId = tenantResolver.requireSchoolId();
-        if (principal.getRole().name().equals("ADMIN") || principal.getRole().name().equals("SUPER_ADMIN")) {
+        if (principal.getRole().name().equals("ADMIN")
+                || principal.getRole().name().equals("TENANT_ADMIN")
+                || principal.getRole().name().equals("SUPER_ADMIN")) {
             return noticeService.listForAdmin(schoolId);
         }
         return noticeService.listForAudience(schoolId, principal.getRole());
@@ -45,13 +47,13 @@ public class NoticeController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public NoticeResponse create(@CurrentUser UserPrincipal principal, @Valid @RequestBody NoticeRequest request) {
         return noticeService.create(tenantResolver.requireSchoolId(), request, principal.getId());
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
     public NoticeResponse update(@PathVariable Long id, @Valid @RequestBody NoticeRequest request) {
         return noticeService.update(tenantResolver.requireSchoolId(), id, request);
     }

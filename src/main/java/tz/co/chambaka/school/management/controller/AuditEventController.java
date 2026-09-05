@@ -34,7 +34,7 @@ public class AuditEventController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     @Operation(summary = "Tenant audit trail for the current school")
     public PageResponse<AuditEventResponse> list(
             @RequestParam(required = false) String correctionId,
@@ -59,7 +59,7 @@ public class AuditEventController {
     }
 
     @GetMapping("/{correctionId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     @Operation(summary = "Tenant events sharing a correctionId")
     public List<AuditEventResponse> byCorrectionId(@PathVariable String correctionId) {
         return auditQueryService.byCorrectionIdForSchool(correctionId, tenantResolver.requireSchoolId());

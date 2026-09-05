@@ -23,8 +23,14 @@ import java.time.Instant;
 @Table(name = "users")
 public class User extends BaseEntity {
 
+    @Column(name = "tenant_id")
+    private Long tenantId;
+
     @Column(name = "school_id")
     private Long schoolId;
+
+    @Column(name = "campus_id")
+    private Long campusId;
 
     @Column(nullable = false, length = 150)
     private String name;

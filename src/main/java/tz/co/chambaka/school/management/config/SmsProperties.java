@@ -9,8 +9,19 @@ import java.util.List;
 public record SmsProperties(
         Jwt jwt,
         Cors cors,
-        SuperAdmin superAdmin
+        SuperAdmin superAdmin,
+        PasswordReset passwordReset
 ) {
+    public SmsProperties {
+        if (passwordReset == null) {
+            passwordReset = new PasswordReset(Duration.ofMinutes(30), false);
+        }
+    }
+
+    public SmsProperties(Jwt jwt, Cors cors, SuperAdmin superAdmin) {
+        this(jwt, cors, superAdmin, new PasswordReset(Duration.ofMinutes(30), false));
+    }
+
     public record Jwt(String secret, Duration accessTokenTtl, Duration refreshTokenTtl) {
     }
 
@@ -18,5 +29,8 @@ public record SmsProperties(
     }
 
     public record SuperAdmin(String email, String password, String name) {
+    }
+
+    public record PasswordReset(Duration ttl, Boolean includeDebugCode) {
     }
 }
