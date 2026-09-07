@@ -242,7 +242,7 @@ class PasswordResetServiceTest {
     }
 
     private PasswordResetService service(Duration ttl, Boolean debug) {
-        SmsProperties properties = new SmsProperties(
+        SmsProperties properties = SmsProperties.of(
                 Fixtures.properties().jwt(),
                 Fixtures.properties().cors(),
                 Fixtures.properties().superAdmin(),

@@ -180,7 +180,7 @@ class ControllersTest {
         assertThat(publicConfig.config().tenancyMode()).isEqualTo("multi");
         assertThat(publicConfig.config().registrationEnabled()).isTrue();
         assertThat(publicConfig.config().organizationName()).isNull();
-        SmsProperties singleProps = new SmsProperties(
+        SmsProperties singleProps = SmsProperties.of(
                 Fixtures.properties().jwt(),
                 Fixtures.properties().cors(),
                 Fixtures.properties().superAdmin(),

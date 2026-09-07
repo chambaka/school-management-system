@@ -15,7 +15,7 @@ class SmsPropertiesTest {
         assertThat(fromLegacyConstructor.passwordReset().ttl()).isEqualTo(Duration.ofMinutes(30));
         assertThat(fromLegacyConstructor.passwordReset().includeDebugCode()).isFalse();
 
-        SmsProperties fromNullReset = new SmsProperties(
+        SmsProperties fromNullReset = SmsProperties.of(
                 fromLegacyConstructor.jwt(),
                 fromLegacyConstructor.cors(),
                 fromLegacyConstructor.superAdmin(),
@@ -33,7 +33,7 @@ class SmsPropertiesTest {
         assertThat(tenancy.defaultTenantName()).isEqualTo("Halo Campus");
         assertThat(tenancy.defaultTenantSlug()).isEqualTo("halo");
 
-        SmsProperties fromNullTenancy = new SmsProperties(
+        SmsProperties fromNullTenancy = SmsProperties.of(
                 Fixtures.properties().jwt(),
                 Fixtures.properties().cors(),
                 Fixtures.properties().superAdmin(),
@@ -41,13 +41,13 @@ class SmsPropertiesTest {
                 null);
         assertThat(fromNullTenancy.singleTenant()).isFalse();
         assertThat(Fixtures.properties().messaging().active()).isFalse();
-        SmsProperties.Messaging messaging = new SmsProperties.Messaging(null, "  ", "", null, null);
+        SmsProperties.Messaging messaging = SmsProperties.Messaging.of(null, "  ", "", null, null);
         assertThat(messaging.active()).isFalse();
         assertThat(messaging.notificationConfigured()).isFalse();
         assertThat(messaging.provider()).isEmpty();
         assertThat(messaging.senderId()).isEqualTo("HALO");
         assertThat(messaging.path()).isEqualTo("/f1/queueNotification");
-        assertThat(new SmsProperties.Messaging(true, " beem ", "HALO", "http://n", "k").provider())
+        assertThat(SmsProperties.Messaging.of(true, " beem ", "HALO", "http://n", "k").provider())
                 .isEqualTo("beem");
         SmsProperties fromNullMessaging = new SmsProperties(
                 Fixtures.properties().jwt(),
@@ -59,7 +59,7 @@ class SmsPropertiesTest {
         assertThat(fromNullMessaging.messaging().provider()).isEmpty();
         assertThat(fromNullMessaging.messaging().baseUrl()).isEqualTo("http://localhost:7575");
 
-        SmsProperties single = new SmsProperties(
+        SmsProperties single = SmsProperties.of(
                 Fixtures.properties().jwt(),
                 Fixtures.properties().cors(),
                 Fixtures.properties().superAdmin(),

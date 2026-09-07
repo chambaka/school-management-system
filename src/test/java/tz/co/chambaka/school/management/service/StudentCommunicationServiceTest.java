@@ -99,7 +99,7 @@ class StudentCommunicationServiceTest {
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
         when(userRepository.findById(10L)).thenReturn(Optional.of(Fixtures.user(10L, Role.ADMIN)));
         when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
-        when(smsProperties.messaging()).thenReturn(new SmsProperties.Messaging(
+        when(smsProperties.messaging()).thenReturn(SmsProperties.Messaging.of(
                 true, "log-sms", "HALO", "http://localhost:7575", "secret"));
         when(smsGateway.send(any(), eq("HALO"), any())).thenReturn(SmsSendResult.ok("queued"));
         when(studentParentRepository.findByStudentId(1L)).thenReturn(List.of(
@@ -134,7 +134,7 @@ class StudentCommunicationServiceTest {
                 new CreateStudentMessageRequest("Note", true));
         assertThat(disabled.smsSkipped()).isEqualTo(1);
 
-        when(smsProperties.messaging()).thenReturn(new SmsProperties.Messaging(
+        when(smsProperties.messaging()).thenReturn(SmsProperties.Messaging.of(
                 true, "log-sms", "HALO", "http://localhost:7575", "secret"));
         when(smsGateway.send(any(), any(), any())).thenReturn(SmsSendResult.skipped("rate-limit"));
         var skipped = service.post(1L, 1L, Fixtures.principal(Role.TENANT_ADMIN),

@@ -1,6 +1,7 @@
 package tz.co.chambaka.school.management.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
 import java.time.Duration;
 import java.util.List;
@@ -14,6 +15,7 @@ public record SmsProperties(
         Tenancy tenancy,
         Messaging messaging
 ) {
+    @ConstructorBinding
     public SmsProperties {
         if (passwordReset == null) {
             passwordReset = new PasswordReset(Duration.ofMinutes(30), false);
@@ -26,16 +28,16 @@ public record SmsProperties(
         }
     }
 
-    public SmsProperties(Jwt jwt, Cors cors, SuperAdmin superAdmin) {
-        this(jwt, cors, superAdmin, new PasswordReset(Duration.ofMinutes(30), false), Tenancy.defaults(), Messaging.defaults());
+    public static SmsProperties of(Jwt jwt, Cors cors, SuperAdmin superAdmin) {
+        return new SmsProperties(jwt, cors, superAdmin, null, null, null);
     }
 
-    public SmsProperties(Jwt jwt, Cors cors, SuperAdmin superAdmin, PasswordReset passwordReset) {
-        this(jwt, cors, superAdmin, passwordReset, Tenancy.defaults(), Messaging.defaults());
+    public static SmsProperties of(Jwt jwt, Cors cors, SuperAdmin superAdmin, PasswordReset passwordReset) {
+        return new SmsProperties(jwt, cors, superAdmin, passwordReset, null, null);
     }
 
-    public SmsProperties(Jwt jwt, Cors cors, SuperAdmin superAdmin, PasswordReset passwordReset, Tenancy tenancy) {
-        this(jwt, cors, superAdmin, passwordReset, tenancy, Messaging.defaults());
+    public static SmsProperties of(Jwt jwt, Cors cors, SuperAdmin superAdmin, PasswordReset passwordReset, Tenancy tenancy) {
+        return new SmsProperties(jwt, cors, superAdmin, passwordReset, tenancy, null);
     }
 
     public boolean singleTenant() {
@@ -111,8 +113,8 @@ public record SmsProperties(
             }
         }
 
-        public Messaging(Boolean enabled, String provider, String senderId, String baseUrl, String apiKey) {
-            this(enabled, provider, senderId, baseUrl, apiKey, "/f1/queueNotification");
+        public static Messaging of(Boolean enabled, String provider, String senderId, String baseUrl, String apiKey) {
+            return new Messaging(enabled, provider, senderId, baseUrl, apiKey, "/f1/queueNotification");
         }
 
         public boolean active() {

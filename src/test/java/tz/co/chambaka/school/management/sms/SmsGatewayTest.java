@@ -55,14 +55,14 @@ class SmsGatewayTest {
     @Test
     void notificationGatewayValidatesAndQueues() {
         RestClient unusedClient = RestClient.builder().build();
-        SmsProperties.Messaging noUrl = new SmsProperties.Messaging(true, "log-sms", "HALO", " ", "key");
+        SmsProperties.Messaging noUrl = SmsProperties.Messaging.of(true, "log-sms", "HALO", " ", "key");
         assertThat(new NotificationServiceSmsGateway(noUrl, unusedClient).send("0756", "HALO", "Hi").error())
                 .contains("not configured");
-        SmsProperties.Messaging nullUrl = new SmsProperties.Messaging(true, "log-sms", "HALO", null, "key");
+        SmsProperties.Messaging nullUrl = SmsProperties.Messaging.of(true, "log-sms", "HALO", null, "key");
         assertThat(new NotificationServiceSmsGateway(nullUrl, unusedClient).send("0756", "HALO", "Hi").error())
                 .contains("not configured");
 
-        SmsProperties.Messaging noKey = new SmsProperties.Messaging(
+        SmsProperties.Messaging noKey = SmsProperties.Messaging.of(
                 true, "log-sms", "HALO", "http://localhost:7575", "  ");
         assertThat(new NotificationServiceSmsGateway(noKey, unusedClient)
                 .send("0756628215", "HALO", "Hi").error())
@@ -103,7 +103,7 @@ class SmsGatewayTest {
         MockRestServiceServer rejectedServer = MockRestServiceServer.bindTo(rejected).build();
         rejectedServer.expect(requestTo("http://localhost:7575/f1/queueNotification"))
                 .andRespond(withSuccess("{\"error\":true,\"errorMessage\":\"quota\"}", MediaType.APPLICATION_JSON));
-        SmsProperties.Messaging messaging = new SmsProperties.Messaging(
+        SmsProperties.Messaging messaging = SmsProperties.Messaging.of(
                 true, "", "HALO", "http://localhost:7575", "secret");
         assertThat(new NotificationServiceSmsGateway(messaging, rejected.build())
                 .send("255756628215", "  ", "Hi").error())
@@ -155,7 +155,7 @@ class SmsGatewayTest {
                 .contains(":");
         badJsonServer.verify();
 
-        SmsProperties.Messaging unreachable = new SmsProperties.Messaging(
+        SmsProperties.Messaging unreachable = SmsProperties.Messaging.of(
                 true, "beem", "HALO", "http://127.0.0.1:1", "secret");
         assertThat(new NotificationServiceSmsGateway(unreachable, RestClient.builder().build())
                 .send("0756628215", "HALO", "Hi").error())
@@ -170,14 +170,14 @@ class SmsGatewayTest {
                 Fixtures.properties().superAdmin(),
                 Fixtures.properties().passwordReset(),
                 Fixtures.properties().tenancy(),
-                new SmsProperties.Messaging(true, "log-sms", "HALO", "http://localhost:7575", "secret"));
+                SmsProperties.Messaging.of(true, "log-sms", "HALO", "http://localhost:7575", "secret"));
         SmsProperties enabledBare = new SmsProperties(
                 Fixtures.properties().jwt(),
                 Fixtures.properties().cors(),
                 Fixtures.properties().superAdmin(),
                 Fixtures.properties().passwordReset(),
                 Fixtures.properties().tenancy(),
-                new SmsProperties.Messaging(true, "", "HALO", "", "key"));
+                SmsProperties.Messaging.of(true, "", "HALO", "", "key"));
         assertThat(config.smsGateway(enabledBare, RestClient.builder()))
                 .isInstanceOf(NotificationServiceSmsGateway.class);
     }

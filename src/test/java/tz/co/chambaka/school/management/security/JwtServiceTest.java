@@ -49,7 +49,7 @@ class JwtServiceTest {
 
     @Test
     void rejectsShortSecret() {
-        SmsProperties shortSecret = new SmsProperties(
+        SmsProperties shortSecret = SmsProperties.of(
                 new SmsProperties.Jwt("too-short", Duration.ofHours(1), Duration.ofDays(1)),
                 new SmsProperties.Cors(List.of("*")),
                 new SmsProperties.SuperAdmin("a@b.c", "x", "n"));

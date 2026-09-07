@@ -41,7 +41,7 @@ public final class Fixtures {
     }
 
     public static SmsProperties properties() {
-        return new SmsProperties(
+        return SmsProperties.of(
                 new SmsProperties.Jwt("change-this-to-a-long-random-secret-key-of-at-least-256-bits",
                         Duration.ofHours(1), Duration.ofDays(7)),
                 new SmsProperties.Cors(List.of("http://localhost:3000")),
