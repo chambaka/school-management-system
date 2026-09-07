@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,12 +65,18 @@ class HttpAuditFilterTest {
         filter.doFilter(request, response, mockChain());
         verify(auditService, never()).record(any());
 
+        MockHttpServletRequest financeRead = new MockHttpServletRequest("GET", "/api/v1/invoices/4");
+        MockHttpServletResponse financeOk = new MockHttpServletResponse();
+        financeOk.setStatus(200);
+        filter.doFilter(financeRead, financeOk, mockChain());
+        verify(auditService, times(1)).record(any());
+
         MockHttpServletRequest denied = new MockHttpServletRequest("GET", "/api/v1/invoices/4");
         MockHttpServletResponse forbidden = new MockHttpServletResponse();
         forbidden.setStatus(403);
         doThrow(new RuntimeException("audit down")).when(auditService).record(any());
         filter.doFilter(denied, forbidden, mockChain());
-        verify(auditService).record(any());
+        verify(auditService, times(2)).record(any());
     }
 
     @Test

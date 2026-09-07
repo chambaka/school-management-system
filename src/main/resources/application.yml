@@ -57,6 +57,13 @@ sms:
   password-reset:
     ttl: ${SMS_PASSWORD_RESET_TTL:PT30M}
     include-debug-code: ${SMS_PASSWORD_RESET_DEBUG:false}
+  messaging:
+    enabled: ${NOTIFICATION_SERVICE_ENABLED:${SMS_MESSAGING_ENABLED:false}}
+    base-url: ${NOTIFICATION_SERVICE_BASE_URL:http://localhost:7575}
+    api-key: ${NOTIFICATION_API_KEY:}
+    sender-id: ${NOTIFICATION_SMS_SENDER_NAME:${SMS_MESSAGING_SENDER:HALO}}
+    provider: ${NOTIFICATION_SMS_PROVIDER:}
+    path: ${NOTIFICATION_SERVICE_PATH:/f1/queueNotification}
   tenancy:
     mode: ${SMS_TENANCY_MODE:multi}
     default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:Halo Campus}

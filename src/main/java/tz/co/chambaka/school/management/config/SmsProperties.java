@@ -11,7 +11,8 @@ public record SmsProperties(
         Cors cors,
         SuperAdmin superAdmin,
         PasswordReset passwordReset,
-        Tenancy tenancy
+        Tenancy tenancy,
+        Messaging messaging
 ) {
     public SmsProperties {
         if (passwordReset == null) {
@@ -20,14 +21,21 @@ public record SmsProperties(
         if (tenancy == null) {
             tenancy = Tenancy.defaults();
         }
+        if (messaging == null) {
+            messaging = Messaging.defaults();
+        }
     }
 
     public SmsProperties(Jwt jwt, Cors cors, SuperAdmin superAdmin) {
-        this(jwt, cors, superAdmin, new PasswordReset(Duration.ofMinutes(30), false), Tenancy.defaults());
+        this(jwt, cors, superAdmin, new PasswordReset(Duration.ofMinutes(30), false), Tenancy.defaults(), Messaging.defaults());
     }
 
     public SmsProperties(Jwt jwt, Cors cors, SuperAdmin superAdmin, PasswordReset passwordReset) {
-        this(jwt, cors, superAdmin, passwordReset, Tenancy.defaults());
+        this(jwt, cors, superAdmin, passwordReset, Tenancy.defaults(), Messaging.defaults());
+    }
+
+    public SmsProperties(Jwt jwt, Cors cors, SuperAdmin superAdmin, PasswordReset passwordReset, Tenancy tenancy) {
+        this(jwt, cors, superAdmin, passwordReset, tenancy, Messaging.defaults());
     }
 
     public boolean singleTenant() {
@@ -66,6 +74,57 @@ public record SmsProperties(
 
         public static Tenancy defaults() {
             return new Tenancy(Mode.MULTI, "Halo Campus", "halo");
+        }
+    }
+
+    /**
+     * SMS via chambaka-notification-service ({@code POST /f1/queueNotification}), same as soleiltech.
+     *
+     * @param provider optional SMS backend override for the notification service
+     *                 ({@code beem}, {@code textify}, {@code log-sms}); empty uses the service default
+     */
+    public record Messaging(
+            Boolean enabled,
+            String provider,
+            String senderId,
+            String baseUrl,
+            String apiKey,
+            String path
+    ) {
+        public Messaging {
+            if (enabled == null) {
+                enabled = false;
+            }
+            if (provider == null || provider.isBlank()) {
+                provider = "";
+            } else {
+                provider = provider.trim();
+            }
+            if (senderId == null || senderId.isBlank()) {
+                senderId = "HALO";
+            }
+            if (apiKey == null) {
+                apiKey = "";
+            }
+            if (path == null || path.isBlank()) {
+                path = "/f1/queueNotification";
+            }
+        }
+
+        public Messaging(Boolean enabled, String provider, String senderId, String baseUrl, String apiKey) {
+            this(enabled, provider, senderId, baseUrl, apiKey, "/f1/queueNotification");
+        }
+
+        public boolean active() {
+            return Boolean.TRUE.equals(enabled);
+        }
+
+        public boolean notificationConfigured() {
+            return baseUrl != null && !baseUrl.isBlank();
+        }
+
+        public static Messaging defaults() {
+            return new Messaging(false, "", "HALO", "http://localhost:7575", "", "/f1/queueNotification");
         }
     }
 }

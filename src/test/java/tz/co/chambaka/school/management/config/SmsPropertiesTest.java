@@ -40,6 +40,24 @@ class SmsPropertiesTest {
                 Fixtures.properties().passwordReset(),
                 null);
         assertThat(fromNullTenancy.singleTenant()).isFalse();
+        assertThat(Fixtures.properties().messaging().active()).isFalse();
+        SmsProperties.Messaging messaging = new SmsProperties.Messaging(null, "  ", "", null, null);
+        assertThat(messaging.active()).isFalse();
+        assertThat(messaging.notificationConfigured()).isFalse();
+        assertThat(messaging.provider()).isEmpty();
+        assertThat(messaging.senderId()).isEqualTo("HALO");
+        assertThat(messaging.path()).isEqualTo("/f1/queueNotification");
+        assertThat(new SmsProperties.Messaging(true, " beem ", "HALO", "http://n", "k").provider())
+                .isEqualTo("beem");
+        SmsProperties fromNullMessaging = new SmsProperties(
+                Fixtures.properties().jwt(),
+                Fixtures.properties().cors(),
+                Fixtures.properties().superAdmin(),
+                Fixtures.properties().passwordReset(),
+                Fixtures.properties().tenancy(),
+                null);
+        assertThat(fromNullMessaging.messaging().provider()).isEmpty();
+        assertThat(fromNullMessaging.messaging().baseUrl()).isEqualTo("http://localhost:7575");
 
         SmsProperties single = new SmsProperties(
                 Fixtures.properties().jwt(),

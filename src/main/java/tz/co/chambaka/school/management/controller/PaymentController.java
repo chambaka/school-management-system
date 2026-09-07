@@ -42,13 +42,13 @@ public class PaymentController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT','STUDENT')")
-    public PaymentResponse get(@PathVariable Long id) {
-        return financeService.getPayment(tenantResolver.requireSchoolId(), id);
+    public PaymentResponse get(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
+        return financeService.getPayment(tenantResolver.requireSchoolId(), id, principal);
     }
 
     @GetMapping("/invoice/{invoiceId}")
     @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT','STUDENT')")
-    public List<PaymentResponse> byInvoice(@PathVariable Long invoiceId) {
-        return financeService.paymentsForInvoice(tenantResolver.requireSchoolId(), invoiceId);
+    public List<PaymentResponse> byInvoice(@CurrentUser UserPrincipal principal, @PathVariable Long invoiceId) {
+        return financeService.paymentsForInvoice(tenantResolver.requireSchoolId(), invoiceId, principal);
     }
 }

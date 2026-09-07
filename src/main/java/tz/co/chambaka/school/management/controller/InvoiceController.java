@@ -59,26 +59,27 @@ public class InvoiceController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT','STUDENT')")
-    public InvoiceResponse get(@PathVariable Long id) {
-        return financeService.getInvoice(tenantResolver.requireSchoolId(), id);
+    public InvoiceResponse get(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
+        return financeService.getInvoice(tenantResolver.requireSchoolId(), id, principal);
     }
 
     @GetMapping("/students/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT')")
-    public List<InvoiceResponse> byStudent(@PathVariable Long studentId) {
-        return financeService.studentInvoices(tenantResolver.requireSchoolId(), studentId);
+    public List<InvoiceResponse> byStudent(@CurrentUser UserPrincipal principal, @PathVariable Long studentId) {
+        return financeService.studentInvoices(tenantResolver.requireSchoolId(), studentId, principal);
     }
 
     @GetMapping("/students/{studentId}/balance")
     @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT')")
-    public Map<String, BigDecimal> balance(@PathVariable Long studentId) {
-        return Map.of("outstanding", financeService.outstandingBalance(tenantResolver.requireSchoolId(), studentId));
+    public Map<String, BigDecimal> balance(@CurrentUser UserPrincipal principal, @PathVariable Long studentId) {
+        return Map.of("outstanding", financeService.outstandingBalance(
+                tenantResolver.requireSchoolId(), studentId, principal));
     }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('STUDENT')")
     public List<InvoiceResponse> mine(@CurrentUser UserPrincipal principal) {
         Long studentId = studentService.requireByUser(principal.getId()).getId();
-        return financeService.studentInvoices(tenantResolver.requireSchoolId(), studentId);
+        return financeService.studentInvoices(tenantResolver.requireSchoolId(), studentId, principal);
     }
 }

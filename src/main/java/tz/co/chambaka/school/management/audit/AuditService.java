@@ -22,14 +22,20 @@ public class AuditService {
     private static final Logger log = LoggerFactory.getLogger(AuditService.class);
 
     private final AuditEventRepository auditEventRepository;
+    private final AuditActionSettingsService settingsService;
 
-    public AuditService(AuditEventRepository auditEventRepository) {
+    public AuditService(AuditEventRepository auditEventRepository, AuditActionSettingsService settingsService) {
         this.auditEventRepository = auditEventRepository;
+        this.settingsService = settingsService;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(AuditEventDraft draft) {
         if (draft == null || draft.getAction() == null) {
+            return;
+        }
+        if (!settingsService.isEnabled(draft.getAction())) {
+            log.debug("Skipping disabled audit action={}", draft.getAction());
             return;
         }
         try {
@@ -60,6 +66,25 @@ public class AuditService {
                 .resourceId(user == null || user.getId() == null ? null : String.valueOf(user.getId()))
                 .summary(summary)
                 .httpMethod("POST"));
+    }
+
+    public void recordFinance(
+            Long schoolId,
+            AuditAction action,
+            String resourceType,
+            String resourceId,
+            String summary,
+            String details
+    ) {
+        record(new AuditEventDraft()
+                .scope(AuditScope.TENANT)
+                .schoolId(schoolId)
+                .action(action)
+                .resourceType(resourceType)
+                .resourceId(resourceId)
+                .summary(summary)
+                .details(details)
+                .statusCode(200));
     }
 
     public void recordAuthFailure(String email, String summary) {

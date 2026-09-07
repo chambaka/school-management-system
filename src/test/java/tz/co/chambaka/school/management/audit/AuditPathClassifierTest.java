@@ -21,6 +21,11 @@ class AuditPathClassifierTest {
         assertThat(AuditPathClassifier.isNoise("/api/v1/students")).isFalse();
         assertThat(AuditPathClassifier.isAuth("/api/v1/auth/login")).isTrue();
         assertThat(AuditPathClassifier.isAuth("/api/v1/students")).isFalse();
+        assertThat(AuditPathClassifier.isFinance("/api/v1/fees")).isTrue();
+        assertThat(AuditPathClassifier.isFinance("/api/v1/invoices/4")).isTrue();
+        assertThat(AuditPathClassifier.isFinance("/api/v1/payments")).isTrue();
+        assertThat(AuditPathClassifier.isFinance("/api/v1/students")).isFalse();
+        assertThat(AuditPathClassifier.isFinance(null)).isFalse();
         assertThat(AuditPathClassifier.scope("/api/v1/platform/schools", Role.ADMIN, AuditAction.UPDATE))
                 .isEqualTo(AuditScope.PLATFORM);
         assertThat(AuditPathClassifier.scope("/api/v1/students", Role.SUPER_ADMIN, AuditAction.CREATE))
@@ -59,6 +64,9 @@ class AuditPathClassifierTest {
         assertThat(AuditPathClassifier.shouldRecord("POST", "/api/v1/auth/login", 500)).isTrue();
         assertThat(AuditPathClassifier.shouldRecord("POST", "/api/v1/students", 201)).isTrue();
         assertThat(AuditPathClassifier.shouldRecord("GET", "/api/v1/students", 200)).isFalse();
+        assertThat(AuditPathClassifier.shouldRecord("GET", "/api/v1/invoices", 200)).isTrue();
+        assertThat(AuditPathClassifier.shouldRecord("GET", "/api/v1/fees?academicYearId=1", 200)).isTrue();
+        assertThat(AuditPathClassifier.shouldRecord("GET", "/api/v1/payments/3", 200)).isTrue();
         assertThat(AuditPathClassifier.shouldRecord("GET", "/api/v1/students", 403)).isTrue();
         assertThat(AuditPathClassifier.shouldRecord("DELETE", "/api/v1/allocations/1", 204)).isTrue();
         assertThat(AuditPathClassifier.resourceType("/api/v1/teachers")).isEqualTo("Teacher");
@@ -75,5 +83,7 @@ class AuditPathClassifierTest {
         assertThat(AuditPathClassifier.resourceType("/api/v1/subjects")).isEqualTo("Subject");
         assertThat(AuditPathClassifier.resourceType("/api/v1/allocations")).isEqualTo("TeacherSubject");
         assertThat(AuditPathClassifier.resourceType("/api/v1/timetable")).isEqualTo("TimetableSlot");
+        assertThat(AuditPathClassifier.resourceType("/api/v1/messages/inbox")).isEqualTo("StudentMessage");
+        assertThat(AuditPathClassifier.resourceType("/api/v1/communications")).isEqualTo("StudentMessage");
     }
 }

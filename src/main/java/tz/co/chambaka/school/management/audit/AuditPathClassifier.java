@@ -25,6 +25,15 @@ public final class AuditPathClassifier {
         return path != null && path.startsWith("/api/v1/auth/");
     }
 
+    public static boolean isFinance(String path) {
+        if (path == null) {
+            return false;
+        }
+        return path.startsWith("/api/v1/fees")
+                || path.startsWith("/api/v1/invoices")
+                || path.startsWith("/api/v1/payments");
+    }
+
     public static AuditScope scope(String path, Role role, AuditAction action) {
         if (action == AuditAction.REGISTER_SCHOOL
                 || action == AuditAction.REGISTER_TENANT
@@ -95,6 +104,9 @@ public final class AuditPathClassifier {
         if (isAuth(path) && status < 500) {
             return false;
         }
+        if (isFinance(path)) {
+            return true;
+        }
         boolean mutating = method != null && (
                 "POST".equalsIgnoreCase(method)
                         || "PUT".equalsIgnoreCase(method)
@@ -124,6 +136,8 @@ public final class AuditPathClassifier {
             case "subjects" -> "Subject";
             case "allocations" -> "TeacherSubject";
             case "timetable" -> "TimetableSlot";
+            case "messages" -> "StudentMessage";
+            case "communications" -> "StudentMessage";
             default -> Character.toUpperCase(segment.charAt(0)) + segment.substring(1);
         };
     }

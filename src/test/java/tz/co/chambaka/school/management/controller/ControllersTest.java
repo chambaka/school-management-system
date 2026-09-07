@@ -58,6 +58,7 @@ import tz.co.chambaka.school.management.service.ExamService;
 import tz.co.chambaka.school.management.service.FinanceService;
 import tz.co.chambaka.school.management.service.GradeService;
 import tz.co.chambaka.school.management.service.NoticeService;
+import tz.co.chambaka.school.management.service.StudentCommunicationService;
 import tz.co.chambaka.school.management.service.ParentService;
 import tz.co.chambaka.school.management.service.PasswordResetService;
 import tz.co.chambaka.school.management.service.CampusService;
@@ -85,6 +86,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -136,7 +138,11 @@ class ControllersTest {
     @Mock
     private NoticeService noticeService;
     @Mock
+    private StudentCommunicationService communicationService;
+    @Mock
     private AuditQueryService auditQueryService;
+    @Mock
+    private tz.co.chambaka.school.management.audit.AuditActionSettingsService auditActionSettingsService;
 
     @BeforeEach
     void tenant() {
@@ -207,6 +213,21 @@ class ControllersTest {
         platformAudit.byCorrectionId("corr-1");
         verify(auditQueryService).byCorrectionId("corr-1");
         verify(auditQueryService).byCorrectionIdForSchool("corr-1", 1L);
+
+        PlatformAuditSettingsController settings = new PlatformAuditSettingsController(auditActionSettingsService);
+        when(auditActionSettingsService.list()).thenReturn(
+                new tz.co.chambaka.school.management.dto.audit.AuditActionSettingsResponse(List.of()));
+        when(auditActionSettingsService.update(eq(AuditAction.PAYMENT_RECORDED), eq(false))).thenReturn(
+                new tz.co.chambaka.school.management.dto.audit.AuditActionSettingResponse(
+                        AuditAction.PAYMENT_RECORDED, "Finance", "Payment posted", "posted", false));
+        assertThat(settings.list().events()).isEmpty();
+        assertThat(settings.update(AuditAction.PAYMENT_RECORDED,
+                new tz.co.chambaka.school.management.dto.audit.UpdateAuditActionSettingRequest(false)).enabled())
+                .isFalse();
+        settings.replaceAll(new tz.co.chambaka.school.management.dto.audit.ReplaceAuditActionSettingsRequest(List.of(
+                new tz.co.chambaka.school.management.dto.audit.ReplaceAuditActionSettingsRequest.Item(
+                        AuditAction.LOGIN, true))));
+        verify(auditActionSettingsService).replaceAll(any());
     }
 
     @Test
@@ -307,18 +328,18 @@ class ControllersTest {
 
         InvoiceController invoices = new InvoiceController(financeService, studentService, tenantResolver);
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
-        when(financeService.outstandingBalance(1L, 1L)).thenReturn(BigDecimal.TEN);
+        when(financeService.outstandingBalance(eq(1L), eq(1L), any())).thenReturn(BigDecimal.TEN);
         invoices.list(PageRequest.of(0, 10));
         invoices.generate(new GenerateInvoicesRequest(1L, 1L, List.of(1L), null));
-        invoices.get(1L);
-        invoices.byStudent(1L);
-        assertThat(invoices.balance(1L)).containsEntry("outstanding", BigDecimal.TEN);
+        invoices.get(Fixtures.principal(Role.ADMIN), 1L);
+        invoices.byStudent(Fixtures.principal(Role.PARENT), 1L);
+        assertThat(invoices.balance(Fixtures.principal(Role.PARENT), 1L)).containsEntry("outstanding", BigDecimal.TEN);
         invoices.mine(Fixtures.principal(Role.STUDENT));
 
         PaymentController payments = new PaymentController(financeService, tenantResolver);
         payments.record(Fixtures.principal(Role.ADMIN), new RecordPaymentRequest(1L, BigDecimal.ONE, PaymentMethod.CASH, null));
-        payments.get(1L);
-        payments.byInvoice(1L);
+        payments.get(Fixtures.principal(Role.STUDENT), 1L);
+        payments.byInvoice(Fixtures.principal(Role.PARENT), 1L);
 
         NoticeController notices = new NoticeController(noticeService, tenantResolver);
         NoticeRequest noticeReq = new NoticeRequest("T", "C", NoticeAudience.ALL, null, true, null, null);
@@ -329,6 +350,13 @@ class ControllersTest {
         notices.create(Fixtures.principal(Role.ADMIN), noticeReq);
         notices.update(1L, noticeReq);
         verify(noticeService).listForAudience(eq(1L), eq(Role.STUDENT));
+
+        StudentCommunicationController messages = new StudentCommunicationController(communicationService, tenantResolver);
+        messages.list(Fixtures.principal(Role.TEACHER), 1L);
+        messages.post(Fixtures.principal(Role.ADMIN), 1L,
+                new tz.co.chambaka.school.management.dto.communication.CreateStudentMessageRequest("Please come in.", true));
+        messages.inbox(Fixtures.principal(Role.PARENT));
+        verify(communicationService).inbox(eq(1L), any());
 
         TenantController tenants = new TenantController(tenantService, campusService, tenantResolver);
         tenants.listAll();

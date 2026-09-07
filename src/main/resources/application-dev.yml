@@ -11,6 +11,12 @@ spring:
 sms:
   password-reset:
     include-debug-code: true
+  messaging:
+    enabled: true
+    base-url: ${NOTIFICATION_SERVICE_BASE_URL:http://localhost:7575}
+    api-key: ${NOTIFICATION_API_KEY:}
+    sender-id: HALO
+    provider: ${NOTIFICATION_SMS_PROVIDER:log-sms}
 
 logging:
   level:

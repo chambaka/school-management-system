@@ -23,6 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,12 +33,15 @@ class AuditServiceTest {
 
     @Mock
     private AuditEventRepository auditEventRepository;
+    @Mock
+    private AuditActionSettingsService settingsService;
     @InjectMocks
     private AuditService auditService;
 
     @BeforeEach
     void context() {
         RequestContext.set("corr-audit-1", "10.0.0.8", "JUnit");
+        lenient().when(settingsService.isEnabled(any())).thenReturn(true);
     }
 
     @AfterEach
@@ -91,7 +95,9 @@ class AuditServiceTest {
         auditService.recordAuth(AuditAction.REGISTER_SCHOOL, admin, "onboard");
         auditService.recordAuth(AuditAction.LOGIN, null, "anon");
         auditService.recordAuthFailure("bad@example.com", "Invalid email or password");
-        verify(auditEventRepository, org.mockito.Mockito.times(5)).save(any());
+        auditService.recordFinance(1L, AuditAction.PAYMENT_RECORDED, "Payment", "9",
+                "Recorded payment", "amount=1000");
+        verify(auditEventRepository, org.mockito.Mockito.times(6)).save(any());
     }
 
     @Test
@@ -112,5 +118,12 @@ class AuditServiceTest {
         assertThat(captor.getValue().getSchoolId()).isEqualTo(4L);
         UserPrincipal unused = new UserPrincipal(Fixtures.user(2L, Role.TEACHER));
         assertThat(unused.getRole()).isEqualTo(Role.TEACHER);
+    }
+
+    @Test
+    void skipsDisabledActions() {
+        when(settingsService.isEnabled(AuditAction.LOGIN)).thenReturn(false);
+        auditService.record(new AuditEventDraft().action(AuditAction.LOGIN).scope(AuditScope.TENANT));
+        verify(auditEventRepository, never()).save(any());
     }
 }
