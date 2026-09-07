@@ -40,13 +40,13 @@ public class DepartmentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public DepartmentResponse create(@Valid @RequestBody DepartmentRequest request) {
         return departmentService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public DepartmentResponse update(@PathVariable Long id, @Valid @RequestBody DepartmentRequest request) {
         return departmentService.update(tenantResolver.requireSchoolId(), id, request);
     }

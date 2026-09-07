@@ -42,20 +42,20 @@ public class SectionController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public SectionResponse create(@Valid @RequestBody SectionRequest request) {
         return sectionService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public SectionResponse update(@PathVariable Long id, @Valid @RequestBody SectionRequest request) {
         return sectionService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         sectionService.delete(tenantResolver.requireSchoolId(), id);
     }

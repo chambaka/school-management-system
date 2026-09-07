@@ -41,20 +41,20 @@ public class SubjectController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public SubjectResponse create(@Valid @RequestBody SubjectRequest request) {
         return subjectService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public SubjectResponse update(@PathVariable Long id, @Valid @RequestBody SubjectRequest request) {
         return subjectService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         subjectService.delete(tenantResolver.requireSchoolId(), id);
     }

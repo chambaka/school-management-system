@@ -40,19 +40,19 @@ public class AcademicYearController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public AcademicYearResponse create(@Valid @RequestBody AcademicYearRequest request) {
         return academicYearService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public AcademicYearResponse update(@PathVariable Long id, @Valid @RequestBody AcademicYearRequest request) {
         return academicYearService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @PostMapping("/{id}/current")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void setCurrent(@PathVariable Long id) {
         academicYearService.setCurrent(tenantResolver.requireSchoolId(), id);
     }

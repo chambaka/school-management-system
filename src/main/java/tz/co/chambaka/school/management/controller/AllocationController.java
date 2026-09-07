@@ -44,14 +44,14 @@ public class AllocationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public AllocationResponse create(@Valid @RequestBody AllocationRequest request) {
         return allocationService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         allocationService.delete(tenantResolver.requireSchoolId(), id);
     }

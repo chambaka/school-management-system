@@ -47,14 +47,14 @@ public class TimetableController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public TimetableResponse create(@Valid @RequestBody TimetableRequest request) {
         return timetableService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         timetableService.delete(tenantResolver.requireSchoolId(), id);
     }
