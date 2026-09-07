@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.academic.DepartmentRequest;
 import tz.co.chambaka.school.management.dto.academic.DepartmentResponse;
 import tz.co.chambaka.school.management.service.DepartmentService;
@@ -33,20 +34,20 @@ public class DepartmentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ACADEMIC_STAFF)
     public List<DepartmentResponse> list() {
         return departmentService.list(tenantResolver.requireSchoolId());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public DepartmentResponse create(@Valid @RequestBody DepartmentRequest request) {
         return departmentService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public DepartmentResponse update(@PathVariable Long id, @Valid @RequestBody DepartmentRequest request) {
         return departmentService.update(tenantResolver.requireSchoolId(), id, request);
     }

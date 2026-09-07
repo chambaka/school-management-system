@@ -52,11 +52,11 @@ public class TenantResolver {
             }
             throw new ApiException(HttpStatus.BAD_REQUEST, "schoolId is required for platform administrators");
         }
-        if (principal.getRole() == Role.TENANT_ADMIN && requestedSchoolId != null) {
-            return requestedSchoolId;
-        }
         if (principal.getSchoolId() != null) {
             return principal.getSchoolId();
+        }
+        if (principal.getRole() == Role.HEADMASTER && requestedSchoolId != null) {
+            return requestedSchoolId;
         }
         throw new ApiException(HttpStatus.FORBIDDEN, "School context is required");
     }

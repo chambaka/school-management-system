@@ -5,6 +5,7 @@ import tz.co.chambaka.school.management.dto.attendance.MarkStudentAttendanceRequ
 import tz.co.chambaka.school.management.dto.attendance.MarkTeacherAttendanceRequest;
 import tz.co.chambaka.school.management.dto.attendance.StudentAttendanceResponse;
 import tz.co.chambaka.school.management.dto.attendance.TeacherAttendanceResponse;
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.AttendanceService;
@@ -45,7 +46,7 @@ public class AttendanceController {
     }
 
     @PostMapping("/students")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ATTENDANCE_ENTER)
     public List<StudentAttendanceResponse> markStudents(
             @CurrentUser UserPrincipal principal,
             @Valid @RequestBody MarkStudentAttendanceRequest request
@@ -54,7 +55,7 @@ public class AttendanceController {
     }
 
     @PostMapping("/teachers")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.ATTENDANCE_MANAGE)
     public List<TeacherAttendanceResponse> markTeachers(
             @CurrentUser UserPrincipal principal,
             @Valid @RequestBody MarkTeacherAttendanceRequest request
@@ -63,7 +64,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/students/daily")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ATTENDANCE_VIEW)
     public List<StudentAttendanceResponse> dailyStudents(
             @RequestParam Long sectionId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
@@ -72,7 +73,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/teachers/daily")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.ATTENDANCE_MANAGE)
     public List<TeacherAttendanceResponse> dailyTeachers(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
@@ -80,7 +81,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/students/{studentId}/summary")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ATTENDANCE_VIEW)
     public AttendanceSummaryResponse studentSummary(
             @PathVariable Long studentId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,

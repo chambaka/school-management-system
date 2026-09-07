@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.dto.academic.GradeRequest;
 import tz.co.chambaka.school.management.dto.academic.GradeResponse;
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.GradeService;
@@ -34,14 +35,14 @@ public class GradeController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.GRADE_ENTER)
     public List<GradeResponse> byExam(@RequestParam Long examId) {
         return gradeService.byExam(tenantResolver.requireSchoolId(), examId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.GRADE_ENTER)
     public GradeResponse record(@CurrentUser UserPrincipal principal, @Valid @RequestBody GradeRequest request) {
         return gradeService.record(tenantResolver.requireSchoolId(), request, principal.getId());
     }

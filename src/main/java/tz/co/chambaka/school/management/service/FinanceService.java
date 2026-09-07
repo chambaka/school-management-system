@@ -337,7 +337,7 @@ public class FinanceService {
             throw new ApiException(HttpStatus.FORBIDDEN, "Not allowed to access this financial record");
         }
         Role role = principal.getRole();
-        if (role == Role.ADMIN || role == Role.TENANT_ADMIN) {
+        if (role.viewsStudentFinance()) {
             return;
         }
         if (role == Role.STUDENT) {

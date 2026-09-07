@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.dto.finance.PaymentResponse;
 import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.FinanceService;
@@ -35,19 +36,19 @@ public class PaymentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PAYMENT_RECORD)
     public PaymentResponse record(@CurrentUser UserPrincipal principal, @Valid @RequestBody RecordPaymentRequest request) {
         return financeService.recordPayment(tenantResolver.requireSchoolId(), request, principal.getId());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT','STUDENT')")
+    @PreAuthorize(Access.FINANCE_RECORD)
     public PaymentResponse get(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
         return financeService.getPayment(tenantResolver.requireSchoolId(), id, principal);
     }
 
     @GetMapping("/invoice/{invoiceId}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT','STUDENT')")
+    @PreAuthorize(Access.FINANCE_RECORD)
     public List<PaymentResponse> byInvoice(@CurrentUser UserPrincipal principal, @PathVariable Long invoiceId) {
         return financeService.paymentsForInvoice(tenantResolver.requireSchoolId(), invoiceId, principal);
     }

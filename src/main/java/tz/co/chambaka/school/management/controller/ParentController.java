@@ -5,6 +5,7 @@ import tz.co.chambaka.school.management.dto.parent.CreateParentRequest;
 import tz.co.chambaka.school.management.dto.parent.ParentResponse;
 import tz.co.chambaka.school.management.dto.parent.StudentParentResponse;
 import tz.co.chambaka.school.management.dto.parent.UpdateParentRequest;
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.ParentService;
@@ -40,7 +41,7 @@ public class ParentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public PageResponse<ParentResponse> list(
             @RequestParam(defaultValue = "false") boolean archived,
             Pageable pageable
@@ -50,7 +51,7 @@ public class ParentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public ParentResponse create(@Valid @RequestBody CreateParentRequest request) {
         return parentService.create(tenantResolver.requireSchoolId(), request);
     }
@@ -62,31 +63,31 @@ public class ParentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public ParentResponse get(@PathVariable Long id) {
         return parentService.get(tenantResolver.requireSchoolId(), id);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public ParentResponse update(@PathVariable Long id, @Valid @RequestBody UpdateParentRequest request) {
         return parentService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @PostMapping("/{id}/archive")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public ParentResponse archive(@PathVariable Long id) {
         return parentService.archive(tenantResolver.requireSchoolId(), id);
     }
 
     @PostMapping("/{id}/restore")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public ParentResponse restore(@PathVariable Long id) {
         return parentService.restore(tenantResolver.requireSchoolId(), id);
     }
 
     @GetMapping("/{id}/children")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public List<StudentParentResponse> children(@PathVariable Long id) {
         return parentService.listChildren(tenantResolver.requireSchoolId(), id);
     }

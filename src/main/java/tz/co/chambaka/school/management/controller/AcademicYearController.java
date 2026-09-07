@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.academic.AcademicYearRequest;
 import tz.co.chambaka.school.management.dto.academic.AcademicYearResponse;
 import tz.co.chambaka.school.management.service.AcademicYearService;
@@ -33,26 +34,26 @@ public class AcademicYearController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ACADEMIC_STAFF)
     public List<AcademicYearResponse> list() {
         return academicYearService.list(tenantResolver.requireSchoolId());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public AcademicYearResponse create(@Valid @RequestBody AcademicYearRequest request) {
         return academicYearService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public AcademicYearResponse update(@PathVariable Long id, @Valid @RequestBody AcademicYearRequest request) {
         return academicYearService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @PostMapping("/{id}/current")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public void setCurrent(@PathVariable Long id) {
         academicYearService.setCurrent(tenantResolver.requireSchoolId(), id);
     }

@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.admin.CreateSchoolAdminRequest;
 import tz.co.chambaka.school.management.dto.admin.SchoolAdminResponse;
 import tz.co.chambaka.school.management.dto.admin.UpdateSchoolAdminRequest;
@@ -34,26 +35,26 @@ public class SchoolAdminController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize(Access.STAFF_OFFICERS)
     public PageResponse<SchoolAdminResponse> list(Pageable pageable) {
         return schoolAdminService.list(tenantResolver.requireSchoolId(), pageable);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize(Access.STAFF_OFFICERS)
     public SchoolAdminResponse get(@PathVariable Long id) {
         return schoolAdminService.get(tenantResolver.requireSchoolId(), id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize(Access.STAFF_OFFICERS)
     public SchoolAdminResponse create(@Valid @RequestBody CreateSchoolAdminRequest request) {
         return schoolAdminService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize(Access.STAFF_OFFICERS)
     public SchoolAdminResponse update(@PathVariable Long id, @Valid @RequestBody UpdateSchoolAdminRequest request) {
         return schoolAdminService.update(tenantResolver.requireSchoolId(), id, request);
     }

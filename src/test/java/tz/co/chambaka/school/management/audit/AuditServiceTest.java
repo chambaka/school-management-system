@@ -53,7 +53,7 @@ class AuditServiceTest {
     @Test
     void recordsDraftAndFillsActorFromSecurityContext() {
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(Fixtures.principal(Role.ADMIN), null));
+                new UsernamePasswordAuthenticationToken(Fixtures.principal(Role.HEADMASTER), null));
         when(auditEventRepository.save(any(AuditEvent.class))).thenAnswer(inv -> inv.getArgument(0));
         auditService.record(new AuditEventDraft()
                 .action(AuditAction.CREATE)
@@ -69,7 +69,7 @@ class AuditServiceTest {
         AuditEvent event = captor.getValue();
         assertThat(event.getCorrectionId()).isEqualTo("corr-audit-1");
         assertThat(event.getScope()).isEqualTo(AuditScope.TENANT);
-        assertThat(event.getActorEmail()).isEqualTo("admin@example.com");
+        assertThat(event.getActorEmail()).isEqualTo("headmaster@example.com");
         assertThat(event.getSchoolId()).isEqualTo(1L);
         assertThat(event.getDetails()).doesNotContain("secret");
         assertThat(event.getIpAddress()).isEqualTo("10.0.0.8");
@@ -88,7 +88,7 @@ class AuditServiceTest {
     @Test
     void recordsAuthVariants() {
         when(auditEventRepository.save(any(AuditEvent.class))).thenAnswer(inv -> inv.getArgument(0));
-        User admin = Fixtures.user(2L, Role.ADMIN);
+        User admin = Fixtures.user(2L, Role.HEADMASTER);
         auditService.recordAuth(AuditAction.LOGIN, admin, "in");
         User superAdmin = Fixtures.user(1L, Role.SUPER_ADMIN);
         auditService.recordAuth(AuditAction.LOGIN, superAdmin, "platform");
@@ -109,7 +109,7 @@ class AuditServiceTest {
                 .action(AuditAction.ACCESS)
                 .actorUserId(1L)
                 .actorEmail("a@b.com")
-                .actorRole("ADMIN")
+                .actorRole("HEADMASTER")
                 .schoolId(4L)
                 .httpPath("/x"));
         ArgumentCaptor<AuditEvent> captor = ArgumentCaptor.forClass(AuditEvent.class);

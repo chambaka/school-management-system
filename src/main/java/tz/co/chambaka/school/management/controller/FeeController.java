@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureRequest;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureResponse;
 import tz.co.chambaka.school.management.service.FinanceService;
@@ -32,14 +33,14 @@ public class FeeController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.FEE_VIEW)
     public List<FeeStructureResponse> list(@RequestParam(required = false) Long academicYearId) {
         return financeService.listFees(tenantResolver.requireSchoolId(), academicYearId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.FEE_MANAGE)
     public FeeStructureResponse create(@Valid @RequestBody FeeStructureRequest request) {
         return financeService.createFee(tenantResolver.requireSchoolId(), request);
     }

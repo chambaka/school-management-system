@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.academic.SubjectRequest;
 import tz.co.chambaka.school.management.dto.academic.SubjectResponse;
 import tz.co.chambaka.school.management.service.SubjectService;
@@ -34,27 +35,27 @@ public class SubjectController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ACADEMIC_STAFF)
     public List<SubjectResponse> list() {
         return subjectService.list(tenantResolver.requireSchoolId());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public SubjectResponse create(@Valid @RequestBody SubjectRequest request) {
         return subjectService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public SubjectResponse update(@PathVariable Long id, @Valid @RequestBody SubjectRequest request) {
         return subjectService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public void delete(@PathVariable Long id) {
         subjectService.delete(tenantResolver.requireSchoolId(), id);
     }

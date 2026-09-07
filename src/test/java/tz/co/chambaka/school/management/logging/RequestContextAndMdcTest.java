@@ -33,11 +33,11 @@ class RequestContextAndMdcTest {
     @Test
     void mdcPutsActorAndBlankKeys() {
         RequestMdc.putCorrectionId("cid-1");
-        RequestMdc.putActor(Fixtures.principal(Role.ADMIN));
+        RequestMdc.putActor(Fixtures.principal(Role.HEADMASTER));
         assertThat(MDC.get(RequestMdc.CORRECTION_ID)).isEqualTo("cid-1");
         assertThat(MDC.get(RequestMdc.USER_ID)).isEqualTo("10");
         assertThat(MDC.get(RequestMdc.SCHOOL_ID)).isEqualTo("1");
-        assertThat(MDC.get(RequestMdc.ROLE)).isEqualTo("ADMIN");
+        assertThat(MDC.get(RequestMdc.ROLE)).isEqualTo("HEADMASTER");
 
         RequestMdc.putActor(null);
         RequestMdc.put("blank", "  ");

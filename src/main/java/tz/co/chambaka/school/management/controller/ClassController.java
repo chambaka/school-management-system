@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.academic.SchoolClassRequest;
 import tz.co.chambaka.school.management.dto.academic.SchoolClassResponse;
 import tz.co.chambaka.school.management.service.ClassService;
@@ -35,27 +36,27 @@ public class ClassController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ACADEMIC_STAFF)
     public List<SchoolClassResponse> list(@RequestParam(required = false) Long academicYearId) {
         return classService.list(tenantResolver.requireSchoolId(), academicYearId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public SchoolClassResponse create(@Valid @RequestBody SchoolClassRequest request) {
         return classService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public SchoolClassResponse update(@PathVariable Long id, @Valid @RequestBody SchoolClassRequest request) {
         return classService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public void delete(@PathVariable Long id) {
         classService.delete(tenantResolver.requireSchoolId(), id);
     }

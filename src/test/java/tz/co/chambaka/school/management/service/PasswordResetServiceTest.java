@@ -60,26 +60,26 @@ class PasswordResetServiceTest {
         assertThat(missing.expiresInSeconds()).isEqualTo(1800);
         verify(resetTokenRepository, never()).save(any());
 
-        User disabled = Fixtures.user(2L, Role.ADMIN);
+        User disabled = Fixtures.user(2L, Role.HEADMASTER);
         disabled.setEnabled(false);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(disabled));
-        ForgotPasswordResponse hidden = service(false).requestReset(new ForgotPasswordRequest("admin@example.com"));
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(disabled));
+        ForgotPasswordResponse hidden = service(false).requestReset(new ForgotPasswordRequest("headmaster@example.com"));
         assertThat(hidden.debugCode()).isNull();
         assertThat(hidden.message()).contains("If that account exists");
     }
 
     @Test
     void requestResetIssuesCodeAndConsumesPreviousTokens() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         PasswordResetToken previous = new PasswordResetToken();
         previous.setConsumed(false);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         when(resetTokenRepository.findByUserAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(any(), any()))
                 .thenReturn(List.of(previous));
         when(resetTokenRepository.save(any(PasswordResetToken.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ForgotPasswordResponse response = service(Duration.ofMinutes(15), true)
-                .requestReset(new ForgotPasswordRequest("admin@example.com"));
+                .requestReset(new ForgotPasswordRequest("headmaster@example.com"));
 
         assertThat(previous.isConsumed()).isTrue();
         assertThat(response.debugCode()).matches("\\d{6}");
@@ -92,19 +92,19 @@ class PasswordResetServiceTest {
 
     @Test
     void requestResetOmitsDebugCodeWhenDisabledAndDefaultsTtl() {
-        User user = Fixtures.user(2L, Role.ADMIN);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         when(resetTokenRepository.findByUserAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(any(), any()))
                 .thenReturn(List.of());
         when(resetTokenRepository.save(any(PasswordResetToken.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ForgotPasswordResponse hidden = service(null, false)
-                .requestReset(new ForgotPasswordRequest("admin@example.com"));
+                .requestReset(new ForgotPasswordRequest("headmaster@example.com"));
         assertThat(hidden.debugCode()).isNull();
         assertThat(hidden.expiresInSeconds()).isEqualTo(1800);
 
         ForgotPasswordResponse stillHidden = service(Duration.ofMinutes(30), null)
-                .requestReset(new ForgotPasswordRequest("admin@example.com"));
+                .requestReset(new ForgotPasswordRequest("headmaster@example.com"));
         assertThat(stillHidden.debugCode()).isNull();
 
         SmsProperties noResetConfig = org.mockito.Mockito.mock(SmsProperties.class);
@@ -120,15 +120,15 @@ class PasswordResetServiceTest {
 
     @Test
     void verifyCodeIssuesResetSession() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         PasswordResetToken token = pendingToken(user, "123456");
         token.setExpiresAt(Instant.now().minusSeconds(2));
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         when(resetTokenRepository.findByUserAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(any(), any()))
                 .thenReturn(List.of(token));
 
         VerifyResetCodeResponse response = service(true)
-                .verifyCode(new VerifyResetCodeRequest("admin@example.com", "123456"));
+                .verifyCode(new VerifyResetCodeRequest("headmaster@example.com", "123456"));
         assertThat(response.resetToken()).isNotBlank();
         assertThat(response.expiresInSeconds()).isZero();
         assertThat(token.getVerifiedAt()).isNotNull();
@@ -142,17 +142,17 @@ class PasswordResetServiceTest {
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Invalid or expired code");
 
-        User user = Fixtures.user(2L, Role.ADMIN);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         when(resetTokenRepository.findByUserAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(any(), any()))
                 .thenReturn(List.of());
-        assertThatThrownBy(() -> service(true).verifyCode(new VerifyResetCodeRequest("admin@example.com", "123456")))
+        assertThatThrownBy(() -> service(true).verifyCode(new VerifyResetCodeRequest("headmaster@example.com", "123456")))
                 .isInstanceOf(ApiException.class);
 
         PasswordResetToken token = pendingToken(user, "123456");
         when(resetTokenRepository.findByUserAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(any(), any()))
                 .thenReturn(List.of(token));
-        assertThatThrownBy(() -> service(true).verifyCode(new VerifyResetCodeRequest("admin@example.com", "000000")))
+        assertThatThrownBy(() -> service(true).verifyCode(new VerifyResetCodeRequest("headmaster@example.com", "000000")))
                 .isInstanceOf(ApiException.class);
         assertThat(token.getFailedAttempts()).isEqualTo(1);
         assertThat(token.isConsumed()).isFalse();
@@ -160,13 +160,13 @@ class PasswordResetServiceTest {
 
     @Test
     void verifyCodeLocksAfterTooManyAttempts() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         PasswordResetToken alreadyLocked = pendingToken(user, "123456");
         alreadyLocked.setFailedAttempts(5);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         when(resetTokenRepository.findByUserAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(any(), any()))
                 .thenReturn(List.of(alreadyLocked));
-        assertThatThrownBy(() -> service(true).verifyCode(new VerifyResetCodeRequest("admin@example.com", "123456")))
+        assertThatThrownBy(() -> service(true).verifyCode(new VerifyResetCodeRequest("headmaster@example.com", "123456")))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Too many invalid codes");
         assertThat(alreadyLocked.isConsumed()).isTrue();
@@ -175,7 +175,7 @@ class PasswordResetServiceTest {
         lastTry.setFailedAttempts(4);
         when(resetTokenRepository.findByUserAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(any(), any()))
                 .thenReturn(List.of(lastTry));
-        assertThatThrownBy(() -> service(true).verifyCode(new VerifyResetCodeRequest("admin@example.com", "000000")))
+        assertThatThrownBy(() -> service(true).verifyCode(new VerifyResetCodeRequest("headmaster@example.com", "000000")))
                 .isInstanceOf(ApiException.class);
         assertThat(lastTry.getFailedAttempts()).isEqualTo(5);
         assertThat(lastTry.isConsumed()).isTrue();
@@ -183,7 +183,7 @@ class PasswordResetServiceTest {
 
     @Test
     void resetPasswordCompletesSessionAndRevokesRefreshTokens() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         PasswordResetToken token = pendingToken(user, "123456");
         token.setVerifiedAt(Instant.now());
         token.setSessionHash(TokenHash.sha256("session-1"));
@@ -206,7 +206,7 @@ class PasswordResetServiceTest {
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Invalid or expired reset session");
 
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         PasswordResetToken expired = pendingToken(user, "123456");
         expired.setVerifiedAt(Instant.now());
         expired.setExpiresAt(Instant.now().minusSeconds(1));

@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.academic.AllocationRequest;
 import tz.co.chambaka.school.management.dto.academic.AllocationResponse;
 import tz.co.chambaka.school.management.service.AllocationService;
@@ -34,7 +35,7 @@ public class AllocationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ACADEMIC_STAFF)
     public List<AllocationResponse> list(
             @RequestParam(required = false) Long academicYearId,
             @RequestParam(required = false) Long teacherId
@@ -44,14 +45,14 @@ public class AllocationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public AllocationResponse create(@Valid @RequestBody AllocationRequest request) {
         return allocationService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public void delete(@PathVariable Long id) {
         allocationService.delete(tenantResolver.requireSchoolId(), id);
     }

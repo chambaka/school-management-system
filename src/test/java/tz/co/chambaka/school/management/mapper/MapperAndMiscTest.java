@@ -30,8 +30,8 @@ class MapperAndMiscTest {
         assertThat(branding.name()).isEqualTo("Chambaka Secondary");
 
         UserMapper userMapper = new UserMapperImpl();
-        UserProfileResponse profile = userMapper.toProfile(Fixtures.user(1L, tz.co.chambaka.school.management.model.enums.Role.ADMIN));
-        assertThat(profile.role().name()).isEqualTo("ADMIN");
+        UserProfileResponse profile = userMapper.toProfile(Fixtures.user(1L, tz.co.chambaka.school.management.model.enums.Role.HEADMASTER));
+        assertThat(profile.role().name()).isEqualTo("HEADMASTER");
 
         AcademicMapper academicMapper = new AcademicMapperImpl();
         AcademicYearResponse year = academicMapper.toYear(Fixtures.year());

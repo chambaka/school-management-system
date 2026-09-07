@@ -151,7 +151,7 @@ public class AuthService {
                 .name(request.adminName())
                 .email(request.adminEmail().toLowerCase())
                 .password(passwordEncoder.encode(request.password()))
-                .role(Role.TENANT_ADMIN)
+                .role(Role.HEADMASTER)
                 .phone(PhoneNumbers.persist(request.phone()))
                 .enabled(true)
                 .build();
@@ -166,11 +166,11 @@ public class AuthService {
     public AuthResponse switchSchool(Long userId, SwitchSchoolRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
-        if (user.getRole() != Role.TENANT_ADMIN && user.getRole() != Role.SUPER_ADMIN) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Only tenant or platform admins can switch school");
+        if (!user.getRole().switchesSchool()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Only the headmaster or platform admin can switch school");
         }
         School school;
-        if (user.getRole() == Role.TENANT_ADMIN) {
+        if (user.getRole() == Role.HEADMASTER) {
             school = tenantService.requireSchoolInTenant(user.getTenantId(), request.schoolId());
         } else {
             school = schoolRepository.findById(request.schoolId())

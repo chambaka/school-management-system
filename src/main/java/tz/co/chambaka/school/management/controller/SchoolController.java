@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
 import tz.co.chambaka.school.management.dto.school.UpdateSchoolRequest;
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.SchoolService;
@@ -41,13 +42,13 @@ public class SchoolController {
     }
 
     @GetMapping("/schools/current")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','STUDENT','PARENT')")
+    @PreAuthorize(Access.SCHOOL_USER)
     public SchoolResponse current(@CurrentUser UserPrincipal principal) {
         return schoolService.get(tenantResolver.requireSchoolId());
     }
 
     @PutMapping("/schools/current")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public SchoolResponse updateCurrent(@Valid @RequestBody UpdateSchoolRequest request) {
         return schoolService.update(tenantResolver.requireSchoolId(), request);
     }

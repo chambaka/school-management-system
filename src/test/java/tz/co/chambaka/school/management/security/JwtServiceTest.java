@@ -26,12 +26,12 @@ class JwtServiceTest {
 
     @Test
     void generatesAndParsesAccessToken() {
-        User user = Fixtures.user(9L, Role.ADMIN);
+        User user = Fixtures.user(9L, Role.HEADMASTER);
         String token = jwtService.generateAccessToken(user);
         Claims claims = jwtService.parse(token);
         assertThat(claims.getSubject()).isEqualTo("9");
         assertThat(claims.get("email", String.class)).isEqualTo(user.getEmail());
-        assertThat(claims.get("role", String.class)).isEqualTo("ADMIN");
+        assertThat(claims.get("role", String.class)).isEqualTo("HEADMASTER");
         assertThat(claims.get("schoolId", Long.class)).isEqualTo(1L);
     }
 

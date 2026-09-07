@@ -27,11 +27,11 @@ class CustomUserDetailsServiceTest {
 
     @Test
     void loadsByEmail() {
-        when(userRepository.findByEmailIgnoreCase("admin@example.com"))
-                .thenReturn(Optional.of(Fixtures.user(1L, Role.ADMIN)));
-        var details = service.loadUserByUsername("admin@example.com");
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com"))
+                .thenReturn(Optional.of(Fixtures.user(1L, Role.HEADMASTER)));
+        var details = service.loadUserByUsername("headmaster@example.com");
         assertThat(details).isInstanceOf(UserPrincipal.class);
-        assertThat(details.getUsername()).isEqualTo("admin@example.com");
+        assertThat(details.getUsername()).isEqualTo("headmaster@example.com");
     }
 
     @Test

@@ -37,18 +37,18 @@ class SchoolAdminServiceTest {
 
     @Test
     void listGetCreateUpdate() {
-        User admin = Fixtures.user(5L, Role.ADMIN);
-        when(userRepository.findBySchoolIdAndRole(1L, Role.ADMIN, PageRequest.of(0, 10)))
+        User admin = Fixtures.user(5L, Role.HEADMASTER);
+        when(userRepository.findBySchoolIdAndRoleIn(1L, Role.schoolOfficers(), PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of(admin)));
         assertThat(service.list(1L, PageRequest.of(0, 10)).totalElements()).isEqualTo(1);
 
-        when(userRepository.findByIdAndSchoolIdAndRole(5L, 1L, Role.ADMIN)).thenReturn(Optional.of(admin));
+        when(userRepository.findByIdAndSchoolIdAndRoleIn(5L, 1L, Role.schoolOfficers())).thenReturn(Optional.of(admin));
         assertThat(service.get(1L, 5L).email()).isEqualTo(admin.getEmail());
 
-        when(userAccountService.create(1L, "Asha", "asha@x.com", "HaloCampus1!", Role.ADMIN, "07"))
+        when(userAccountService.create(1L, "Asha", "asha@x.com", "HaloCampus1!", Role.ACCOUNTANT, "07"))
                 .thenReturn(admin);
         when(campusService.requirePrimary(1L)).thenReturn(Fixtures.campus());
-        var created = service.create(1L, new CreateSchoolAdminRequest("Asha", "asha@x.com", "HaloCampus1!", "07"));
+        var created = service.create(1L, new CreateSchoolAdminRequest("Asha", "asha@x.com", "HaloCampus1!", "07", Role.ACCOUNTANT));
         assertThat(created.id()).isEqualTo(5L);
         assertThat(admin.getCampusId()).isEqualTo(Fixtures.CAMPUS_ID);
 
@@ -59,9 +59,11 @@ class SchoolAdminServiceTest {
 
     @Test
     void createRejectsWeakPasswordAndMissingAdmin() {
-        assertThatThrownBy(() -> service.create(1L, new CreateSchoolAdminRequest("Asha", "asha@x.com", "weak", null)))
+        assertThatThrownBy(() -> service.create(1L, new CreateSchoolAdminRequest("Asha", "asha@x.com", "weak", null, Role.HEADMASTER)))
                 .isInstanceOf(BusinessException.class);
-        when(userRepository.findByIdAndSchoolIdAndRole(9L, 1L, Role.ADMIN)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.create(1L, new CreateSchoolAdminRequest("Asha", "asha@x.com", "HaloCampus1!", null, Role.TEACHER)))
+                .isInstanceOf(BusinessException.class);
+        when(userRepository.findByIdAndSchoolIdAndRoleIn(9L, 1L, Role.schoolOfficers())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.require(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
     }
 }

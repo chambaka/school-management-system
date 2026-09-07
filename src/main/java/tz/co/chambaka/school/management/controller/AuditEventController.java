@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.audit.AuditQueryService;
 import tz.co.chambaka.school.management.dto.audit.AuditEventResponse;
 import tz.co.chambaka.school.management.dto.common.PageResponse;
@@ -34,7 +35,7 @@ public class AuditEventController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.AUDIT)
     @Operation(summary = "Tenant audit trail for the current school")
     public PageResponse<AuditEventResponse> list(
             @RequestParam(required = false) String correctionId,
@@ -59,7 +60,7 @@ public class AuditEventController {
     }
 
     @GetMapping("/{correctionId}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.AUDIT)
     @Operation(summary = "Tenant events sharing a correctionId")
     public List<AuditEventResponse> byCorrectionId(@PathVariable String correctionId) {
         return auditQueryService.byCorrectionIdForSchool(correctionId, tenantResolver.requireSchoolId());

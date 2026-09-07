@@ -8,6 +8,7 @@ import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
 import tz.co.chambaka.school.management.dto.student.StudentResponse;
 import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.GradeService;
@@ -63,7 +64,7 @@ public class StudentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.STUDENT_DIRECTORY)
     public PageResponse<StudentResponse> list(
             @RequestParam(required = false) Long classId,
             @RequestParam(defaultValue = "false") boolean archived,
@@ -79,64 +80,64 @@ public class StudentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.STUDENT_DIRECTORY)
     public StudentResponse get(@PathVariable Long id) {
         return studentService.get(tenantResolver.requireSchoolId(), id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public StudentResponse create(@Valid @RequestBody CreateStudentRequest request) {
         return studentService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public StudentResponse update(@PathVariable Long id, @Valid @RequestBody UpdateStudentRequest request) {
         return studentService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @PostMapping("/{id}/parents")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public StudentParentResponse linkParent(@PathVariable Long id, @Valid @RequestBody LinkParentRequest request) {
         return parentService.link(tenantResolver.requireSchoolId(), id, request);
     }
 
     @DeleteMapping("/{id}/parents/{parentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public void unlinkParent(@PathVariable Long id, @PathVariable Long parentId) {
         parentService.unlink(tenantResolver.requireSchoolId(), id, parentId);
     }
 
     @PostMapping("/{id}/suspend")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public StudentResponse suspend(@PathVariable Long id) {
         return studentService.suspend(tenantResolver.requireSchoolId(), id);
     }
 
     @PostMapping("/{id}/archive")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public StudentResponse archive(@PathVariable Long id) {
         return studentService.archive(tenantResolver.requireSchoolId(), id);
     }
 
     @PostMapping("/{id}/restore")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public StudentResponse restore(@PathVariable Long id) {
         return studentService.restore(tenantResolver.requireSchoolId(), id);
     }
 
     @GetMapping("/{id}/parents")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ACADEMIC_STAFF)
     public List<StudentParentResponse> parents(@PathVariable Long id) {
         return parentService.listByStudent(tenantResolver.requireSchoolId(), id);
     }
 
     @GetMapping("/{id}/report-card")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','PARENT')")
+    @PreAuthorize(Access.REPORT_CARD)
     public ReportCardResponse reportCard(
             @CurrentUser UserPrincipal principal,
             @PathVariable Long id,
@@ -156,13 +157,13 @@ public class StudentController {
     }
 
     @PostMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public StudentResponse uploadPhoto(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         return studentService.uploadPhoto(tenantResolver.requireSchoolId(), id, file);
     }
 
     @DeleteMapping("/{id}/photo")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public StudentResponse deletePhoto(@PathVariable Long id) {
         return studentService.deletePhoto(tenantResolver.requireSchoolId(), id);
     }
@@ -175,7 +176,7 @@ public class StudentController {
     }
 
     @GetMapping("/{id}/photo")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','STUDENT','PARENT')")
+    @PreAuthorize(Access.ACADEMIC_VIEW)
     public ResponseEntity<Resource> photo(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
         authorizePhotoView(principal, id);
         return toPhotoResponse(studentService.photoFile(tenantResolver.requireSchoolId(), id));

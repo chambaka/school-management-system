@@ -40,7 +40,7 @@ class HttpAuditFilterTest {
     @Test
     void recordsMutatingRequestWithBody() throws Exception {
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(Fixtures.principal(Role.ADMIN), null));
+                new UsernamePasswordAuthenticationToken(Fixtures.principal(Role.HEADMASTER), null));
         MockHttpServletRequest raw = new MockHttpServletRequest("POST", "/api/v1/students");
         raw.setQueryString("dryRun=false");
         raw.setContent("{\"password\":\"secret\",\"name\":\"Ada\"}".getBytes());
@@ -53,7 +53,7 @@ class HttpAuditFilterTest {
         verify(auditService).record(captor.capture());
         assertThat(captor.getValue().getAction()).isEqualTo(AuditAction.CREATE);
         assertThat(captor.getValue().getResourceType()).isEqualTo("Student");
-        assertThat(captor.getValue().getActorEmail()).isEqualTo("admin@example.com");
+        assertThat(captor.getValue().getActorEmail()).isEqualTo("headmaster@example.com");
         assertThat(captor.getValue().getDetails()).doesNotContain("secret");
     }
 

@@ -81,7 +81,7 @@ class UserAccountServiceTest {
     @Test
     void deleteForTenantRemovesSchoolAndTenantUsersButKeepsPlatformAdmin() {
         stubDetachQueries();
-        User tenantAdmin = Fixtures.user(2L, Role.TENANT_ADMIN);
+        User tenantAdmin = Fixtures.user(2L, Role.HEADMASTER);
         User schoolTeacher = Fixtures.user(3L, Role.TEACHER);
         User platform = Fixtures.user(1L, Role.SUPER_ADMIN);
         when(userRepository.findByTenantId(10L)).thenReturn(List.of(tenantAdmin, platform));
@@ -98,7 +98,7 @@ class UserAccountServiceTest {
         when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(false);
         when(passwordEncoder.encode("pw")).thenReturn("hash");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
-        service.create(null, "N", "a@b.com", "pw", Role.ADMIN, null);
+        service.create(null, "N", "a@b.com", "pw", Role.HEADMASTER, null);
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
         assertThat(captor.getValue().getTenantId()).isNull();
@@ -108,7 +108,7 @@ class UserAccountServiceTest {
     @Test
     void deleteForTenantSkipsSchoolLookupWhenNoSchools() {
         stubDetachQueries();
-        when(userRepository.findByTenantId(10L)).thenReturn(List.of(Fixtures.user(2L, Role.TENANT_ADMIN)));
+        when(userRepository.findByTenantId(10L)).thenReturn(List.of(Fixtures.user(2L, Role.HEADMASTER)));
 
         service.deleteForTenant(10L, List.of());
         service.deleteForTenant(10L, null);
@@ -120,7 +120,7 @@ class UserAccountServiceTest {
     @Test
     void deleteForSchoolRemovesSchoolUsers() {
         stubDetachQueries();
-        when(userRepository.findBySchoolId(1L)).thenReturn(List.of(Fixtures.user(4L, Role.ADMIN)));
+        when(userRepository.findBySchoolId(1L)).thenReturn(List.of(Fixtures.user(4L, Role.HEADMASTER)));
 
         service.deleteForSchool(1L);
 

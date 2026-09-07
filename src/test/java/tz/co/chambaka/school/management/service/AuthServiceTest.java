@@ -82,13 +82,13 @@ class AuthServiceTest {
 
     @Test
     void loginSuccess() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         School school = Fixtures.school();
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         stubActiveTenant();
         when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
         stubTokens(user);
-        var response = authService.login(new LoginRequest("admin@example.com", "pw"));
+        var response = authService.login(new LoginRequest("headmaster@example.com", "pw"));
         assertThat(response.accessToken()).isEqualTo("access");
         assertThat(response.tokenType()).isEqualTo("Bearer");
         verify(authenticationManager).authenticate(any());
@@ -99,50 +99,50 @@ class AuthServiceTest {
     void loginFailedIsAudited() {
         org.mockito.Mockito.doThrow(new BadCredentialsException("bad"))
                 .when(authenticationManager).authenticate(any());
-        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+        assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
                 .isInstanceOf(BadCredentialsException.class);
-        verify(auditService).recordAuthFailure("admin@example.com", "Invalid email or password");
+        verify(auditService).recordAuthFailure("headmaster@example.com", "Invalid email or password");
     }
 
     @Test
     void loginDisabled() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         user.setEnabled(false);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
-        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
+        assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
                 .isInstanceOf(ApiException.class);
     }
 
     @Test
     void loginSuspendedSchool() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         School school = Fixtures.school();
         school.setStatus(SchoolStatus.SUSPENDED);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         stubActiveTenant();
         when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
-        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+        assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
                 .isInstanceOf(ApiException.class);
     }
 
     @Test
     void loginSuspendedTenant() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         Tenant tenant = Fixtures.tenant();
         tenant.setStatus(TenantStatus.SUSPENDED);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         when(tenantRepository.findById(Fixtures.TENANT_ID)).thenReturn(Optional.of(tenant));
-        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+        assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Organization");
     }
 
     @Test
     void loginMissingTenant() {
-        User user = Fixtures.user(2L, Role.ADMIN);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         when(tenantRepository.findById(Fixtures.TENANT_ID)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+        assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -155,35 +155,35 @@ class AuthServiceTest {
 
     @Test
     void loginMissingSchool() {
-        User user = Fixtures.user(2L, Role.ADMIN);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         stubActiveTenant();
         when(schoolRepository.findById(1L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+        assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     void loginArchivedTenant() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         Tenant tenant = Fixtures.tenant();
         tenant.setStatus(TenantStatus.ARCHIVED);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         when(tenantRepository.findById(Fixtures.TENANT_ID)).thenReturn(Optional.of(tenant));
-        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+        assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("no longer available");
     }
 
     @Test
     void loginArchivedSchool() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         School school = Fixtures.school();
         school.setStatus(SchoolStatus.ARCHIVED);
-        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         stubActiveTenant();
         when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
-        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+        assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("no longer available");
     }
@@ -191,9 +191,9 @@ class AuthServiceTest {
     @Test
     void loginSuperAdminSkipsSchool() {
         User user = Fixtures.user(1L, Role.SUPER_ADMIN);
-        when(userRepository.findByEmailIgnoreCase("super_admin@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCase("super_headmaster@example.com")).thenReturn(Optional.of(user));
         stubTokens(user);
-        authService.login(new LoginRequest("super_admin@example.com", "pw"));
+        authService.login(new LoginRequest("super_headmaster@example.com", "pw"));
         verify(refreshTokenRepository).save(any());
     }
 
@@ -202,7 +202,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmailIgnoreCase("yuki.t@example.com")).thenReturn(false);
         when(tenantService.provisionNewOrganization(any())).thenReturn(Fixtures.tenant());
         when(passwordEncoder.encode("HaloCampus1!")).thenReturn("enc");
-        User admin = Fixtures.user(2L, Role.TENANT_ADMIN);
+        User admin = Fixtures.user(2L, Role.HEADMASTER);
         when(userRepository.save(any(User.class))).thenReturn(admin);
         stubTokens(admin);
         var response = authService.registerSchool(new RegisterSchoolRequest(
@@ -211,7 +211,7 @@ class AuthServiceTest {
         assertThat(response.accessToken()).isEqualTo("access");
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
-        assertThat(captor.getValue().getRole()).isEqualTo(Role.TENANT_ADMIN);
+        assertThat(captor.getValue().getRole()).isEqualTo(Role.HEADMASTER);
         assertThat(captor.getValue().getTenantId()).isEqualTo(Fixtures.TENANT_ID);
         assertThat(captor.getValue().getSchoolId()).isNull();
         assertThat(captor.getValue().getCampusId()).isNull();
@@ -223,8 +223,8 @@ class AuthServiceTest {
         when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(false);
         when(tenantService.provisionNewOrganization(any())).thenReturn(Fixtures.tenant());
         when(passwordEncoder.encode(anyString())).thenReturn("enc");
-        when(userRepository.save(any(User.class))).thenReturn(Fixtures.user(2L, Role.TENANT_ADMIN));
-        stubTokens(Fixtures.user(2L, Role.TENANT_ADMIN));
+        when(userRepository.save(any(User.class))).thenReturn(Fixtures.user(2L, Role.HEADMASTER));
+        stubTokens(Fixtures.user(2L, Role.HEADMASTER));
         authService.registerSchool(new RegisterSchoolRequest(
                 null, "a@b.com", "HaloCampus1!", "A", null, "UTC", "USD", null, "X", null));
         verify(tenantService).provisionNewOrganization(any());
@@ -257,7 +257,7 @@ class AuthServiceTest {
 
     @Test
     void switchSchoolAsTenantAdmin() {
-        User user = Fixtures.user(2L, Role.TENANT_ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         when(userRepository.findById(2L)).thenReturn(Optional.of(user));
         when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
         when(campusService.requirePrimary(1L)).thenReturn(Fixtures.campus());
@@ -288,7 +288,7 @@ class AuthServiceTest {
 
     @Test
     void refreshSuccess() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         RefreshToken stored = new RefreshToken();
         stored.setUser(user);
         stored.setExpiresAt(Instant.now().plus(1, ChronoUnit.DAYS));
@@ -320,7 +320,7 @@ class AuthServiceTest {
 
     @Test
     void refreshDisabledUser() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         user.setEnabled(false);
         RefreshToken stored = new RefreshToken();
         stored.setUser(user);
@@ -332,7 +332,7 @@ class AuthServiceTest {
 
     @Test
     void meAndChangePassword() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         when(userRepository.findById(2L)).thenReturn(Optional.of(user));
         when(userMapper.toProfile(user)).thenReturn(Fixtures.profile(user));
         assertThat(authService.me(2L).email()).isEqualTo(user.getEmail());
@@ -346,7 +346,7 @@ class AuthServiceTest {
 
     @Test
     void changePasswordWrongCurrent() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         when(userRepository.findById(2L)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("no", "hashed")).thenReturn(false);
         assertThatThrownBy(() -> authService.changePassword(2L, new ChangePasswordRequest("no", "HaloCampus1!")))
@@ -355,7 +355,7 @@ class AuthServiceTest {
 
     @Test
     void changePasswordRejectsWeakPassword() {
-        User user = Fixtures.user(2L, Role.ADMIN);
+        User user = Fixtures.user(2L, Role.HEADMASTER);
         when(userRepository.findById(2L)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("old", "hashed")).thenReturn(true);
         assertThatThrownBy(() -> authService.changePassword(2L, new ChangePasswordRequest("old", "newpass12")))

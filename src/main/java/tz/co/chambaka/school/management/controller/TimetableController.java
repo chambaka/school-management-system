@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.academic.TimetableRequest;
 import tz.co.chambaka.school.management.dto.academic.TimetableResponse;
 import tz.co.chambaka.school.management.service.TimetableService;
@@ -35,33 +36,33 @@ public class TimetableController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','STUDENT')")
+    @PreAuthorize(Access.TIMETABLE_VIEW)
     public List<TimetableResponse> bySection(@RequestParam Long sectionId) {
         return timetableService.bySection(tenantResolver.requireSchoolId(), sectionId);
     }
 
     @GetMapping("/teacher/{teacherId}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ACADEMIC_STAFF)
     public List<TimetableResponse> byTeacher(@PathVariable Long teacherId) {
         return timetableService.byTeacher(tenantResolver.requireSchoolId(), teacherId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.TIMETABLE_MANAGE)
     public TimetableResponse create(@Valid @RequestBody TimetableRequest request) {
         return timetableService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.TIMETABLE_MANAGE)
     public TimetableResponse update(@PathVariable Long id, @Valid @RequestBody TimetableRequest request) {
         return timetableService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.TIMETABLE_MANAGE)
     public void delete(@PathVariable Long id) {
         timetableService.delete(tenantResolver.requireSchoolId(), id);
     }

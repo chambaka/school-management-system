@@ -3,6 +3,7 @@ package tz.co.chambaka.school.management.controller;
 import tz.co.chambaka.school.management.dto.common.PageResponse;
 import tz.co.chambaka.school.management.dto.finance.GenerateInvoicesRequest;
 import tz.co.chambaka.school.management.dto.finance.InvoiceResponse;
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.FinanceService;
@@ -45,32 +46,32 @@ public class InvoiceController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.INVOICE_VIEW)
     public PageResponse<InvoiceResponse> list(Pageable pageable) {
         return financeService.listInvoices(tenantResolver.requireSchoolId(), pageable);
     }
 
     @PostMapping("/generate")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    @PreAuthorize(Access.INVOICE_MANAGE)
     public List<InvoiceResponse> generate(@Valid @RequestBody GenerateInvoicesRequest request) {
         return financeService.generateInvoices(tenantResolver.requireSchoolId(), request);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT','STUDENT')")
+    @PreAuthorize(Access.FINANCE_RECORD)
     public InvoiceResponse get(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
         return financeService.getInvoice(tenantResolver.requireSchoolId(), id, principal);
     }
 
     @GetMapping("/students/{studentId}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT')")
+    @PreAuthorize(Access.FINANCE_RECORD)
     public List<InvoiceResponse> byStudent(@CurrentUser UserPrincipal principal, @PathVariable Long studentId) {
         return financeService.studentInvoices(tenantResolver.requireSchoolId(), studentId, principal);
     }
 
     @GetMapping("/students/{studentId}/balance")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','PARENT')")
+    @PreAuthorize(Access.FINANCE_RECORD)
     public Map<String, BigDecimal> balance(@CurrentUser UserPrincipal principal, @PathVariable Long studentId) {
         return Map.of("outstanding", financeService.outstandingBalance(
                 tenantResolver.requireSchoolId(), studentId, principal));

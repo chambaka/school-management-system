@@ -30,5 +30,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Page<User> findBySchoolIdAndRole(Long schoolId, Role role, Pageable pageable);
 
+    Page<User> findBySchoolIdAndRoleIn(Long schoolId, Collection<Role> roles, Pageable pageable);
+
     Optional<User> findByIdAndSchoolIdAndRole(Long id, Long schoolId, Role role);
+
+    Optional<User> findByIdAndSchoolIdAndRoleIn(Long id, Long schoolId, Collection<Role> roles);
 }

@@ -4,6 +4,7 @@ import tz.co.chambaka.school.management.dto.admin.CreateSchoolAdminRequest;
 import tz.co.chambaka.school.management.dto.admin.SchoolAdminResponse;
 import tz.co.chambaka.school.management.dto.admin.UpdateSchoolAdminRequest;
 import tz.co.chambaka.school.management.dto.common.PageResponse;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
@@ -37,7 +38,7 @@ public class SchoolAdminService {
 
     @Transactional(readOnly = true)
     public PageResponse<SchoolAdminResponse> list(Long schoolId, Pageable pageable) {
-        return PageResponse.of(userRepository.findBySchoolIdAndRole(schoolId, Role.ADMIN, pageable).map(this::toResponse));
+        return PageResponse.of(userRepository.findBySchoolIdAndRoleIn(schoolId, Role.schoolOfficers(), pageable).map(this::toResponse));
     }
 
     @Transactional(readOnly = true)
@@ -49,7 +50,7 @@ public class SchoolAdminService {
     public SchoolAdminResponse create(Long schoolId, CreateSchoolAdminRequest request) {
         PasswordPolicy.requireValid(request.password(), request.email(), request.name());
         User user = userAccountService.create(
-                schoolId, request.name(), request.email(), request.password(), Role.ADMIN, request.phone());
+                schoolId, request.name(), request.email(), request.password(), officerRole(request.role()), request.phone());
         user.setCampusId(campusService.requirePrimary(schoolId).getId());
         log.info("Created school admin userId={} schoolId={}", user.getId(), schoolId);
         return toResponse(user);
@@ -72,8 +73,16 @@ public class SchoolAdminService {
     }
 
     public User require(Long schoolId, Long id) {
-        return userRepository.findByIdAndSchoolIdAndRole(id, schoolId, Role.ADMIN)
-                .orElseThrow(() -> ResourceNotFoundException.of("School admin", id));
+        return userRepository.findByIdAndSchoolIdAndRoleIn(id, schoolId, Role.schoolOfficers())
+                .orElseThrow(() -> ResourceNotFoundException.of("School officer", id));
+    }
+
+    private static Role officerRole(Role requested) {
+        Role role = requested == null ? Role.HEADMASTER : requested;
+        if (!Role.schoolOfficers().contains(role)) {
+            throw new BusinessException("Role must be HEADMASTER, ACADEMIC_MASTER, or ACCOUNTANT");
+        }
+        return role;
     }
 
     private SchoolAdminResponse toResponse(User user) {
@@ -82,6 +91,7 @@ public class SchoolAdminService {
                 user.getName(),
                 user.getEmail(),
                 user.getPhone(),
-                user.isEnabled());
+                user.isEnabled(),
+                user.getRole());
     }
 }

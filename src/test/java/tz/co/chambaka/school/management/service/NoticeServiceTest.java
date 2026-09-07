@@ -40,14 +40,14 @@ class NoticeServiceTest {
     @Test
     void createUpdateList() {
         when(classService.require(1L, 1L)).thenReturn(Fixtures.schoolClass());
-        when(userRepository.findById(2L)).thenReturn(Optional.of(Fixtures.user(2L, Role.ADMIN)));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(Fixtures.user(2L, Role.HEADMASTER)));
         when(noticeRepository.save(any(Notice.class))).thenAnswer(inv -> {
             Notice saved = inv.getArgument(0);
             saved.setId(1L);
             return saved;
         });
         NoticeRequest req = new NoticeRequest("Hi", "Body", NoticeAudience.ALL, 1L, true, Instant.now(), null);
-        assertThat(service.create(1L, req, 2L).createdByName()).isEqualTo("User ADMIN");
+        assertThat(service.create(1L, req, 2L).createdByName()).isEqualTo("User HEADMASTER");
 
         Notice notice = notice();
         when(noticeRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(notice));
@@ -63,7 +63,7 @@ class NoticeServiceTest {
         service.listForAudience(1L, Role.TEACHER);
         service.listForAudience(1L, Role.STUDENT);
         service.listForAudience(1L, Role.PARENT);
-        service.listForAudience(1L, Role.ADMIN);
+        service.listForAudience(1L, Role.HEADMASTER);
         verify(noticeRepository, org.mockito.Mockito.times(4))
                 .findBySchoolIdAndPublishedTrueAndAudienceInOrderByCreatedAtDesc(eq(1L), any());
     }
@@ -86,7 +86,7 @@ class NoticeServiceTest {
         notice.setAudience(NoticeAudience.ALL);
         notice.setPublished(true);
         notice.setSchoolClass(Fixtures.schoolClass());
-        notice.setCreatedBy(Fixtures.user(2L, Role.ADMIN));
+        notice.setCreatedBy(Fixtures.user(2L, Role.HEADMASTER));
         return notice;
     }
 }

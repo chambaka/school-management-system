@@ -26,7 +26,7 @@ Package: `tz.co.chambaka.school.management`
 - Multi-tenant SaaS by default: one database. Organizations are `tenants`; operational data is isolated by `school_id`; locations are `campuses`. Flip `sms.tenancy.mode` to `single` for one organization with many schools.
 - White-label branding (logo, colors, timezone, currency, custom domain)
 - Organization signup (tenant + tenant admin) and JWT authentication; schools are added from the organization dashboard
-- Roles: `SUPER_ADMIN`, `TENANT_ADMIN`, `ADMIN`, `TEACHER`, `STUDENT`, `PARENT`
+- Roles: `SUPER_ADMIN`, `HEADMASTER`, `ACADEMIC_MASTER`, `TEACHER`, `ACCOUNTANT`, `PARENT`, `STUDENT`
 - Academic structure: years, classes, sections, subjects, timetable
 - Exams, grades, and report cards
 - Student and teacher attendance
@@ -90,9 +90,10 @@ Every school-owned row has `school_id`. Users also carry `tenant_id` and optiona
 | Role | Purpose |
 | --- | --- |
 | `SUPER_ADMIN` | Platform operator. Manages all tenants (and their schools). In single-tenant mode, bound to the default organization and uses the schools dashboard. |
-| `TENANT_ADMIN` | Organization admin. Creates schools and campuses; can switch active school. |
-| `ADMIN` | School administrator for one school. |
-| `TEACHER` | Teaching staff. |
+| `HEADMASTER` | School lead. Sees academics and finance; approves exams and results. |
+| `ACADEMIC_MASTER` | Runs classes, timetable, attendance, and exams. |
+| `ACCOUNTANT` | Manages fees, invoices, and payments. |
+| `TEACHER` | Assigned classes, attendance, marks, and parent messages. |
 | `STUDENT` | Learner. |
 | `PARENT` | Guardian linked to one or more students. |
 
@@ -140,7 +141,7 @@ Default platform admin (created on first boot if none exists):
 - Email: `halo.admin@halo-schools.net`
 - Password: `ChangeMe123!`
 
-Create an organization (tenant + `TENANT_ADMIN`). Schools are added later from the organization dashboard (`POST /api/v1/tenants/current/schools`):
+Create an organization (tenant + `HEADMASTER`). Schools are added later from the organization dashboard (`POST /api/v1/tenants/current/schools`):
 
 ```bash
 curl -X POST http://localhost:8989/api/v1/auth/register-school \
@@ -324,7 +325,7 @@ Passwords, tokens, and similar fields are stripped from stored request bodies. R
 
 ### Query APIs
 
-School `ADMIN` — current tenant only:
+School `HEADMASTER` — current tenant only:
 
 ```text
 GET /api/v1/audit-events

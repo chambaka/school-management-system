@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.academic.SectionRequest;
 import tz.co.chambaka.school.management.dto.academic.SectionResponse;
 import tz.co.chambaka.school.management.service.SectionService;
@@ -35,27 +36,27 @@ public class SectionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.ACADEMIC_STAFF)
     public List<SectionResponse> list(@RequestParam Long schoolClassId) {
         return sectionService.list(tenantResolver.requireSchoolId(), schoolClassId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public SectionResponse create(@Valid @RequestBody SectionRequest request) {
         return sectionService.create(tenantResolver.requireSchoolId(), request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public SectionResponse update(@PathVariable Long id, @Valid @RequestBody SectionRequest request) {
         return sectionService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
     public void delete(@PathVariable Long id) {
         sectionService.delete(tenantResolver.requireSchoolId(), id);
     }

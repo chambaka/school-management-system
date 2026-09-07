@@ -2,6 +2,8 @@ package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.dto.notice.NoticeRequest;
 import tz.co.chambaka.school.management.dto.notice.NoticeResponse;
+import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.NoticeService;
@@ -37,9 +39,7 @@ public class NoticeController {
     @GetMapping
     public List<NoticeResponse> list(@CurrentUser UserPrincipal principal) {
         Long schoolId = tenantResolver.requireSchoolId();
-        if (principal.getRole().name().equals("ADMIN")
-                || principal.getRole().name().equals("TENANT_ADMIN")
-                || principal.getRole().name().equals("SUPER_ADMIN")) {
+        if (principal.getRole() == Role.SUPER_ADMIN || principal.getRole().managesPeople()) {
             return noticeService.listForAdmin(schoolId);
         }
         return noticeService.listForAudience(schoolId, principal.getRole());
@@ -47,13 +47,13 @@ public class NoticeController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.NOTICE_WRITE)
     public NoticeResponse create(@CurrentUser UserPrincipal principal, @Valid @RequestBody NoticeRequest request) {
         return noticeService.create(tenantResolver.requireSchoolId(), request, principal.getId());
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
+    @PreAuthorize(Access.NOTICE_WRITE)
     public NoticeResponse update(@PathVariable Long id, @Valid @RequestBody NoticeRequest request) {
         return noticeService.update(tenantResolver.requireSchoolId(), id, request);
     }

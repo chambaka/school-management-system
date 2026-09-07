@@ -94,7 +94,7 @@ public class StudentCommunicationService {
     public StudentMessageResponse post(Long schoolId, Long studentId, UserPrincipal principal, CreateStudentMessageRequest request) {
         Student student = studentService.require(schoolId, studentId);
         Role role = principal.getRole();
-        boolean staff = role == Role.ADMIN || role == Role.TENANT_ADMIN || role == Role.TEACHER;
+        boolean staff = role.postsStudentMessages() && role != Role.PARENT;
         boolean parent = role == Role.PARENT;
         if (!staff && !parent) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Not allowed to post student messages");
@@ -105,8 +105,8 @@ public class StudentCommunicationService {
         boolean notifySms = request.notifyParentsSms();
         if (parent) {
             notifySms = false;
-        } else if (notifySms && role != Role.ADMIN && role != Role.TENANT_ADMIN) {
-            throw new BusinessException("Only school admins can send parent SMS alerts");
+        } else if (notifySms && !role.sendsParentSms()) {
+            throw new BusinessException("Only the headmaster or academic master can send parent SMS alerts");
         }
         User author = userRepository.findById(principal.getId())
                 .orElseThrow(() -> ResourceNotFoundException.of("User", principal.getId()));
@@ -177,7 +177,7 @@ public class StudentCommunicationService {
 
     private void requireCanView(UserPrincipal principal, Long studentId) {
         Role role = principal.getRole();
-        if (role == Role.ADMIN || role == Role.TENANT_ADMIN || role == Role.TEACHER) {
+        if (role.postsStudentMessages() && role != Role.PARENT) {
             return;
         }
         if (role == Role.PARENT) {

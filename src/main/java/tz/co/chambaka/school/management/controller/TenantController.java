@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
@@ -83,25 +84,25 @@ public class TenantController {
     }
 
     @GetMapping("/tenants/current")
-    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize(Access.ORG_SCHOOLS)
     public TenantResponse current() {
         return tenantService.get(tenantResolver.requireTenantId());
     }
 
     @PutMapping("/tenants/current")
-    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize(Access.ORG_SCHOOLS)
     public TenantResponse updateCurrent(@Valid @RequestBody RenameOrganizationRequest request) {
         return tenantService.rename(tenantResolver.requireTenantId(), request.name());
     }
 
     @GetMapping("/tenants/current/schools")
-    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize(Access.ORG_SCHOOLS)
     public List<SchoolResponse> currentSchools() {
         return tenantService.listSchools(tenantResolver.requireTenantId());
     }
 
     @PostMapping("/tenants/current/schools")
-    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize(Access.ORG_SCHOOLS)
     @ResponseStatus(HttpStatus.CREATED)
     public SchoolResponse addSchool(@Valid @RequestBody CreateSchoolRequest request) {
         return tenantService.addSchool(tenantResolver.requireTenantId(), request);

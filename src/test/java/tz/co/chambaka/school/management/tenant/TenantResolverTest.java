@@ -70,7 +70,7 @@ class TenantResolverTest {
 
     @Test
     void schoolUserUsesOwnTenant() {
-        assertThat(resolver().resolve(999L, Fixtures.principal(Role.ADMIN))).isEqualTo(1L);
+        assertThat(resolver().resolve(999L, Fixtures.principal(Role.HEADMASTER))).isEqualTo(1L);
     }
 
     @Test
@@ -107,12 +107,14 @@ class TenantResolverTest {
     }
 
     @Test
-    void tenantAdminCanRequestSchool() {
-        assertThat(resolver().resolve(99L, Fixtures.principal(Role.TENANT_ADMIN))).isEqualTo(99L);
+    void headmasterWithoutSchoolCanRequestSchool() {
+        var user = Fixtures.user(10L, Role.HEADMASTER);
+        user.setSchoolId(null);
+        assertThat(resolver().resolve(99L, new tz.co.chambaka.school.management.security.UserPrincipal(user))).isEqualTo(99L);
     }
 
     @Test
     void tenantAdminFallsBackToHomeSchool() {
-        assertThat(resolver().resolve(null, Fixtures.principal(Role.TENANT_ADMIN))).isEqualTo(1L);
+        assertThat(resolver().resolve(null, Fixtures.principal(Role.HEADMASTER))).isEqualTo(1L);
     }
 }

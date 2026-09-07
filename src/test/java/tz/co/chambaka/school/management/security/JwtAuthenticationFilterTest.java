@@ -60,11 +60,11 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void authenticatesBearerToken() throws Exception {
-        Claims claims = mockClaims("admin@example.com");
+        Claims claims = mockClaims("headmaster@example.com");
         when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer tok");
         when(jwtService.parse("tok")).thenReturn(claims);
-        when(userDetailsService.loadUserByUsername("admin@example.com"))
-                .thenReturn(new UserPrincipal(Fixtures.user(2L, Role.ADMIN)));
+        when(userDetailsService.loadUserByUsername("headmaster@example.com"))
+                .thenReturn(new UserPrincipal(Fixtures.user(2L, Role.HEADMASTER)));
         filter.doFilter(request, response, chain);
         verify(chain).doFilter(request, response);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
@@ -107,11 +107,11 @@ class JwtAuthenticationFilterTest {
         filter.doFilter(request, response, chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
 
-        Claims enabledClaims = mockClaims("admin@example.com");
+        Claims enabledClaims = mockClaims("headmaster@example.com");
         when(jwtService.parse("tok")).thenReturn(enabledClaims);
-        User disabled = Fixtures.user(2L, Role.ADMIN);
+        User disabled = Fixtures.user(2L, Role.HEADMASTER);
         disabled.setEnabled(false);
-        when(userDetailsService.loadUserByUsername("admin@example.com")).thenReturn(new UserPrincipal(disabled));
+        when(userDetailsService.loadUserByUsername("headmaster@example.com")).thenReturn(new UserPrincipal(disabled));
         filter.doFilter(request, response, chain);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }

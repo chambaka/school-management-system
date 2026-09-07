@@ -123,20 +123,20 @@ class FinanceServiceTest {
         assertThat(service.listInvoices(1L, PageRequest.of(0, 10)).content()).hasSize(1);
         verify(auditService).recordFinance(eq(1L), eq(AuditAction.INVOICE_LISTED), eq("Invoice"), isNull(),
                 contains("count=1"), contains("INV-1-000001"));
-        assertThat(service.studentInvoices(1L, 1L, Fixtures.principal(Role.ADMIN))).hasSize(1);
-        assertThat(service.getInvoice(1L, 1L, Fixtures.principal(Role.TENANT_ADMIN)).status())
+        assertThat(service.studentInvoices(1L, 1L, Fixtures.principal(Role.HEADMASTER))).hasSize(1);
+        assertThat(service.getInvoice(1L, 1L, Fixtures.principal(Role.HEADMASTER)).status())
                 .isEqualTo(InvoiceStatus.PENDING);
         verify(auditService).recordFinance(eq(1L), eq(AuditAction.INVOICE_VIEWED), eq("Invoice"), eq("1"),
                 contains("INV-1-000001"), contains("status=PENDING"));
 
         when(invoiceRepository.findBySchoolIdAndStudentIdAndStatusIn(any(), any(), any()))
                 .thenReturn(List.of(invoice));
-        assertThat(service.outstandingBalance(1L, 1L, Fixtures.principal(Role.ADMIN)))
+        assertThat(service.outstandingBalance(1L, 1L, Fixtures.principal(Role.HEADMASTER)))
                 .isEqualByComparingTo("250000");
         verify(auditService).recordFinance(eq(1L), eq(AuditAction.BALANCE_VIEWED), eq("Student"), eq("1"),
                 contains("250000"), contains("outstanding=250000"));
 
-        when(userRepository.findById(2L)).thenReturn(Optional.of(Fixtures.user(2L, Role.ADMIN)));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(Fixtures.user(2L, Role.HEADMASTER)));
         when(paymentRepository.countBySchoolId(1L)).thenReturn(0L);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> {
             Payment saved = inv.getArgument(0);
@@ -155,10 +155,10 @@ class FinanceServiceTest {
 
         when(paymentRepository.findBySchoolIdAndInvoiceId(1L, 1L)).thenReturn(List.of(payment(invoice)));
         when(paymentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(payment(invoice)));
-        assertThat(service.paymentsForInvoice(1L, 1L, Fixtures.principal(Role.ADMIN))).hasSize(1);
+        assertThat(service.paymentsForInvoice(1L, 1L, Fixtures.principal(Role.HEADMASTER))).hasSize(1);
         verify(auditService).recordFinance(eq(1L), eq(AuditAction.PAYMENT_LISTED), eq("Invoice"), eq("1"),
                 contains("payments"), contains("RCPT-1-000001"));
-        assertThat(service.getPayment(1L, 1L, Fixtures.principal(Role.ADMIN)).method()).isEqualTo(PaymentMethod.CASH);
+        assertThat(service.getPayment(1L, 1L, Fixtures.principal(Role.HEADMASTER)).method()).isEqualTo(PaymentMethod.CASH);
         verify(auditService).recordFinance(eq(1L), eq(AuditAction.PAYMENT_VIEWED), eq("Payment"), eq("1"),
                 contains("RCPT-1-000001"), contains("amount=10"));
     }
@@ -191,10 +191,10 @@ class FinanceServiceTest {
                 .isInstanceOf(BusinessException.class);
 
         when(invoiceRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.getInvoice(1L, 9L, Fixtures.principal(Role.ADMIN)))
+        assertThatThrownBy(() -> service.getInvoice(1L, 9L, Fixtures.principal(Role.HEADMASTER)))
                 .isInstanceOf(ResourceNotFoundException.class);
         when(paymentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.getPayment(1L, 9L, Fixtures.principal(Role.ADMIN)))
+        assertThatThrownBy(() -> service.getPayment(1L, 9L, Fixtures.principal(Role.HEADMASTER)))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 

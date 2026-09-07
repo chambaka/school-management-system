@@ -26,13 +26,13 @@ class AuditPathClassifierTest {
         assertThat(AuditPathClassifier.isFinance("/api/v1/payments")).isTrue();
         assertThat(AuditPathClassifier.isFinance("/api/v1/students")).isFalse();
         assertThat(AuditPathClassifier.isFinance(null)).isFalse();
-        assertThat(AuditPathClassifier.scope("/api/v1/platform/schools", Role.ADMIN, AuditAction.UPDATE))
+        assertThat(AuditPathClassifier.scope("/api/v1/platform/schools", Role.HEADMASTER, AuditAction.UPDATE))
                 .isEqualTo(AuditScope.PLATFORM);
         assertThat(AuditPathClassifier.scope("/api/v1/students", Role.SUPER_ADMIN, AuditAction.CREATE))
                 .isEqualTo(AuditScope.PLATFORM);
-        assertThat(AuditPathClassifier.scope("/api/v1/students", Role.ADMIN, AuditAction.REGISTER_SCHOOL))
+        assertThat(AuditPathClassifier.scope("/api/v1/students", Role.HEADMASTER, AuditAction.REGISTER_SCHOOL))
                 .isEqualTo(AuditScope.PLATFORM);
-        assertThat(AuditPathClassifier.scope("/api/v1/students", Role.ADMIN, AuditAction.CREATE))
+        assertThat(AuditPathClassifier.scope("/api/v1/students", Role.HEADMASTER, AuditAction.CREATE))
                 .isEqualTo(AuditScope.TENANT);
     }
 

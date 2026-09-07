@@ -48,7 +48,7 @@ class AttendanceServiceTest {
     void markAndQuery() {
         LocalDate date = LocalDate.of(2026, 9, 5);
         when(sectionService.require(1L, 1L)).thenReturn(Fixtures.section());
-        when(userRepository.findById(2L)).thenReturn(Optional.of(Fixtures.user(2L, tz.co.chambaka.school.management.model.enums.Role.ADMIN)));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(Fixtures.user(2L, tz.co.chambaka.school.management.model.enums.Role.HEADMASTER)));
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
         when(studentAttendanceRepository.findByStudentIdAndAttendanceDate(1L, date)).thenReturn(Optional.empty());
         when(studentAttendanceRepository.save(any(StudentAttendance.class))).thenAnswer(inv -> {

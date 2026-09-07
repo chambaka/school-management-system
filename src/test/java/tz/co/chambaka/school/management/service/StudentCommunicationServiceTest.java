@@ -77,7 +77,7 @@ class StudentCommunicationServiceTest {
 
         when(communicationRepository.findBySchoolIdAndStudentIdOrderByCreatedAtAsc(1L, 1L))
                 .thenReturn(List.of(message(Role.TEACHER, false)));
-        assertThat(service.listForStudent(1L, 1L, Fixtures.principal(Role.ADMIN))).hasSize(1);
+        assertThat(service.listForStudent(1L, 1L, Fixtures.principal(Role.HEADMASTER))).hasSize(1);
         service.listForStudent(1L, 1L, Fixtures.principal(Role.PARENT));
         verify(parentService).assertLinked(10L, 1L);
 
@@ -90,14 +90,14 @@ class StudentCommunicationServiceTest {
         link.setParent(Fixtures.parent());
         when(studentParentRepository.findByParentId(1L)).thenReturn(List.of(link));
         when(communicationRepository.findBySchoolIdAndStudentIdInOrderByCreatedAtDesc(eq(1L), any()))
-                .thenReturn(List.of(message(Role.ADMIN, true)));
+                .thenReturn(List.of(message(Role.HEADMASTER, true)));
         assertThat(service.inbox(1L, Fixtures.principal(Role.PARENT)).getFirst().smsSent()).isEqualTo(1);
     }
 
     @Test
     void adminSmsFlagAlertsLinkedParents() {
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
-        when(userRepository.findById(10L)).thenReturn(Optional.of(Fixtures.user(10L, Role.ADMIN)));
+        when(userRepository.findById(10L)).thenReturn(Optional.of(Fixtures.user(10L, Role.HEADMASTER)));
         when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
         when(smsProperties.messaging()).thenReturn(SmsProperties.Messaging.of(
                 true, "log-sms", "HALO", "http://localhost:7575", "secret"));
@@ -114,7 +114,7 @@ class StudentCommunicationServiceTest {
             saved.setCreatedAt(Instant.parse("2026-09-07T07:00:00Z"));
             return saved;
         });
-        var response = service.post(1L, 1L, Fixtures.principal(Role.ADMIN),
+        var response = service.post(1L, 1L, Fixtures.principal(Role.HEADMASTER),
                 new CreateStudentMessageRequest("Fee reminder for next week.", true));
         assertThat(response.notifyParentsSms()).isTrue();
         assertThat(response.smsSent()).isEqualTo(1);
@@ -125,19 +125,19 @@ class StudentCommunicationServiceTest {
     @Test
     void smsDisabledSkippedAndGatewaySkip() {
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
-        when(userRepository.findById(10L)).thenReturn(Optional.of(Fixtures.user(10L, Role.TENANT_ADMIN)));
+        when(userRepository.findById(10L)).thenReturn(Optional.of(Fixtures.user(10L, Role.HEADMASTER)));
         when(schoolRepository.findById(1L)).thenReturn(Optional.empty());
         when(smsProperties.messaging()).thenReturn(SmsProperties.Messaging.defaults());
         when(studentParentRepository.findByStudentId(1L)).thenReturn(List.of(link(Fixtures.parent())));
         when(communicationRepository.save(any(StudentCommunication.class))).thenAnswer(inv -> inv.getArgument(0));
-        var disabled = service.post(1L, 1L, Fixtures.principal(Role.TENANT_ADMIN),
+        var disabled = service.post(1L, 1L, Fixtures.principal(Role.HEADMASTER),
                 new CreateStudentMessageRequest("Note", true));
         assertThat(disabled.smsSkipped()).isEqualTo(1);
 
         when(smsProperties.messaging()).thenReturn(SmsProperties.Messaging.of(
                 true, "log-sms", "HALO", "http://localhost:7575", "secret"));
         when(smsGateway.send(any(), any(), any())).thenReturn(SmsSendResult.skipped("rate-limit"));
-        var skipped = service.post(1L, 1L, Fixtures.principal(Role.TENANT_ADMIN),
+        var skipped = service.post(1L, 1L, Fixtures.principal(Role.HEADMASTER),
                 new CreateStudentMessageRequest("Note two", true));
         assertThat(skipped.smsSkipped()).isEqualTo(1);
     }
@@ -149,7 +149,7 @@ class StudentCommunicationServiceTest {
                 new CreateStudentMessageRequest("x", false))).isInstanceOf(ApiException.class);
         assertThatThrownBy(() -> service.post(1L, 1L, Fixtures.principal(Role.TEACHER),
                 new CreateStudentMessageRequest("x", true))).isInstanceOf(BusinessException.class);
-        assertThatThrownBy(() -> service.post(1L, 1L, Fixtures.principal(Role.ADMIN),
+        assertThatThrownBy(() -> service.post(1L, 1L, Fixtures.principal(Role.HEADMASTER),
                 new CreateStudentMessageRequest("x", false))).isInstanceOf(ResourceNotFoundException.class);
 
         when(userRepository.findById(10L)).thenReturn(Optional.of(Fixtures.user(10L, Role.PARENT)));
@@ -161,7 +161,7 @@ class StudentCommunicationServiceTest {
 
         assertThatThrownBy(() -> service.listForStudent(1L, 1L, Fixtures.principal(Role.STUDENT)))
                 .isInstanceOf(ApiException.class);
-        assertThatThrownBy(() -> service.inbox(1L, Fixtures.principal(Role.ADMIN)))
+        assertThatThrownBy(() -> service.inbox(1L, Fixtures.principal(Role.HEADMASTER)))
                 .isInstanceOf(ApiException.class);
         assertThat(StudentCommunicationService.composeSms("S", "Ada", null)).contains("Reply in the app.");
         assertThat(StudentCommunicationService.composeSms("S", "Ada", "word ".repeat(40)).length()).isLessThanOrEqualTo(160);

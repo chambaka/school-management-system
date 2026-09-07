@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.dto.communication.CreateStudentMessageRequest;
 import tz.co.chambaka.school.management.dto.communication.StudentMessageResponse;
+import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.StudentCommunicationService;
@@ -37,7 +38,7 @@ public class StudentCommunicationController {
     }
 
     @GetMapping("/students/{studentId}/messages")
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','PARENT')")
+    @PreAuthorize(Access.MESSAGE)
     public List<StudentMessageResponse> list(
             @CurrentUser UserPrincipal principal,
             @PathVariable Long studentId
@@ -47,7 +48,7 @@ public class StudentCommunicationController {
 
     @PostMapping("/students/{studentId}/messages")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','PARENT')")
+    @PreAuthorize(Access.MESSAGE)
     public StudentMessageResponse post(
             @CurrentUser UserPrincipal principal,
             @PathVariable Long studentId,

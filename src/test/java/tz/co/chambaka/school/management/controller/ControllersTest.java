@@ -174,7 +174,7 @@ class ControllersTest {
         auth.login(new LoginRequest("a@b.com", "pw"));
         auth.registerSchool(new RegisterSchoolRequest(null, "a@b.com", "HaloCampus1!", "A", null, null, null, null, "Org", null));
         auth.refresh(new RefreshTokenRequest("rt"));
-        UserPrincipal admin = Fixtures.principal(Role.ADMIN);
+        UserPrincipal admin = Fixtures.principal(Role.HEADMASTER);
         auth.switchSchool(admin, new tz.co.chambaka.school.management.dto.auth.SwitchSchoolRequest(1L, 20L));
         auth.me(admin);
         auth.changePassword(admin, new ChangePasswordRequest("old", "HaloCampus1!"));
@@ -313,7 +313,7 @@ class ControllersTest {
         teachers.uploadPhoto(1L, new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1}));
         teachers.deletePhoto(1L);
         teachers.myPhoto(Fixtures.principal(Role.TEACHER));
-        teachers.photo(Fixtures.principal(Role.ADMIN), 1L);
+        teachers.photo(Fixtures.principal(Role.HEADMASTER), 1L);
         teachers.photo(Fixtures.principal(Role.TEACHER), 1L);
         var otherTeacher = Fixtures.teacher();
         otherTeacher.setId(99L);
@@ -324,7 +324,7 @@ class ControllersTest {
         SchoolAdminController schoolAdmins = new SchoolAdminController(schoolAdminService, tenantResolver);
         schoolAdmins.list(PageRequest.of(0, 10));
         schoolAdmins.get(5L);
-        schoolAdmins.create(new CreateSchoolAdminRequest("Asha", "asha@x.com", "HaloCampus1!", "07"));
+        schoolAdmins.create(new CreateSchoolAdminRequest("Asha", "asha@x.com", "HaloCampus1!", "07", Role.HEADMASTER));
         schoolAdmins.update(5L, new UpdateSchoolAdminRequest("Asha", "08", true));
         verify(schoolAdminService).create(eq(1L), any());
 
@@ -342,7 +342,7 @@ class ControllersTest {
         students.update(1L, new UpdateStudentRequest(null, null, null, null, null, null, null, null, null, null, null, null));
         students.linkParent(1L, new LinkParentRequest(1L, RelationshipType.MOTHER, true));
         students.parents(1L);
-        students.reportCard(Fixtures.principal(Role.ADMIN), 1L, 1L);
+        students.reportCard(Fixtures.principal(Role.HEADMASTER), 1L, 1L);
         students.reportCard(Fixtures.principal(Role.PARENT), 1L, 1L);
         verify(parentService).assertLinked(10L, 1L);
         students.myReportCard(Fixtures.principal(Role.STUDENT), 1L);
@@ -351,7 +351,7 @@ class ControllersTest {
         students.uploadPhoto(1L, new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1}));
         students.deletePhoto(1L);
         students.myPhoto(Fixtures.principal(Role.STUDENT));
-        students.photo(Fixtures.principal(Role.ADMIN), 1L);
+        students.photo(Fixtures.principal(Role.HEADMASTER), 1L);
         students.photo(Fixtures.principal(Role.TEACHER), 1L);
         students.photo(Fixtures.principal(Role.STUDENT), 1L);
         students.photo(Fixtures.principal(Role.PARENT), 1L);
@@ -404,7 +404,7 @@ class ControllersTest {
         AttendanceController attendance = new AttendanceController(attendanceService, studentService, tenantResolver);
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
         attendance.markStudents(Fixtures.principal(Role.TEACHER), new MarkStudentAttendanceRequest(1L, LocalDate.now(), List.of()));
-        attendance.markTeachers(Fixtures.principal(Role.ADMIN), new MarkTeacherAttendanceRequest(LocalDate.now(), List.of()));
+        attendance.markTeachers(Fixtures.principal(Role.HEADMASTER), new MarkTeacherAttendanceRequest(LocalDate.now(), List.of()));
         attendance.dailyStudents(1L, LocalDate.now());
         attendance.dailyTeachers(LocalDate.now());
         attendance.studentSummary(1L, LocalDate.now(), LocalDate.now());
@@ -420,29 +420,29 @@ class ControllersTest {
         when(financeService.outstandingBalance(eq(1L), eq(1L), any())).thenReturn(BigDecimal.TEN);
         invoices.list(PageRequest.of(0, 10));
         invoices.generate(new GenerateInvoicesRequest(1L, 1L, List.of(1L), null));
-        invoices.get(Fixtures.principal(Role.ADMIN), 1L);
+        invoices.get(Fixtures.principal(Role.HEADMASTER), 1L);
         invoices.byStudent(Fixtures.principal(Role.PARENT), 1L);
         assertThat(invoices.balance(Fixtures.principal(Role.PARENT), 1L)).containsEntry("outstanding", BigDecimal.TEN);
         invoices.mine(Fixtures.principal(Role.STUDENT));
 
         PaymentController payments = new PaymentController(financeService, tenantResolver);
-        payments.record(Fixtures.principal(Role.ADMIN), new RecordPaymentRequest(1L, BigDecimal.ONE, PaymentMethod.CASH, null));
+        payments.record(Fixtures.principal(Role.HEADMASTER), new RecordPaymentRequest(1L, BigDecimal.ONE, PaymentMethod.CASH, null));
         payments.get(Fixtures.principal(Role.STUDENT), 1L);
         payments.byInvoice(Fixtures.principal(Role.PARENT), 1L);
 
         NoticeController notices = new NoticeController(noticeService, tenantResolver);
         NoticeRequest noticeReq = new NoticeRequest("T", "C", NoticeAudience.ALL, null, true, null, null);
-        notices.list(Fixtures.principal(Role.ADMIN));
+        notices.list(Fixtures.principal(Role.HEADMASTER));
         notices.list(Fixtures.principal(Role.SUPER_ADMIN));
-        notices.list(Fixtures.principal(Role.TENANT_ADMIN));
+        notices.list(Fixtures.principal(Role.HEADMASTER));
         notices.list(Fixtures.principal(Role.STUDENT));
-        notices.create(Fixtures.principal(Role.ADMIN), noticeReq);
+        notices.create(Fixtures.principal(Role.HEADMASTER), noticeReq);
         notices.update(1L, noticeReq);
         verify(noticeService).listForAudience(eq(1L), eq(Role.STUDENT));
 
         StudentCommunicationController messages = new StudentCommunicationController(communicationService, tenantResolver);
         messages.list(Fixtures.principal(Role.TEACHER), 1L);
-        messages.post(Fixtures.principal(Role.ADMIN), 1L,
+        messages.post(Fixtures.principal(Role.HEADMASTER), 1L,
                 new tz.co.chambaka.school.management.dto.communication.CreateStudentMessageRequest("Please come in.", true));
         messages.inbox(Fixtures.principal(Role.PARENT));
         verify(communicationService).inbox(eq(1L), any());
