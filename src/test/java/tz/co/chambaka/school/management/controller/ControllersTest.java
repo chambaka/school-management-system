@@ -321,11 +321,13 @@ class ControllersTest {
         assertThatThrownBy(() -> teachers.photo(Fixtures.principal(Role.TEACHER), 1L))
                 .isInstanceOf(AccessDeniedException.class);
 
-        SchoolAdminController schoolAdmins = new SchoolAdminController(schoolAdminService, tenantResolver);
-        schoolAdmins.list(PageRequest.of(0, 10));
-        schoolAdmins.get(5L);
-        schoolAdmins.create(new CreateSchoolAdminRequest("Asha", "asha@x.com", "HaloCampus1!", "07", Role.HEADMASTER));
-        schoolAdmins.update(5L, new UpdateSchoolAdminRequest("Asha", "08", true));
+        SchoolAdminController schoolAdmins = new SchoolAdminController(schoolAdminService);
+        var platform = Fixtures.principal(Role.SUPER_ADMIN);
+        schoolAdmins.list(1L, platform, PageRequest.of(0, 10));
+        schoolAdmins.get(1L, 5L, platform);
+        schoolAdmins.create(1L, platform, new CreateSchoolAdminRequest("Asha", "asha@x.com", "HaloCampus1!", "07", Role.HEADMASTER));
+        schoolAdmins.update(1L, 5L, platform, new UpdateSchoolAdminRequest("Asha", "08", true));
+        verify(schoolAdminService, times(4)).assertCanManage(1L, platform);
         verify(schoolAdminService).create(eq(1L), any());
 
         StudentController students = new StudentController(studentService, parentService, gradeService, tenantResolver);

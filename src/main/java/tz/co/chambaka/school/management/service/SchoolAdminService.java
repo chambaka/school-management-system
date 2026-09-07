@@ -4,16 +4,20 @@ import tz.co.chambaka.school.management.dto.admin.CreateSchoolAdminRequest;
 import tz.co.chambaka.school.management.dto.admin.SchoolAdminResponse;
 import tz.co.chambaka.school.management.dto.admin.UpdateSchoolAdminRequest;
 import tz.co.chambaka.school.management.dto.common.PageResponse;
+import tz.co.chambaka.school.management.exception.ApiException;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.UserRepository;
 import tz.co.chambaka.school.management.security.PasswordPolicy;
+import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.sms.PhoneNumbers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,15 +29,33 @@ public class SchoolAdminService {
     private final UserRepository userRepository;
     private final UserAccountService userAccountService;
     private final CampusService campusService;
+    private final SchoolRepository schoolRepository;
+    private final TenantService tenantService;
 
     public SchoolAdminService(
             UserRepository userRepository,
             UserAccountService userAccountService,
-            CampusService campusService
+            CampusService campusService,
+            SchoolRepository schoolRepository,
+            TenantService tenantService
     ) {
         this.userRepository = userRepository;
         this.userAccountService = userAccountService;
         this.campusService = campusService;
+        this.schoolRepository = schoolRepository;
+        this.tenantService = tenantService;
+    }
+
+    public void assertCanManage(Long schoolId, UserPrincipal principal) {
+        if (principal.getRole() == Role.SUPER_ADMIN) {
+            schoolRepository.findById(schoolId).orElseThrow(() -> ResourceNotFoundException.of("School", schoolId));
+            return;
+        }
+        if (principal.getRole() == Role.HEADMASTER) {
+            tenantService.requireSchoolInTenant(principal.getTenantId(), schoolId);
+            return;
+        }
+        throw new ApiException(HttpStatus.FORBIDDEN, "Only the headmaster or platform admin can manage school officers");
     }
 
     @Transactional(readOnly = true)

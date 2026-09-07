@@ -2,10 +2,12 @@ package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.admin.CreateSchoolAdminRequest;
 import tz.co.chambaka.school.management.dto.admin.UpdateSchoolAdminRequest;
+import tz.co.chambaka.school.management.exception.ApiException;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.UserRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,10 @@ class SchoolAdminServiceTest {
     private UserAccountService userAccountService;
     @Mock
     private CampusService campusService;
+    @Mock
+    private SchoolRepository schoolRepository;
+    @Mock
+    private TenantService tenantService;
     @InjectMocks
     private SchoolAdminService service;
 
@@ -65,5 +71,20 @@ class SchoolAdminServiceTest {
                 .isInstanceOf(BusinessException.class);
         when(userRepository.findByIdAndSchoolIdAndRoleIn(9L, 1L, Role.schoolOfficers())).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.require(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void assertCanManageAllowsPlatformAndHeadmaster() {
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
+        service.assertCanManage(1L, Fixtures.principal(Role.SUPER_ADMIN));
+
+        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
+        service.assertCanManage(1L, Fixtures.principal(Role.HEADMASTER));
+
+        when(schoolRepository.findById(9L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.assertCanManage(9L, Fixtures.principal(Role.SUPER_ADMIN)))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.assertCanManage(1L, Fixtures.principal(Role.TEACHER)))
+                .isInstanceOf(ApiException.class);
     }
 }
