@@ -8,6 +8,7 @@ import tz.co.chambaka.school.management.dto.academic.ExamSubjectRequest;
 import tz.co.chambaka.school.management.dto.academic.GradeRequest;
 import tz.co.chambaka.school.management.dto.academic.SchoolClassRequest;
 import tz.co.chambaka.school.management.dto.academic.SectionRequest;
+import tz.co.chambaka.school.management.dto.academic.ClassroomRequest;
 import tz.co.chambaka.school.management.dto.academic.DepartmentRequest;
 import tz.co.chambaka.school.management.dto.academic.SubjectRequest;
 import tz.co.chambaka.school.management.dto.academic.TimetableRequest;
@@ -28,6 +29,7 @@ import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
 import tz.co.chambaka.school.management.dto.notice.NoticeRequest;
 import tz.co.chambaka.school.management.dto.parent.CreateParentRequest;
 import tz.co.chambaka.school.management.dto.parent.LinkParentRequest;
+import tz.co.chambaka.school.management.dto.parent.UpdateParentRequest;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.UpdateSchoolRequest;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
@@ -68,6 +70,7 @@ import tz.co.chambaka.school.management.repository.TenantRepository;
 import tz.co.chambaka.school.management.service.TenantService;
 import tz.co.chambaka.school.management.service.SectionService;
 import tz.co.chambaka.school.management.service.StudentService;
+import tz.co.chambaka.school.management.service.ClassroomService;
 import tz.co.chambaka.school.management.service.DepartmentService;
 import tz.co.chambaka.school.management.service.SubjectService;
 import tz.co.chambaka.school.management.service.TeacherService;
@@ -121,6 +124,8 @@ class ControllersTest {
     private SubjectService subjectService;
     @Mock
     private DepartmentService departmentService;
+    @Mock
+    private ClassroomService classroomService;
     @Mock
     private TeacherService teacherService;
     @Mock
@@ -283,6 +288,13 @@ class ControllersTest {
         departments.create(departmentReq);
         departments.update(1L, departmentReq);
 
+        ClassroomController classrooms = new ClassroomController(classroomService, tenantResolver);
+        ClassroomRequest classroomReq = new ClassroomRequest("Lab 1", "L1", 40, "Block A", null);
+        classrooms.list();
+        classrooms.create(classroomReq);
+        classrooms.update(1L, classroomReq);
+        classrooms.delete(1L);
+
         TeacherController teachers = new TeacherController(teacherService, tenantResolver);
         when(teacherService.requireByUser(10L)).thenReturn(Fixtures.teacher());
         teachers.list(PageRequest.of(0, 10));
@@ -300,7 +312,11 @@ class ControllersTest {
 
         StudentController students = new StudentController(studentService, parentService, gradeService, tenantResolver);
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
-        students.list(null, PageRequest.of(0, 10));
+        students.list(null, false, PageRequest.of(0, 10));
+        students.suspend(1L);
+        students.archive(1L);
+        students.restore(1L);
+        students.unlinkParent(1L, 1L);
         students.me(Fixtures.principal(Role.STUDENT));
         students.get(1L);
         students.create(new CreateStudentRequest("S", "s@x.com", "password1", null,
@@ -316,8 +332,13 @@ class ControllersTest {
 
         ParentController parents = new ParentController(parentService, tenantResolver);
         when(parentService.requireByUser(10L)).thenReturn(Fixtures.parent());
-        parents.list(PageRequest.of(0, 10));
+        parents.list(false, PageRequest.of(0, 10));
+        parents.archive(1L);
+        parents.restore(1L);
+        parents.get(1L);
         parents.create(new CreateParentRequest("P", "p@x.com", "password1", null, null, null));
+        parents.update(1L, new UpdateParentRequest("P", "07", "Trader", "addr", true));
+        parents.children(1L);
         parents.myChildren(Fixtures.principal(Role.PARENT));
     }
 

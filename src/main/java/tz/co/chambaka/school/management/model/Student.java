@@ -1,6 +1,7 @@
 package tz.co.chambaka.school.management.model;
 
 import tz.co.chambaka.school.management.model.enums.Gender;
+import tz.co.chambaka.school.management.model.enums.StudentStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -59,4 +60,8 @@ public class Student extends TenantEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "section_id")
     private Section section;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private StudentStatus status = StudentStatus.ACTIVE;
 }

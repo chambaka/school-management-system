@@ -5,15 +5,20 @@ import tz.co.chambaka.school.management.dto.parent.CreateParentRequest;
 import tz.co.chambaka.school.management.dto.parent.LinkParentRequest;
 import tz.co.chambaka.school.management.dto.parent.ParentResponse;
 import tz.co.chambaka.school.management.dto.parent.StudentParentResponse;
+import tz.co.chambaka.school.management.dto.parent.UpdateParentRequest;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Parent;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.StudentParent;
 import tz.co.chambaka.school.management.model.User;
+import tz.co.chambaka.school.management.model.enums.ParentStatus;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.model.enums.StudentStatus;
 import tz.co.chambaka.school.management.repository.ParentRepository;
 import tz.co.chambaka.school.management.repository.StudentParentRepository;
+import tz.co.chambaka.school.management.sms.PhoneNumbers;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,8 +46,10 @@ public class ParentService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<ParentResponse> list(Long schoolId, Pageable pageable) {
-        return PageResponse.of(parentRepository.findBySchoolId(schoolId, pageable).map(this::toResponse));
+    public PageResponse<ParentResponse> list(Long schoolId, boolean archived, Pageable pageable) {
+        return PageResponse.of(parentRepository
+                .search(schoolId, archived, ParentStatus.ARCHIVED, pageable)
+                .map(this::toResponse));
     }
 
     @Transactional
@@ -54,15 +61,59 @@ public class ParentService {
         parent.setUser(user);
         parent.setOccupation(request.occupation());
         parent.setAddress(request.address());
+        parent.setStatus(ParentStatus.ACTIVE);
         return toResponse(parentRepository.save(parent));
+    }
+
+    @Transactional(readOnly = true)
+    public ParentResponse get(Long schoolId, Long id) {
+        return toResponse(require(schoolId, id));
+    }
+
+    @Transactional
+    public ParentResponse update(Long schoolId, Long id, UpdateParentRequest request) {
+        Parent parent = require(schoolId, id);
+        User user = parent.getUser();
+        if (request.name() != null) {
+            user.setName(request.name());
+        }
+        if (request.phone() != null) {
+            user.setPhone(PhoneNumbers.persist(request.phone()));
+        }
+        if (request.enabled() != null) {
+            user.setEnabled(request.enabled());
+        }
+        if (request.occupation() != null) {
+            parent.setOccupation(request.occupation());
+        }
+        if (request.address() != null) {
+            parent.setAddress(request.address());
+        }
+        return toResponse(parent);
+    }
+
+    @Transactional
+    public ParentResponse archive(Long schoolId, Long id) {
+        return setStatus(schoolId, id, ParentStatus.ARCHIVED);
+    }
+
+    @Transactional
+    public ParentResponse restore(Long schoolId, Long id) {
+        return setStatus(schoolId, id, ParentStatus.ACTIVE);
     }
 
     @Transactional
     public StudentParentResponse link(Long schoolId, Long studentId, LinkParentRequest request) {
         Student student = studentService.require(schoolId, studentId);
         Parent parent = require(schoolId, request.parentId());
-        if (studentParentRepository.existsByStudentIdAndParentId(student.getId(), parent.getId())) {
-            throw new DuplicateResourceException("Parent is already linked to this student");
+        if (StudentService.statusOf(student) == StudentStatus.ARCHIVED) {
+            throw new BusinessException("Restore this student first");
+        }
+        if (statusOf(parent) == ParentStatus.ARCHIVED) {
+            throw new BusinessException("Restore this parent first");
+        }
+        if (studentParentRepository.existsByStudentId(student.getId())) {
+            throw new DuplicateResourceException("This student already has a parent");
         }
         StudentParent link = new StudentParent();
         link.setSchoolId(schoolId);
@@ -71,6 +122,15 @@ public class ParentService {
         link.setRelationship(request.relationship());
         link.setPrimaryContact(request.primaryContact());
         return toLink(studentParentRepository.save(link));
+    }
+
+    @Transactional
+    public void unlink(Long schoolId, Long studentId, Long parentId) {
+        studentService.require(schoolId, studentId);
+        require(schoolId, parentId);
+        StudentParent link = studentParentRepository.findByStudentIdAndParentId(studentId, parentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Parent is not linked to this student"));
+        studentParentRepository.delete(link);
     }
 
     @Transactional(readOnly = true)
@@ -82,6 +142,12 @@ public class ParentService {
     @Transactional(readOnly = true)
     public List<StudentParentResponse> listByParent(Long parentId) {
         return studentParentRepository.findByParentId(parentId).stream().map(this::toLink).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentParentResponse> listChildren(Long schoolId, Long parentId) {
+        require(schoolId, parentId);
+        return listByParent(parentId);
     }
 
     public Parent require(Long schoolId, Long id) {
@@ -113,8 +179,21 @@ public class ParentService {
                 user.getPhone(),
                 parent.getOccupation(),
                 parent.getAddress(),
-                user.isEnabled()
+                user.isEnabled(),
+                statusOf(parent),
+                studentParentRepository.findByParentId(parent.getId()).stream().map(this::toLink).toList()
         );
+    }
+
+    private ParentResponse setStatus(Long schoolId, Long id, ParentStatus status) {
+        Parent parent = require(schoolId, id);
+        parent.setStatus(status);
+        parent.getUser().setEnabled(status == ParentStatus.ACTIVE);
+        return toResponse(parent);
+    }
+
+    static ParentStatus statusOf(Parent parent) {
+        return parent.getStatus() == null ? ParentStatus.ACTIVE : parent.getStatus();
     }
 
     private StudentParentResponse toLink(StudentParent link) {
@@ -122,6 +201,7 @@ public class ParentService {
                 link.getId(),
                 link.getStudent().getId(),
                 link.getStudent().getUser().getName(),
+                link.getStudent().getAdmissionNo(),
                 link.getParent().getId(),
                 link.getParent().getUser().getName(),
                 link.getRelationship(),

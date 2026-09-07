@@ -6,6 +6,7 @@ public record StudentParentResponse(
         Long id,
         Long studentId,
         String studentName,
+        String studentAdmissionNo,
         Long parentId,
         String parentName,
         RelationshipType relationship,

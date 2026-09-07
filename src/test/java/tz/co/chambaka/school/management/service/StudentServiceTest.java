@@ -7,6 +7,8 @@ import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.enums.Gender;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.model.enums.StudentStatus;
+import tz.co.chambaka.school.management.repository.StudentParentRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,8 @@ class StudentServiceTest {
     @Mock
     private StudentRepository studentRepository;
     @Mock
+    private StudentParentRepository studentParentRepository;
+    @Mock
     private UserAccountService userAccountService;
     @Mock
     private AcademicYearService academicYearService;
@@ -45,12 +49,13 @@ class StudentServiceTest {
     @Test
     void listGetCreateUpdate() {
         Student student = Fixtures.student();
-        when(studentRepository.findBySchoolId(1L, PageRequest.of(0, 5)))
+        when(studentRepository.search(1L, null, false, StudentStatus.ARCHIVED, PageRequest.of(0, 5)))
                 .thenReturn(new PageImpl<>(List.of(student)));
-        when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L, PageRequest.of(0, 5)))
+        when(studentRepository.search(1L, 1L, false, StudentStatus.ARCHIVED, PageRequest.of(0, 5)))
                 .thenReturn(new PageImpl<>(List.of(student)));
-        assertThat(service.list(1L, null, PageRequest.of(0, 5)).content()).hasSize(1);
-        assertThat(service.list(1L, 1L, PageRequest.of(0, 5)).content().getFirst().sectionName()).isEqualTo("A");
+        when(studentParentRepository.findByStudentId(1L)).thenReturn(List.of());
+        assertThat(service.list(1L, null, false, PageRequest.of(0, 5)).content()).hasSize(1);
+        assertThat(service.list(1L, 1L, false, PageRequest.of(0, 5)).content().getFirst().sectionName()).isEqualTo("A");
 
         when(studentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(student));
         assertThat(service.get(1L, 1L).admissionNo()).isEqualTo("ADM-001");
@@ -80,6 +85,18 @@ class StudentServiceTest {
         assertThat(student.getUser().getName()).isEqualTo("Juma 2");
         assertThat(student.getUser().isEnabled()).isFalse();
         assertThat(student.getGender()).isEqualTo(Gender.FEMALE);
+
+        service.suspend(1L, 1L);
+        assertThat(student.getStatus()).isEqualTo(StudentStatus.SUSPENDED);
+        assertThat(student.getUser().isEnabled()).isFalse();
+        service.archive(1L, 1L);
+        assertThat(student.getStatus()).isEqualTo(StudentStatus.ARCHIVED);
+        service.restore(1L, 1L);
+        assertThat(student.getStatus()).isEqualTo(StudentStatus.ACTIVE);
+        assertThat(student.getUser().isEnabled()).isTrue();
+        when(studentRepository.search(1L, null, true, StudentStatus.ARCHIVED, PageRequest.of(0, 5)))
+                .thenReturn(new PageImpl<>(List.of()));
+        assertThat(service.list(1L, null, true, PageRequest.of(0, 5)).content()).isEmpty();
     }
 
     @Test

@@ -4,6 +4,7 @@ import tz.co.chambaka.school.management.dto.common.PageResponse;
 import tz.co.chambaka.school.management.dto.parent.CreateParentRequest;
 import tz.co.chambaka.school.management.dto.parent.ParentResponse;
 import tz.co.chambaka.school.management.dto.parent.StudentParentResponse;
+import tz.co.chambaka.school.management.dto.parent.UpdateParentRequest;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.ParentService;
@@ -14,9 +15,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,8 +41,11 @@ public class ParentController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
-    public PageResponse<ParentResponse> list(Pageable pageable) {
-        return parentService.list(tenantResolver.requireSchoolId(), pageable);
+    public PageResponse<ParentResponse> list(
+            @RequestParam(defaultValue = "false") boolean archived,
+            Pageable pageable
+    ) {
+        return parentService.list(tenantResolver.requireSchoolId(), archived, pageable);
     }
 
     @PostMapping
@@ -52,5 +59,35 @@ public class ParentController {
     @PreAuthorize("hasRole('PARENT')")
     public List<StudentParentResponse> myChildren(@CurrentUser UserPrincipal principal) {
         return parentService.listByParent(parentService.requireByUser(principal.getId()).getId());
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public ParentResponse get(@PathVariable Long id) {
+        return parentService.get(tenantResolver.requireSchoolId(), id);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public ParentResponse update(@PathVariable Long id, @Valid @RequestBody UpdateParentRequest request) {
+        return parentService.update(tenantResolver.requireSchoolId(), id, request);
+    }
+
+    @PostMapping("/{id}/archive")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public ParentResponse archive(@PathVariable Long id) {
+        return parentService.archive(tenantResolver.requireSchoolId(), id);
+    }
+
+    @PostMapping("/{id}/restore")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public ParentResponse restore(@PathVariable Long id) {
+        return parentService.restore(tenantResolver.requireSchoolId(), id);
+    }
+
+    @GetMapping("/{id}/children")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public List<StudentParentResponse> children(@PathVariable Long id) {
+        return parentService.listChildren(tenantResolver.requireSchoolId(), id);
     }
 }

@@ -1,6 +1,7 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.common.PageResponse;
+import tz.co.chambaka.school.management.dto.parent.StudentParentResponse;
 import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
 import tz.co.chambaka.school.management.dto.student.StudentResponse;
 import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
@@ -9,8 +10,11 @@ import tz.co.chambaka.school.management.model.AcademicYear;
 import tz.co.chambaka.school.management.model.SchoolClass;
 import tz.co.chambaka.school.management.model.Section;
 import tz.co.chambaka.school.management.model.Student;
+import tz.co.chambaka.school.management.model.StudentParent;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.model.enums.StudentStatus;
+import tz.co.chambaka.school.management.repository.StudentParentRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.sms.PhoneNumbers;
 import org.slf4j.Logger;
@@ -20,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class StudentService {
@@ -27,6 +32,7 @@ public class StudentService {
     private static final Logger log = LoggerFactory.getLogger(StudentService.class);
 
     private final StudentRepository studentRepository;
+    private final StudentParentRepository studentParentRepository;
     private final UserAccountService userAccountService;
     private final AcademicYearService academicYearService;
     private final ClassService classService;
@@ -34,12 +40,14 @@ public class StudentService {
 
     public StudentService(
             StudentRepository studentRepository,
+            StudentParentRepository studentParentRepository,
             UserAccountService userAccountService,
             AcademicYearService academicYearService,
             ClassService classService,
             SectionService sectionService
     ) {
         this.studentRepository = studentRepository;
+        this.studentParentRepository = studentParentRepository;
         this.userAccountService = userAccountService;
         this.academicYearService = academicYearService;
         this.classService = classService;
@@ -47,11 +55,10 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<StudentResponse> list(Long schoolId, Long classId, Pageable pageable) {
-        var page = classId == null
-                ? studentRepository.findBySchoolId(schoolId, pageable)
-                : studentRepository.findBySchoolIdAndSchoolClassId(schoolId, classId, pageable);
-        return PageResponse.of(page.map(this::toResponse));
+    public PageResponse<StudentResponse> list(Long schoolId, Long classId, boolean archived, Pageable pageable) {
+        return PageResponse.of(studentRepository
+                .search(schoolId, classId, archived, StudentStatus.ARCHIVED, pageable)
+                .map(this::toResponse));
     }
 
     @Transactional(readOnly = true)
@@ -74,6 +81,7 @@ public class StudentService {
         student.setAdmissionDate(request.admissionDate());
         student.setAddress(request.address());
         student.setEmergencyContact(request.emergencyContact());
+        student.setStatus(StudentStatus.ACTIVE);
         applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId());
         Student saved = studentRepository.save(student);
         log.info("Created student id={} schoolId={} admissionNo={}", saved.getId(), schoolId, saved.getAdmissionNo());
@@ -113,6 +121,21 @@ public class StudentService {
         }
         applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId());
         return toResponse(student);
+    }
+
+    @Transactional
+    public StudentResponse suspend(Long schoolId, Long id) {
+        return setStatus(schoolId, id, StudentStatus.SUSPENDED);
+    }
+
+    @Transactional
+    public StudentResponse archive(Long schoolId, Long id) {
+        return setStatus(schoolId, id, StudentStatus.ARCHIVED);
+    }
+
+    @Transactional
+    public StudentResponse restore(Long schoolId, Long id) {
+        return setStatus(schoolId, id, StudentStatus.ACTIVE);
     }
 
     public Student require(Long schoolId, Long id) {
@@ -172,7 +195,34 @@ public class StudentService {
                 schoolClass != null ? schoolClass.getName() : null,
                 section != null ? section.getId() : null,
                 section != null ? section.getName() : null,
-                user.isEnabled()
+                user.isEnabled(),
+                statusOf(student),
+                studentParentRepository.findByStudentId(student.getId()).stream().map(this::toLink).toList()
         );
+    }
+
+    private StudentResponse setStatus(Long schoolId, Long id, StudentStatus status) {
+        Student student = require(schoolId, id);
+        student.setStatus(status);
+        student.getUser().setEnabled(status == StudentStatus.ACTIVE);
+        log.info("Set student status id={} schoolId={} status={}", id, schoolId, status);
+        return toResponse(student);
+    }
+
+    private StudentParentResponse toLink(StudentParent link) {
+        return new StudentParentResponse(
+                link.getId(),
+                link.getStudent().getId(),
+                link.getStudent().getUser().getName(),
+                link.getStudent().getAdmissionNo(),
+                link.getParent().getId(),
+                link.getParent().getUser().getName(),
+                link.getRelationship(),
+                link.isPrimaryContact()
+        );
+    }
+
+    static StudentStatus statusOf(Student student) {
+        return student.getStatus() == null ? StudentStatus.ACTIVE : student.getStatus();
     }
 }

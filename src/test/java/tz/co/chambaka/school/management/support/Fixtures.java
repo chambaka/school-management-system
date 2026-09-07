@@ -7,6 +7,7 @@ import tz.co.chambaka.school.management.dto.school.SchoolResponse;
 import tz.co.chambaka.school.management.dto.tenant.TenantResponse;
 import tz.co.chambaka.school.management.model.AcademicYear;
 import tz.co.chambaka.school.management.model.Campus;
+import tz.co.chambaka.school.management.model.Classroom;
 import tz.co.chambaka.school.management.model.Department;
 import tz.co.chambaka.school.management.model.Exam;
 import tz.co.chambaka.school.management.model.ExamSubject;
@@ -205,6 +206,22 @@ public final class Fixtures {
         department.setSchoolId(SCHOOL_ID);
         department.setName(name);
         return department;
+    }
+
+    public static Classroom classroom() {
+        return classroom("Lab 1");
+    }
+
+    public static Classroom classroom(String name) {
+        Classroom classroom = new Classroom();
+        classroom.setId(1L);
+        classroom.setSchoolId(SCHOOL_ID);
+        classroom.setName(name);
+        classroom.setCode("L1");
+        classroom.setCapacity(40);
+        classroom.setBuilding("Block A");
+        classroom.setNotes("Science");
+        return classroom;
     }
 
     public static Subject subject() {

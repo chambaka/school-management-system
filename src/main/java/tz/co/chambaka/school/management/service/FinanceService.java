@@ -23,6 +23,7 @@ import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.AuditAction;
 import tz.co.chambaka.school.management.model.enums.InvoiceStatus;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.model.enums.StudentStatus;
 import tz.co.chambaka.school.management.repository.FeeStructureRepository;
 import tz.co.chambaka.school.management.repository.InvoiceRepository;
 import tz.co.chambaka.school.management.repository.PaymentRepository;
@@ -128,7 +129,10 @@ public class FinanceService {
                 .map(id -> feeStructureRepository.findByIdAndSchoolId(id, schoolId)
                         .orElseThrow(() -> ResourceNotFoundException.of("FeeStructure", id)))
                 .toList();
-        List<Student> students = studentRepository.findBySchoolIdAndSchoolClassId(schoolId, request.schoolClassId());
+        List<Student> students = studentRepository.findBySchoolIdAndSchoolClassId(schoolId, request.schoolClassId())
+                .stream()
+                .filter(student -> StudentService.statusOf(student) != StudentStatus.ARCHIVED)
+                .toList();
         if (students.isEmpty()) {
             throw new BusinessException("No students found in this class");
         }

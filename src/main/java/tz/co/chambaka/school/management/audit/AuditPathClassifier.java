@@ -136,6 +136,7 @@ public final class AuditPathClassifier {
             case "sections" -> "Section";
             case "subjects" -> "Subject";
             case "departments" -> "Department";
+            case "classrooms" -> "Classroom";
             case "allocations" -> "TeacherSubject";
             case "timetable" -> "TimetableSlot";
             case "messages" -> "StudentMessage";

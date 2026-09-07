@@ -18,6 +18,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,8 +55,12 @@ public class StudentController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER')")
-    public PageResponse<StudentResponse> list(@RequestParam(required = false) Long classId, Pageable pageable) {
-        return studentService.list(tenantResolver.requireSchoolId(), classId, pageable);
+    public PageResponse<StudentResponse> list(
+            @RequestParam(required = false) Long classId,
+            @RequestParam(defaultValue = "false") boolean archived,
+            Pageable pageable
+    ) {
+        return studentService.list(tenantResolver.requireSchoolId(), classId, archived, pageable);
     }
 
     @GetMapping("/me")
@@ -88,6 +93,31 @@ public class StudentController {
     @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
     public StudentParentResponse linkParent(@PathVariable Long id, @Valid @RequestBody LinkParentRequest request) {
         return parentService.link(tenantResolver.requireSchoolId(), id, request);
+    }
+
+    @DeleteMapping("/{id}/parents/{parentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public void unlinkParent(@PathVariable Long id, @PathVariable Long parentId) {
+        parentService.unlink(tenantResolver.requireSchoolId(), id, parentId);
+    }
+
+    @PostMapping("/{id}/suspend")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public StudentResponse suspend(@PathVariable Long id) {
+        return studentService.suspend(tenantResolver.requireSchoolId(), id);
+    }
+
+    @PostMapping("/{id}/archive")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public StudentResponse archive(@PathVariable Long id) {
+        return studentService.archive(tenantResolver.requireSchoolId(), id);
+    }
+
+    @PostMapping("/{id}/restore")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public StudentResponse restore(@PathVariable Long id) {
+        return studentService.restore(tenantResolver.requireSchoolId(), id);
     }
 
     @GetMapping("/{id}/parents")

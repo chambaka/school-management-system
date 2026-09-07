@@ -83,6 +83,7 @@ class AuditPathClassifierTest {
         assertThat(AuditPathClassifier.resourceType("/api/v1/sections")).isEqualTo("Section");
         assertThat(AuditPathClassifier.resourceType("/api/v1/subjects")).isEqualTo("Subject");
         assertThat(AuditPathClassifier.resourceType("/api/v1/departments")).isEqualTo("Department");
+        assertThat(AuditPathClassifier.resourceType("/api/v1/classrooms")).isEqualTo("Classroom");
         assertThat(AuditPathClassifier.resourceType("/api/v1/allocations")).isEqualTo("TeacherSubject");
         assertThat(AuditPathClassifier.resourceType("/api/v1/timetable")).isEqualTo("TimetableSlot");
         assertThat(AuditPathClassifier.resourceType("/api/v1/messages/inbox")).isEqualTo("StudentMessage");

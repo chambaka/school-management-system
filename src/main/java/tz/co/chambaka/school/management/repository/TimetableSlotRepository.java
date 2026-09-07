@@ -20,4 +20,8 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
     void deleteBySectionId(Long sectionId);
 
     void deleteBySubjectId(Long subjectId);
+
+    List<TimetableSlot> findBySchoolIdAndRoomIgnoreCase(Long schoolId, String room);
+
+    boolean existsBySchoolIdAndRoomIgnoreCase(Long schoolId, String room);
 }
