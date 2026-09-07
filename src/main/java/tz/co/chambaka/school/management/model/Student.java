@@ -23,7 +23,7 @@ import java.time.LocalDate;
 public class Student extends TenantEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", unique = true)
+    @JoinColumn(name = "user_id", unique = true, nullable = true)
     private User user;
 
     @Column(nullable = false, length = 50)

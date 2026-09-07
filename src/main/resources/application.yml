@@ -71,6 +71,6 @@ sms:
   uploads:
     dir: ${SMS_UPLOADS_DIR:uploads}
   tenancy:
-    mode: ${SMS_TENANCY_MODE:single}
+    mode: ${SMS_TENANCY_MODE:multi}
     default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:ShuleHub}
     default-tenant-slug: ${SMS_DEFAULT_TENANT_SLUG:shulehub}

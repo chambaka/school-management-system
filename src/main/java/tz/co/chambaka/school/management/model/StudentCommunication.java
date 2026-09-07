@@ -28,7 +28,7 @@ public class StudentCommunication extends TenantEntity {
     private Student student;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_user_id")
+    @JoinColumn(name = "author_user_id", nullable = true)
     private User author;
 
     @Enumerated(EnumType.STRING)
