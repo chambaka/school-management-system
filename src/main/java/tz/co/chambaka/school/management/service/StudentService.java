@@ -4,7 +4,6 @@ import tz.co.chambaka.school.management.dto.common.PageResponse;
 import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
 import tz.co.chambaka.school.management.dto.student.StudentResponse;
 import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
-import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.AcademicYear;
 import tz.co.chambaka.school.management.model.SchoolClass;
@@ -19,6 +18,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 
 @Service
 public class StudentService {
@@ -60,15 +61,12 @@ public class StudentService {
 
     @Transactional
     public StudentResponse create(Long schoolId, CreateStudentRequest request) {
-        if (studentRepository.existsBySchoolIdAndAdmissionNoIgnoreCase(schoolId, request.admissionNo())) {
-            throw new DuplicateResourceException("Admission number already exists");
-        }
         User user = userAccountService.create(
                 schoolId, request.name(), request.email(), request.password(), Role.STUDENT, request.phone());
         Student student = new Student();
         student.setSchoolId(schoolId);
         student.setUser(user);
-        student.setAdmissionNo(request.admissionNo());
+        student.setAdmissionNo(nextAdmissionNo(schoolId));
         student.setRollNumber(request.rollNumber());
         student.setDateOfBirth(request.dateOfBirth());
         student.setGender(request.gender());
@@ -125,6 +123,17 @@ public class StudentService {
     public Student requireByUser(Long userId) {
         return studentRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student profile not found for current user"));
+    }
+
+    String nextAdmissionNo(Long schoolId) {
+        String prefix = "ADM-" + LocalDate.now().getYear() + "-";
+        long next = studentRepository.countBySchoolIdAndAdmissionNoStartingWithIgnoreCase(schoolId, prefix) + 1;
+        String admissionNo;
+        do {
+            admissionNo = prefix + String.format("%04d", next);
+            next++;
+        } while (studentRepository.existsBySchoolIdAndAdmissionNoIgnoreCase(schoolId, admissionNo));
+        return admissionNo;
     }
 
     private void applyPlacement(Long schoolId, Student student, Long yearId, Long classId, Long sectionId) {

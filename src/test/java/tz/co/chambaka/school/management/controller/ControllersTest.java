@@ -303,7 +303,7 @@ class ControllersTest {
         students.list(null, PageRequest.of(0, 10));
         students.me(Fixtures.principal(Role.STUDENT));
         students.get(1L);
-        students.create(new CreateStudentRequest("S", "s@x.com", "password1", null, "A1",
+        students.create(new CreateStudentRequest("S", "s@x.com", "password1", null,
                 null, null, null, null, null, null, null, null, null, null));
         students.update(1L, new UpdateStudentRequest(null, null, null, null, null, null, null, null, null, null, null, null));
         students.linkParent(1L, new LinkParentRequest(1L, RelationshipType.MOTHER, true));

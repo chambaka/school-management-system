@@ -12,7 +12,6 @@ public record CreateStudentRequest(
         @NotBlank @Email String email,
         @NotBlank @Size(min = 8, max = 72) String password,
         String phone,
-        @NotBlank String admissionNo,
         String rollNumber,
         LocalDate dateOfBirth,
         Gender gender,
