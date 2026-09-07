@@ -87,10 +87,13 @@ public class FinanceService {
 
     @Transactional(readOnly = true)
     public List<FeeStructureResponse> listFees(Long schoolId, Long academicYearId) {
-        List<FeeStructureResponse> fees = feeStructureRepository.findBySchoolIdAndAcademicYearId(schoolId, academicYearId)
-                .stream().map(this::toFee).toList();
+        List<FeeStructure> rows = academicYearId == null
+                ? feeStructureRepository.findBySchoolId(schoolId)
+                : feeStructureRepository.findBySchoolIdAndAcademicYearId(schoolId, academicYearId);
+        List<FeeStructureResponse> fees = rows.stream().map(this::toFee).toList();
+        String yearLabel = academicYearId == null ? "all years" : "academic year " + academicYearId;
         audit(schoolId, AuditAction.FEE_LISTED, "FeeStructure", academicYearId,
-                "Listed " + fees.size() + " fee structures for academic year " + academicYearId,
+                "Listed " + fees.size() + " fee structures for " + yearLabel,
                 "academicYearId=" + academicYearId + " count=" + fees.size()
                         + " feeIds=" + fees.stream().map(f -> String.valueOf(f.id())).collect(Collectors.joining(",")));
         return fees;

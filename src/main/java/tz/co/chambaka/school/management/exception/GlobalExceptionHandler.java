@@ -12,8 +12,10 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.Instant;
 import java.util.List;
@@ -63,6 +65,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDenied(AccessDeniedException ex, HttpServletRequest request) {
         log.warn("Access denied path={}", request.getRequestURI());
         return build(HttpStatus.FORBIDDEN, "You do not have permission to perform this action", request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        log.warn("Upload too large path={}", request.getRequestURI());
+        return build(HttpStatus.BAD_REQUEST, "Photo must be 2 MB or smaller", request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        log.warn("Missing request parameter path={} param={}", request.getRequestURI(), ex.getParameterName());
+        return build(HttpStatus.BAD_REQUEST, "Required parameter '" + ex.getParameterName() + "' is missing",
+                request.getRequestURI(), null);
     }
 
     @ExceptionHandler(Exception.class)

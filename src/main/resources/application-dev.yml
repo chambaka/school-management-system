@@ -15,7 +15,7 @@ sms:
     enabled: true
     base-url: ${NOTIFICATION_SERVICE_BASE_URL:http://localhost:7575}
     api-key: ${NOTIFICATION_API_KEY:}
-    sender-id: HALO
+    sender-id: SHULEHUB
     provider: ${NOTIFICATION_SMS_PROVIDER:log-sms}
 
 logging:

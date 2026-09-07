@@ -7,6 +7,7 @@ import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Teacher;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.model.enums.TeacherStatus;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.mock.web.MockMultipartFile;
 
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +27,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,15 +39,17 @@ class TeacherServiceTest {
     private UserAccountService userAccountService;
     @Mock
     private DepartmentService departmentService;
+    @Mock
+    private PhotoStorageService photoStorageService;
     @InjectMocks
     private TeacherService service;
 
     @Test
     void listGetCreateUpdate() {
         Teacher teacher = Fixtures.teacher();
-        when(teacherRepository.findBySchoolId(1L, PageRequest.of(0, 10)))
+        when(teacherRepository.search(1L, false, TeacherStatus.ARCHIVED, PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of(teacher)));
-        assertThat(service.list(1L, PageRequest.of(0, 10)).totalElements()).isEqualTo(1);
+        assertThat(service.list(1L, false, PageRequest.of(0, 10)).totalElements()).isEqualTo(1);
 
         when(teacherRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(teacher));
         assertThat(service.get(1L, 1L).employeeId()).isEqualTo("T-001");
@@ -67,6 +73,16 @@ class TeacherServiceTest {
         assertThat(teacher.getUser().getName()).isEqualTo("New");
         assertThat(teacher.getUser().isEnabled()).isFalse();
         assertThat(teacher.getDepartment()).isEqualTo("Arts");
+
+        service.archive(1L, 1L);
+        assertThat(teacher.getStatus()).isEqualTo(TeacherStatus.ARCHIVED);
+        assertThat(teacher.getUser().isEnabled()).isFalse();
+        service.restore(1L, 1L);
+        assertThat(teacher.getStatus()).isEqualTo(TeacherStatus.ACTIVE);
+        assertThat(teacher.getUser().isEnabled()).isTrue();
+        when(teacherRepository.search(1L, true, TeacherStatus.ARCHIVED, PageRequest.of(0, 10)))
+                .thenReturn(new PageImpl<>(List.of()));
+        assertThat(service.list(1L, true, PageRequest.of(0, 10)).content()).isEmpty();
     }
 
     @Test
@@ -100,5 +116,27 @@ class TeacherServiceTest {
         when(teacherRepository.findByUserId(8L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.requireByUser(8L)).isInstanceOf(ResourceNotFoundException.class);
         assertThat(service.requireByUserSafe(8L)).isNull();
+    }
+
+    @Test
+    void uploadAndDeletePhoto() {
+        Teacher teacher = Fixtures.teacher();
+        when(teacherRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(teacher));
+        MockMultipartFile file = new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1, 2});
+        when(photoStorageService.storeTeacherPhoto(1L, 1L, file)).thenReturn(Path.of("x.jpg"));
+        assertThat(service.uploadPhoto(1L, 1L, file).photoUrl()).isEqualTo("/api/v1/teachers/1/photo");
+        assertThat(teacher.getUser().getAvatarUrl()).isEqualTo("/api/v1/teachers/1/photo");
+
+        when(photoStorageService.findTeacherPhoto(1L, 1L))
+                .thenReturn(Optional.of(new StoredPhoto(Path.of("x.jpg"), "image/jpeg")));
+        assertThat(service.photoFile(1L, 1L).contentType()).isEqualTo("image/jpeg");
+
+        when(photoStorageService.findTeacherPhoto(1L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.photoFile(1L, 1L)).isInstanceOf(ResourceNotFoundException.class);
+
+        assertThat(service.deletePhoto(1L, 1L).photoUrl()).isNull();
+        assertThat(teacher.getUser().getAvatarUrl()).isNull();
+        verify(photoStorageService).deleteTeacherPhoto(1L, 1L);
+        assertThat(TeacherService.photoPath(7L)).isEqualTo("/api/v1/teachers/7/photo");
     }
 }

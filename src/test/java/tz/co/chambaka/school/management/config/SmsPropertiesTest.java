@@ -23,15 +23,15 @@ class SmsPropertiesTest {
         assertThat(fromNullReset.passwordReset().ttl()).isEqualTo(Duration.ofMinutes(30));
         assertThat(fromNullReset.passwordReset().includeDebugCode()).isFalse();
         assertThat(fromLegacyConstructor.singleTenant()).isFalse();
-        assertThat(fromNullReset.tenancy().defaultTenantSlug()).isEqualTo("halo");
+        assertThat(fromNullReset.tenancy().defaultTenantSlug()).isEqualTo("shulehub");
     }
 
     @Test
     void tenancyDefaultsBlankFieldsAndNullMode() {
         SmsProperties.Tenancy tenancy = new SmsProperties.Tenancy(null, "  ", "");
         assertThat(tenancy.mode()).isEqualTo(SmsProperties.Mode.MULTI);
-        assertThat(tenancy.defaultTenantName()).isEqualTo("Halo Campus");
-        assertThat(tenancy.defaultTenantSlug()).isEqualTo("halo");
+        assertThat(tenancy.defaultTenantName()).isEqualTo("ShuleHub");
+        assertThat(tenancy.defaultTenantSlug()).isEqualTo("shulehub");
 
         SmsProperties fromNullTenancy = SmsProperties.of(
                 Fixtures.properties().jwt(),
@@ -45,7 +45,7 @@ class SmsPropertiesTest {
         assertThat(messaging.active()).isFalse();
         assertThat(messaging.notificationConfigured()).isFalse();
         assertThat(messaging.provider()).isEmpty();
-        assertThat(messaging.senderId()).isEqualTo("HALO");
+        assertThat(messaging.senderId()).isEqualTo("SHULEHUB");
         assertThat(messaging.path()).isEqualTo("/f1/queueNotification");
         assertThat(SmsProperties.Messaging.of(true, " beem ", "HALO", "http://n", "k").provider())
                 .isEqualTo("beem");

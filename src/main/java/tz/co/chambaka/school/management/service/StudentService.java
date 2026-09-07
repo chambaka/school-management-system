@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -37,6 +38,7 @@ public class StudentService {
     private final AcademicYearService academicYearService;
     private final ClassService classService;
     private final SectionService sectionService;
+    private final PhotoStorageService photoStorageService;
 
     public StudentService(
             StudentRepository studentRepository,
@@ -44,7 +46,8 @@ public class StudentService {
             UserAccountService userAccountService,
             AcademicYearService academicYearService,
             ClassService classService,
-            SectionService sectionService
+            SectionService sectionService,
+            PhotoStorageService photoStorageService
     ) {
         this.studentRepository = studentRepository;
         this.studentParentRepository = studentParentRepository;
@@ -52,6 +55,7 @@ public class StudentService {
         this.academicYearService = academicYearService;
         this.classService = classService;
         this.sectionService = sectionService;
+        this.photoStorageService = photoStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -148,6 +152,35 @@ public class StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student profile not found for current user"));
     }
 
+    @Transactional
+    public StudentResponse uploadPhoto(Long schoolId, Long id, MultipartFile file) {
+        Student student = require(schoolId, id);
+        photoStorageService.storeStudentPhoto(schoolId, id, file);
+        student.getUser().setAvatarUrl(photoPath(id));
+        log.info("Uploaded student photo id={} schoolId={}", id, schoolId);
+        return toResponse(student);
+    }
+
+    @Transactional
+    public StudentResponse deletePhoto(Long schoolId, Long id) {
+        Student student = require(schoolId, id);
+        photoStorageService.deleteStudentPhoto(schoolId, id);
+        student.getUser().setAvatarUrl(null);
+        log.info("Deleted student photo id={} schoolId={}", id, schoolId);
+        return toResponse(student);
+    }
+
+    @Transactional(readOnly = true)
+    public StoredPhoto photoFile(Long schoolId, Long id) {
+        require(schoolId, id);
+        return photoStorageService.findStudentPhoto(schoolId, id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student photo not found"));
+    }
+
+    static String photoPath(Long studentId) {
+        return "/api/v1/students/" + studentId + "/photo";
+    }
+
     String nextAdmissionNo(Long schoolId) {
         String prefix = "ADM-" + LocalDate.now().getYear() + "-";
         long next = studentRepository.countBySchoolIdAndAdmissionNoStartingWithIgnoreCase(schoolId, prefix) + 1;
@@ -197,6 +230,7 @@ public class StudentService {
                 section != null ? section.getName() : null,
                 user.isEnabled(),
                 statusOf(student),
+                user.getAvatarUrl(),
                 studentParentRepository.findByStudentId(student.getId()).stream().map(this::toLink).toList()
         );
     }

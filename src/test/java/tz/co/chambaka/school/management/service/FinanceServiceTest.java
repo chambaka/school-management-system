@@ -93,6 +93,11 @@ class FinanceServiceTest {
         verify(auditService).recordFinance(eq(1L), eq(AuditAction.FEE_LISTED), eq("FeeStructure"), eq("1"),
                 contains("1 fee"), any());
 
+        when(feeStructureRepository.findBySchoolId(1L)).thenReturn(List.of(fee()));
+        assertThat(service.listFees(1L, null)).hasSize(1);
+        verify(auditService).recordFinance(eq(1L), eq(AuditAction.FEE_LISTED), eq("FeeStructure"), isNull(),
+                contains("all years"), any());
+
         when(feeStructureRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(fee()));
         when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L)).thenReturn(List.of(Fixtures.student()));
         when(invoiceRepository.countBySchoolId(1L)).thenReturn(0L);

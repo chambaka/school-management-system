@@ -91,7 +91,7 @@ class TenantResolverTest {
     void requireTenantIdFallsBackInSingleTenant() {
         when(properties.singleTenant()).thenReturn(true);
         when(properties.tenancy()).thenReturn(SmsProperties.Tenancy.defaults());
-        when(tenantRepository.findBySlug("halo")).thenReturn(Optional.of(Fixtures.tenant()));
+        when(tenantRepository.findBySlug("shulehub")).thenReturn(Optional.of(Fixtures.tenant()));
         assertThat(resolver().requireTenantId()).isEqualTo(10L);
     }
 
@@ -99,7 +99,7 @@ class TenantResolverTest {
     void requireTenantIdSingleMissingDefault() {
         when(properties.singleTenant()).thenReturn(true);
         when(properties.tenancy()).thenReturn(SmsProperties.Tenancy.defaults());
-        when(tenantRepository.findBySlug("halo")).thenReturn(Optional.empty());
+        when(tenantRepository.findBySlug("shulehub")).thenReturn(Optional.empty());
         assertThatThrownBy(() -> resolver().requireTenantId())
                 .isInstanceOf(ApiException.class)
                 .extracting(ex -> ((ApiException) ex).getStatus())

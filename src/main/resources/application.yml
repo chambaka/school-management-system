@@ -15,6 +15,10 @@ spring:
           time_zone: UTC
   flyway:
     enabled: false
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
 
 server:
   port: ${SERVER_PORT:8989}
@@ -61,10 +65,12 @@ sms:
     enabled: ${NOTIFICATION_SERVICE_ENABLED:${SMS_MESSAGING_ENABLED:false}}
     base-url: ${NOTIFICATION_SERVICE_BASE_URL:http://localhost:7575}
     api-key: ${NOTIFICATION_API_KEY:}
-    sender-id: ${NOTIFICATION_SMS_SENDER_NAME:${SMS_MESSAGING_SENDER:HALO}}
+    sender-id: ${NOTIFICATION_SMS_SENDER_NAME:${SMS_MESSAGING_SENDER:SHULEHUB}}
     provider: ${NOTIFICATION_SMS_PROVIDER:}
     path: ${NOTIFICATION_SERVICE_PATH:/f1/queueNotification}
+  uploads:
+    dir: ${SMS_UPLOADS_DIR:uploads}
   tenancy:
-    mode: ${SMS_TENANCY_MODE:multi}
-    default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:Halo Campus}
-    default-tenant-slug: ${SMS_DEFAULT_TENANT_SLUG:halo}
+    mode: ${SMS_TENANCY_MODE:single}
+    default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:ShuleHub}
+    default-tenant-slug: ${SMS_DEFAULT_TENANT_SLUG:shulehub}

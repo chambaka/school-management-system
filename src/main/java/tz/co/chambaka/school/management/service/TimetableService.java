@@ -4,6 +4,8 @@ import tz.co.chambaka.school.management.dto.academic.TimetableRequest;
 import tz.co.chambaka.school.management.dto.academic.TimetableResponse;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
+import tz.co.chambaka.school.management.model.AcademicYear;
+import tz.co.chambaka.school.management.model.SchoolClass;
 import tz.co.chambaka.school.management.model.TimetableSlot;
 import tz.co.chambaka.school.management.repository.TimetableSlotRepository;
 import org.springframework.stereotype.Service;
@@ -48,18 +50,34 @@ public class TimetableService {
 
     @Transactional
     public TimetableResponse create(Long schoolId, TimetableRequest request) {
-        if (!request.endTime().isAfter(request.startTime())) {
-            throw new BusinessException("End time must be after start time");
-        }
-        boolean overlap = timetableSlotRepository
-                .findBySectionIdAndDayOfWeek(request.sectionId(), request.dayOfWeek())
-                .stream()
-                .anyMatch(slot -> overlaps(slot, request));
-        if (overlap) {
-            throw new BusinessException("This slot overlaps an existing timetable entry");
-        }
+        assertTimes(request);
+        assertNoClashes(schoolId, request, null);
         TimetableSlot slot = new TimetableSlot();
         slot.setSchoolId(schoolId);
+        apply(schoolId, slot, request);
+        return toResponse(timetableSlotRepository.save(slot));
+    }
+
+    @Transactional
+    public TimetableResponse update(Long schoolId, Long id, TimetableRequest request) {
+        assertTimes(request);
+        TimetableSlot slot = require(schoolId, id);
+        assertNoClashes(schoolId, request, id);
+        apply(schoolId, slot, request);
+        return toResponse(slot);
+    }
+
+    @Transactional
+    public void delete(Long schoolId, Long id) {
+        timetableSlotRepository.delete(require(schoolId, id));
+    }
+
+    private TimetableSlot require(Long schoolId, Long id) {
+        return timetableSlotRepository.findByIdAndSchoolId(id, schoolId)
+                .orElseThrow(() -> ResourceNotFoundException.of("TimetableSlot", id));
+    }
+
+    private void apply(Long schoolId, TimetableSlot slot, TimetableRequest request) {
         slot.setAcademicYear(academicYearService.require(schoolId, request.academicYearId()));
         slot.setSection(sectionService.require(schoolId, request.sectionId()));
         slot.setSubject(subjectService.require(schoolId, request.subjectId()));
@@ -67,15 +85,36 @@ public class TimetableService {
         slot.setDayOfWeek(request.dayOfWeek());
         slot.setStartTime(request.startTime());
         slot.setEndTime(request.endTime());
-        slot.setRoom(request.room());
-        return toResponse(timetableSlotRepository.save(slot));
+        slot.setRoom(blankToNull(request.room()));
     }
 
-    @Transactional
-    public void delete(Long schoolId, Long id) {
-        TimetableSlot slot = timetableSlotRepository.findByIdAndSchoolId(id, schoolId)
-                .orElseThrow(() -> ResourceNotFoundException.of("TimetableSlot", id));
-        timetableSlotRepository.delete(slot);
+    private void assertTimes(TimetableRequest request) {
+        if (!request.endTime().isAfter(request.startTime())) {
+            throw new BusinessException("End time must be after start time");
+        }
+    }
+
+    private void assertNoClashes(Long schoolId, TimetableRequest request, Long excludeId) {
+        if (clashes(timetableSlotRepository.findBySectionIdAndDayOfWeek(request.sectionId(), request.dayOfWeek()),
+                request, excludeId)) {
+            throw new BusinessException("This slot overlaps an existing timetable entry");
+        }
+        if (clashes(timetableSlotRepository.findByTeacherIdAndDayOfWeek(request.teacherId(), request.dayOfWeek()),
+                request, excludeId)) {
+            throw new BusinessException("This teacher is already teaching at that time");
+        }
+        String room = blankToNull(request.room());
+        if (room != null && clashes(
+                timetableSlotRepository.findBySchoolIdAndRoomIgnoreCaseAndDayOfWeek(schoolId, room, request.dayOfWeek()),
+                request, excludeId)) {
+            throw new BusinessException("This room is already booked at that time");
+        }
+    }
+
+    private boolean clashes(List<TimetableSlot> existing, TimetableRequest request, Long excludeId) {
+        return existing.stream()
+                .filter(slot -> excludeId == null || !excludeId.equals(slot.getId()))
+                .anyMatch(slot -> overlaps(slot, request));
     }
 
     private boolean overlaps(TimetableSlot existing, TimetableRequest request) {
@@ -83,9 +122,18 @@ public class TimetableService {
                 && request.startTime().isBefore(existing.getEndTime());
     }
 
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
     private TimetableResponse toResponse(TimetableSlot slot) {
+        AcademicYear year = slot.getAcademicYear();
+        SchoolClass schoolClass = slot.getSection().getSchoolClass();
         return new TimetableResponse(
                 slot.getId(),
+                year != null ? year.getId() : null,
+                schoolClass != null ? schoolClass.getId() : null,
+                schoolClass != null ? schoolClass.getName() : null,
                 slot.getSection().getId(),
                 slot.getSection().getName(),
                 slot.getSubject().getId(),

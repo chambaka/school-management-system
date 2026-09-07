@@ -9,6 +9,7 @@ import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Teacher;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.model.enums.TeacherStatus;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
 import tz.co.chambaka.school.management.sms.PhoneNumbers;
 import org.slf4j.Logger;
@@ -16,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class TeacherService {
@@ -25,20 +27,25 @@ public class TeacherService {
     private final TeacherRepository teacherRepository;
     private final UserAccountService userAccountService;
     private final DepartmentService departmentService;
+    private final PhotoStorageService photoStorageService;
 
     public TeacherService(
             TeacherRepository teacherRepository,
             UserAccountService userAccountService,
-            DepartmentService departmentService
+            DepartmentService departmentService,
+            PhotoStorageService photoStorageService
     ) {
         this.teacherRepository = teacherRepository;
         this.userAccountService = userAccountService;
         this.departmentService = departmentService;
+        this.photoStorageService = photoStorageService;
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<TeacherResponse> list(Long schoolId, Pageable pageable) {
-        return PageResponse.of(teacherRepository.findBySchoolId(schoolId, pageable).map(this::toResponse));
+    public PageResponse<TeacherResponse> list(Long schoolId, boolean archived, Pageable pageable) {
+        return PageResponse.of(teacherRepository
+                .search(schoolId, archived, TeacherStatus.ARCHIVED, pageable)
+                .map(this::toResponse));
     }
 
     @Transactional(readOnly = true)
@@ -61,6 +68,7 @@ public class TeacherService {
         teacher.setSpecialization(request.specialization());
         teacher.setDepartment(resolveDepartment(schoolId, request.department()));
         teacher.setJoiningDate(request.joiningDate());
+        teacher.setStatus(TeacherStatus.ACTIVE);
         Teacher saved = teacherRepository.save(teacher);
         log.info("Created teacher id={} schoolId={} employeeId={}", saved.getId(), schoolId, saved.getEmployeeId());
         return toResponse(saved);
@@ -94,6 +102,16 @@ public class TeacherService {
         return toResponse(teacher);
     }
 
+    @Transactional
+    public TeacherResponse archive(Long schoolId, Long id) {
+        return setStatus(schoolId, id, TeacherStatus.ARCHIVED);
+    }
+
+    @Transactional
+    public TeacherResponse restore(Long schoolId, Long id) {
+        return setStatus(schoolId, id, TeacherStatus.ACTIVE);
+    }
+
     public Teacher require(Long schoolId, Long id) {
         return teacherRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Teacher", id));
@@ -106,6 +124,35 @@ public class TeacherService {
 
     public Teacher requireByUserSafe(Long userId) {
         return teacherRepository.findByUserId(userId).orElse(null);
+    }
+
+    @Transactional
+    public TeacherResponse uploadPhoto(Long schoolId, Long id, MultipartFile file) {
+        Teacher teacher = require(schoolId, id);
+        photoStorageService.storeTeacherPhoto(schoolId, id, file);
+        teacher.getUser().setAvatarUrl(photoPath(id));
+        log.info("Uploaded teacher photo id={} schoolId={}", id, schoolId);
+        return toResponse(teacher);
+    }
+
+    @Transactional
+    public TeacherResponse deletePhoto(Long schoolId, Long id) {
+        Teacher teacher = require(schoolId, id);
+        photoStorageService.deleteTeacherPhoto(schoolId, id);
+        teacher.getUser().setAvatarUrl(null);
+        log.info("Deleted teacher photo id={} schoolId={}", id, schoolId);
+        return toResponse(teacher);
+    }
+
+    @Transactional(readOnly = true)
+    public StoredPhoto photoFile(Long schoolId, Long id) {
+        require(schoolId, id);
+        return photoStorageService.findTeacherPhoto(schoolId, id)
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher photo not found"));
+    }
+
+    static String photoPath(Long teacherId) {
+        return "/api/v1/teachers/" + teacherId + "/photo";
     }
 
     private String resolveDepartment(Long schoolId, String department) {
@@ -128,7 +175,21 @@ public class TeacherService {
                 teacher.getSpecialization(),
                 teacher.getDepartment(),
                 teacher.getJoiningDate(),
-                user.isEnabled()
+                user.isEnabled(),
+                statusOf(teacher),
+                user.getAvatarUrl()
         );
+    }
+
+    private TeacherResponse setStatus(Long schoolId, Long id, TeacherStatus status) {
+        Teacher teacher = require(schoolId, id);
+        teacher.setStatus(status);
+        teacher.getUser().setEnabled(status == TeacherStatus.ACTIVE);
+        log.info("Set teacher status id={} schoolId={} status={}", id, schoolId, status);
+        return toResponse(teacher);
+    }
+
+    static TeacherStatus statusOf(Teacher teacher) {
+        return teacher.getStatus() == null ? TeacherStatus.ACTIVE : teacher.getStatus();
     }
 }

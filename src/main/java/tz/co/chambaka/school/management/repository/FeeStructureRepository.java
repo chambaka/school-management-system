@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface FeeStructureRepository extends JpaRepository<FeeStructure, Long> {
 
+    List<FeeStructure> findBySchoolId(Long schoolId);
+
     List<FeeStructure> findBySchoolIdAndAcademicYearId(Long schoolId, Long academicYearId);
 
     List<FeeStructure> findBySchoolIdAndAcademicYearIdAndSchoolClassId(Long schoolId, Long academicYearId, Long schoolClassId);

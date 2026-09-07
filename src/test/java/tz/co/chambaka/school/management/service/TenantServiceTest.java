@@ -172,23 +172,23 @@ class TenantServiceTest {
     @Test
     void ensureDefaultTenantCreatesWhenMissing() {
         when(smsProperties.tenancy()).thenReturn(new SmsProperties.Tenancy(
-                SmsProperties.Mode.SINGLE, "Halo Campus", "halo"));
-        when(tenantRepository.findBySlug("halo")).thenReturn(Optional.empty());
+                SmsProperties.Mode.SINGLE, "ShuleHub", "shulehub"));
+        when(tenantRepository.findBySlug("shulehub")).thenReturn(Optional.empty());
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> {
             Tenant tenant = inv.getArgument(0);
             tenant.setId(10L);
             return tenant;
         });
         Tenant tenant = tenantService.ensureDefaultTenant();
-        assertThat(tenant.getSlug()).isEqualTo("halo");
+        assertThat(tenant.getSlug()).isEqualTo("shulehub");
         assertThat(tenant.getStatus()).isEqualTo(TenantStatus.ACTIVE);
     }
 
     @Test
     void ensureDefaultTenantReusesExisting() {
         when(smsProperties.tenancy()).thenReturn(new SmsProperties.Tenancy(
-                SmsProperties.Mode.SINGLE, "Halo Campus", "halo"));
-        when(tenantRepository.findBySlug("halo")).thenReturn(Optional.of(Fixtures.tenant()));
+                SmsProperties.Mode.SINGLE, "ShuleHub", "shulehub"));
+        when(tenantRepository.findBySlug("shulehub")).thenReturn(Optional.of(Fixtures.tenant()));
         assertThat(tenantService.ensureDefaultTenant().getId()).isEqualTo(10L);
         org.mockito.Mockito.verify(tenantRepository, org.mockito.Mockito.never()).save(any());
     }
@@ -196,14 +196,14 @@ class TenantServiceTest {
     @Test
     void requireDefaultTenantMissing() {
         when(smsProperties.tenancy()).thenReturn(SmsProperties.Tenancy.defaults());
-        when(tenantRepository.findBySlug("halo")).thenReturn(Optional.empty());
+        when(tenantRepository.findBySlug("shulehub")).thenReturn(Optional.empty());
         assertThatThrownBy(tenantService::requireDefaultTenant).isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     void requireDefaultTenantFound() {
         when(smsProperties.tenancy()).thenReturn(SmsProperties.Tenancy.defaults());
-        when(tenantRepository.findBySlug("halo")).thenReturn(Optional.of(Fixtures.tenant()));
+        when(tenantRepository.findBySlug("shulehub")).thenReturn(Optional.of(Fixtures.tenant()));
         assertThat(tenantService.requireDefaultTenant().getId()).isEqualTo(10L);
     }
 

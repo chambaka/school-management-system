@@ -33,7 +33,7 @@ public class FeeController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
-    public List<FeeStructureResponse> list(@RequestParam Long academicYearId) {
+    public List<FeeStructureResponse> list(@RequestParam(required = false) Long academicYearId) {
         return financeService.listFees(tenantResolver.requireSchoolId(), academicYearId);
     }
 

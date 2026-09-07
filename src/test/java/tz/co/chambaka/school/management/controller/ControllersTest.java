@@ -69,6 +69,7 @@ import tz.co.chambaka.school.management.service.SchoolService;
 import tz.co.chambaka.school.management.repository.TenantRepository;
 import tz.co.chambaka.school.management.service.TenantService;
 import tz.co.chambaka.school.management.service.SectionService;
+import tz.co.chambaka.school.management.service.StoredPhoto;
 import tz.co.chambaka.school.management.service.StudentService;
 import tz.co.chambaka.school.management.service.ClassroomService;
 import tz.co.chambaka.school.management.service.DepartmentService;
@@ -85,14 +86,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
@@ -204,15 +209,15 @@ class ControllersTest {
                 Fixtures.properties().cors(),
                 Fixtures.properties().superAdmin(),
                 Fixtures.properties().passwordReset(),
-                new SmsProperties.Tenancy(SmsProperties.Mode.SINGLE, "Halo Campus", "halo"));
-        when(tenantRepository.findBySlug("halo")).thenReturn(java.util.Optional.of(Fixtures.tenant()));
+                new SmsProperties.Tenancy(SmsProperties.Mode.SINGLE, "ShuleHub", "shulehub"));
+        when(tenantRepository.findBySlug("shulehub")).thenReturn(java.util.Optional.of(Fixtures.tenant()));
         PublicConfigController singleConfig = new PublicConfigController(singleProps, tenantRepository);
         assertThat(singleConfig.config().tenancyMode()).isEqualTo("single");
         assertThat(singleConfig.config().registrationEnabled()).isFalse();
         assertThat(singleConfig.config().organizationName()).isEqualTo(Fixtures.tenant().getName());
-        when(tenantRepository.findBySlug("halo")).thenReturn(java.util.Optional.empty());
+        when(tenantRepository.findBySlug("shulehub")).thenReturn(java.util.Optional.empty());
         assertThat(new PublicConfigController(singleProps, tenantRepository).config().organizationName())
-                .isEqualTo("Halo Campus");
+                .isEqualTo("ShuleHub");
 
         SchoolController schools = new SchoolController(schoolService, tenantResolver);
         schools.listAll();
@@ -297,11 +302,24 @@ class ControllersTest {
 
         TeacherController teachers = new TeacherController(teacherService, tenantResolver);
         when(teacherService.requireByUser(10L)).thenReturn(Fixtures.teacher());
-        teachers.list(PageRequest.of(0, 10));
+        teachers.list(false, PageRequest.of(0, 10));
+        teachers.archive(1L);
+        teachers.restore(1L);
         teachers.me(Fixtures.principal(Role.TEACHER));
         teachers.get(1L);
         teachers.create(new CreateTeacherRequest("T", "t@x.com", "password1", null, "E1", null, null, null, null));
         teachers.update(1L, new UpdateTeacherRequest(null, null, null, null, null, null, null));
+        when(teacherService.photoFile(1L, 1L)).thenReturn(new StoredPhoto(Path.of("t.jpg"), "image/jpeg"));
+        teachers.uploadPhoto(1L, new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1}));
+        teachers.deletePhoto(1L);
+        teachers.myPhoto(Fixtures.principal(Role.TEACHER));
+        teachers.photo(Fixtures.principal(Role.ADMIN), 1L);
+        teachers.photo(Fixtures.principal(Role.TEACHER), 1L);
+        var otherTeacher = Fixtures.teacher();
+        otherTeacher.setId(99L);
+        when(teacherService.requireByUser(10L)).thenReturn(otherTeacher);
+        assertThatThrownBy(() -> teachers.photo(Fixtures.principal(Role.TEACHER), 1L))
+                .isInstanceOf(AccessDeniedException.class);
 
         SchoolAdminController schoolAdmins = new SchoolAdminController(schoolAdminService, tenantResolver);
         schoolAdmins.list(PageRequest.of(0, 10));
@@ -329,6 +347,20 @@ class ControllersTest {
         verify(parentService).assertLinked(10L, 1L);
         students.myReportCard(Fixtures.principal(Role.STUDENT), 1L);
         verify(gradeService, times(3)).reportCard(1L, 1L, 1L);
+        when(studentService.photoFile(1L, 1L)).thenReturn(new StoredPhoto(Path.of("x.jpg"), "image/jpeg"));
+        students.uploadPhoto(1L, new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1}));
+        students.deletePhoto(1L);
+        students.myPhoto(Fixtures.principal(Role.STUDENT));
+        students.photo(Fixtures.principal(Role.ADMIN), 1L);
+        students.photo(Fixtures.principal(Role.TEACHER), 1L);
+        students.photo(Fixtures.principal(Role.STUDENT), 1L);
+        students.photo(Fixtures.principal(Role.PARENT), 1L);
+        verify(parentService, times(2)).assertLinked(10L, 1L);
+        var other = Fixtures.student();
+        other.setId(99L);
+        when(studentService.requireByUser(10L)).thenReturn(other);
+        assertThatThrownBy(() -> students.photo(Fixtures.principal(Role.STUDENT), 1L))
+                .isInstanceOf(AccessDeniedException.class);
 
         ParentController parents = new ParentController(parentService, tenantResolver);
         when(parentService.requireByUser(10L)).thenReturn(Fixtures.parent());
@@ -354,6 +386,8 @@ class ControllersTest {
         timetable.byTeacher(1L);
         timetable.create(new TimetableRequest(1L, 1L, 1L, 1L, DayOfWeek.MONDAY,
                 LocalTime.of(8, 0), LocalTime.of(9, 0), "R"));
+        timetable.update(1L, new TimetableRequest(1L, 1L, 1L, 1L, DayOfWeek.TUESDAY,
+                LocalTime.of(9, 0), LocalTime.of(10, 0), "R2"));
         timetable.delete(1L);
 
         ExamController exams = new ExamController(examService, tenantResolver);
@@ -378,6 +412,7 @@ class ControllersTest {
 
         FeeController fees = new FeeController(financeService, tenantResolver);
         fees.list(1L);
+        fees.list(null);
         fees.create(new FeeStructureRequest(1L, 1L, "T", FeeType.TUITION, FeeFrequency.TERM, BigDecimal.TEN, null));
 
         InvoiceController invoices = new InvoiceController(financeService, studentService, tenantResolver);

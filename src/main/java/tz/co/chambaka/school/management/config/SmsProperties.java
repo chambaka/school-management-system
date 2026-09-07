@@ -67,15 +67,15 @@ public record SmsProperties(
                 mode = Mode.MULTI;
             }
             if (defaultTenantName == null || defaultTenantName.isBlank()) {
-                defaultTenantName = "Halo Campus";
+                defaultTenantName = "ShuleHub";
             }
             if (defaultTenantSlug == null || defaultTenantSlug.isBlank()) {
-                defaultTenantSlug = "halo";
+                defaultTenantSlug = "shulehub";
             }
         }
 
         public static Tenancy defaults() {
-            return new Tenancy(Mode.MULTI, "Halo Campus", "halo");
+            return new Tenancy(Mode.MULTI, "ShuleHub", "shulehub");
         }
     }
 
@@ -103,7 +103,7 @@ public record SmsProperties(
                 provider = provider.trim();
             }
             if (senderId == null || senderId.isBlank()) {
-                senderId = "HALO";
+                senderId = "SHULEHUB";
             }
             if (apiKey == null) {
                 apiKey = "";
@@ -126,7 +126,7 @@ public record SmsProperties(
         }
 
         public static Messaging defaults() {
-            return new Messaging(false, "", "HALO", "http://localhost:7575", "", "/f1/queueNotification");
+            return new Messaging(false, "", "SHULEHUB", "http://localhost:7575", "", "/f1/queueNotification");
         }
     }
 }

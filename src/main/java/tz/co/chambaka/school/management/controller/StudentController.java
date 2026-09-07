@@ -7,16 +7,24 @@ import tz.co.chambaka.school.management.dto.parent.StudentParentResponse;
 import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
 import tz.co.chambaka.school.management.dto.student.StudentResponse;
 import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
+import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.GradeService;
 import tz.co.chambaka.school.management.service.ParentService;
+import tz.co.chambaka.school.management.service.StoredPhoto;
 import tz.co.chambaka.school.management.service.StudentService;
 import tz.co.chambaka.school.management.tenant.TenantResolver;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -144,5 +153,48 @@ public class StudentController {
     public ReportCardResponse myReportCard(@CurrentUser UserPrincipal principal, @RequestParam Long examId) {
         Long studentId = studentService.requireByUser(principal.getId()).getId();
         return gradeService.reportCard(tenantResolver.requireSchoolId(), studentId, examId);
+    }
+
+    @PostMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public StudentResponse uploadPhoto(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        return studentService.uploadPhoto(tenantResolver.requireSchoolId(), id, file);
+    }
+
+    @DeleteMapping("/{id}/photo")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN')")
+    public StudentResponse deletePhoto(@PathVariable Long id) {
+        return studentService.deletePhoto(tenantResolver.requireSchoolId(), id);
+    }
+
+    @GetMapping("/me/photo")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Resource> myPhoto(@CurrentUser UserPrincipal principal) {
+        Long studentId = studentService.requireByUser(principal.getId()).getId();
+        return toPhotoResponse(studentService.photoFile(tenantResolver.requireSchoolId(), studentId));
+    }
+
+    @GetMapping("/{id}/photo")
+    @PreAuthorize("hasAnyRole('ADMIN','TENANT_ADMIN','TEACHER','STUDENT','PARENT')")
+    public ResponseEntity<Resource> photo(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
+        authorizePhotoView(principal, id);
+        return toPhotoResponse(studentService.photoFile(tenantResolver.requireSchoolId(), id));
+    }
+
+    private void authorizePhotoView(UserPrincipal principal, Long studentId) {
+        if (principal.getRole() == Role.STUDENT) {
+            if (!studentService.requireByUser(principal.getId()).getId().equals(studentId)) {
+                throw new AccessDeniedException("Not allowed to view this photo");
+            }
+        } else if (principal.getRole() == Role.PARENT) {
+            parentService.assertLinked(principal.getId(), studentId);
+        }
+    }
+
+    private static ResponseEntity<Resource> toPhotoResponse(StoredPhoto photo) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(photo.contentType()))
+                .header(HttpHeaders.CACHE_CONTROL, "private, no-cache")
+                .body(new FileSystemResource(photo.path()));
     }
 }

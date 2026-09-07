@@ -5,6 +5,9 @@ import java.time.LocalTime;
 
 public record TimetableResponse(
         Long id,
+        Long academicYearId,
+        Long schoolClassId,
+        String schoolClassName,
         Long sectionId,
         String sectionName,
         Long subjectId,

@@ -28,6 +28,7 @@ public record StudentResponse(
         String sectionName,
         boolean enabled,
         StudentStatus status,
+        String photoUrl,
         List<StudentParentResponse> parents
 ) {
 }

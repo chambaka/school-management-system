@@ -14,6 +14,8 @@ import org.springframework.security.authentication.InsufficientAuthenticationExc
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.lang.reflect.Method;
 import java.util.Set;
@@ -71,8 +73,16 @@ class GlobalExceptionHandlerTest {
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(handler.handleDenied(new AccessDeniedException("no"), request).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(handler.handleUploadTooLarge(new MaxUploadSizeExceededException(2), request).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(handler.handleUploadTooLarge(new MaxUploadSizeExceededException(2), request).getBody().message())
+                .isEqualTo("Photo must be 2 MB or smaller");
         assertThat(handler.handleGeneric(new RuntimeException("boom"), request).getStatusCode())
                 .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        var missing = handler.handleMissingParam(
+                new MissingServletRequestParameterException("academicYearId", "Long"), request);
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(missing.getBody().message()).contains("academicYearId");
     }
 
     @Test

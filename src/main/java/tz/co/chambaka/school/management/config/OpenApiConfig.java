@@ -19,11 +19,11 @@ public class OpenApiConfig {
     public OpenAPI schoolSmsOpenApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("School SMS API")
+                        .title("ShuleHub API")
                         .description("White-label SaaS school management system. "
                                 + "Send or read X-Correction-Id to correlate logs and audit events.")
                         .version("1.0.0")
-                        .contact(new Contact().name("School SMS").email("halo.admin@halo-schools.net")))
+                        .contact(new Contact().name("ShuleHub").email("halo.admin@halo-schools.net")))
                 .servers(List.of(new Server().url("/").description("Current host")))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components().addSecuritySchemes("bearerAuth",

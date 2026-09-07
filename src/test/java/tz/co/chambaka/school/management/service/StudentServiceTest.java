@@ -18,7 +18,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.mock.web.MockMultipartFile;
 
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +28,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,6 +46,8 @@ class StudentServiceTest {
     private ClassService classService;
     @Mock
     private SectionService sectionService;
+    @Mock
+    private PhotoStorageService photoStorageService;
     @InjectMocks
     private StudentService service;
 
@@ -117,5 +122,28 @@ class StudentServiceTest {
         assertThatThrownBy(() -> service.requireByUser(8L)).isInstanceOf(ResourceNotFoundException.class);
         when(studentRepository.findByUserId(4L)).thenReturn(Optional.of(Fixtures.student()));
         assertThat(service.requireByUser(4L).getAdmissionNo()).isEqualTo("ADM-001");
+    }
+
+    @Test
+    void uploadAndDeletePhoto() {
+        Student student = Fixtures.student();
+        when(studentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(student));
+        when(studentParentRepository.findByStudentId(1L)).thenReturn(List.of());
+        MockMultipartFile file = new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1, 2});
+        when(photoStorageService.storeStudentPhoto(1L, 1L, file)).thenReturn(Path.of("x.jpg"));
+        assertThat(service.uploadPhoto(1L, 1L, file).photoUrl()).isEqualTo("/api/v1/students/1/photo");
+        assertThat(student.getUser().getAvatarUrl()).isEqualTo("/api/v1/students/1/photo");
+
+        when(photoStorageService.findStudentPhoto(1L, 1L))
+                .thenReturn(Optional.of(new StoredPhoto(Path.of("x.jpg"), "image/jpeg")));
+        assertThat(service.photoFile(1L, 1L).contentType()).isEqualTo("image/jpeg");
+
+        when(photoStorageService.findStudentPhoto(1L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.photoFile(1L, 1L)).isInstanceOf(ResourceNotFoundException.class);
+
+        assertThat(service.deletePhoto(1L, 1L).photoUrl()).isNull();
+        assertThat(student.getUser().getAvatarUrl()).isNull();
+        verify(photoStorageService).deleteStudentPhoto(1L, 1L);
+        assertThat(StudentService.photoPath(7L)).isEqualTo("/api/v1/students/7/photo");
     }
 }

@@ -133,7 +133,7 @@ If you do not already have that database, `docker compose up -d` starts a separa
 | Health | http://localhost:8989/actuator/health |
 | Swagger UI | http://localhost:8989/swagger-ui.html |
 | OpenAPI JSON | http://localhost:8989/v3/api-docs |
-| Halo Vue PWA | http://localhost:5173 (sibling repo `school_management_system_vue`) |
+| ShuleHub Vue PWA | http://localhost:5173 (sibling repo `school_management_system_vue`) |
 
 Default platform admin (created on first boot if none exists):
 
@@ -176,8 +176,8 @@ Default is **multi** (SaaS: many organizations). Set `sms.tenancy.mode` to `sing
 sms:
   tenancy:
     mode: ${SMS_TENANCY_MODE:multi}              # multi | single
-    default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:Halo Campus}
-    default-tenant-slug: ${SMS_DEFAULT_TENANT_SLUG:halo}
+    default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:ShuleHub}
+    default-tenant-slug: ${SMS_DEFAULT_TENANT_SLUG:shulehub}
 ```
 
 In **single** mode the API:
@@ -267,7 +267,7 @@ Full method-level docs live in Swagger. Typical flow:
 
 ### Forgot password
 
-Three public steps, matching the Halo reset screens. The API never says whether the email exists.
+Three public steps, matching the ShuleHub reset screens. The API never says whether the email exists.
 
 1. `POST /api/v1/auth/forgot-password` `{ "email": "yuki.t@example.com" }` — generic message, masked email, 30-minute expiry. In `dev`, the JSON also includes `debugCode`.
 2. `POST /api/v1/auth/forgot-password/verify` `{ "email": "...", "code": "123456" }` — returns `resetToken`.

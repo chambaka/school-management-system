@@ -56,6 +56,6 @@ class MapperAndMiscTest {
         invoice.setPaidAmount(new BigDecimal("40"));
         assertThat(invoice.getBalance()).isEqualByComparingTo("60");
 
-        assertThat(new OpenApiConfig().schoolSmsOpenApi().getInfo().getTitle()).contains("School SMS");
+        assertThat(new OpenApiConfig().schoolSmsOpenApi().getInfo().getTitle()).contains("ShuleHub");
     }
 }

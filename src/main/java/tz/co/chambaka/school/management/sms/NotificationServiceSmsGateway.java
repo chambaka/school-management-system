@@ -59,7 +59,7 @@ public class NotificationServiceSmsGateway implements SmsGateway {
         payload.put("body", body);
         payload.put("senderName", sender);
         payload.put("tag", TAG);
-        payload.put("idempotencyKey", "halo-sms-" + TAG + "-" + to + "-" + System.currentTimeMillis());
+        payload.put("idempotencyKey", "shulehub-sms-" + TAG + "-" + to + "-" + System.currentTimeMillis());
         if (messaging.provider() != null && !messaging.provider().isBlank()) {
             payload.put("provider", messaging.provider().trim());
         }

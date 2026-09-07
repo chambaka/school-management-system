@@ -13,7 +13,7 @@ sms:
     enabled: ${NOTIFICATION_SERVICE_ENABLED:true}
     base-url: ${NOTIFICATION_SERVICE_BASE_URL:}
     api-key: ${NOTIFICATION_API_KEY:}
-    sender-id: ${NOTIFICATION_SMS_SENDER_NAME:HALO}
+    sender-id: ${NOTIFICATION_SMS_SENDER_NAME:SHULEHUB}
     provider: ${NOTIFICATION_SMS_PROVIDER:}
 
 logging:
