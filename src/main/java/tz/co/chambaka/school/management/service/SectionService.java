@@ -2,13 +2,18 @@ package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.academic.SectionRequest;
 import tz.co.chambaka.school.management.dto.academic.SectionResponse;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.SchoolClass;
 import tz.co.chambaka.school.management.model.Section;
 import tz.co.chambaka.school.management.model.Teacher;
 import tz.co.chambaka.school.management.repository.SectionRepository;
+import tz.co.chambaka.school.management.repository.StudentAttendanceRepository;
+import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
+import tz.co.chambaka.school.management.repository.TeacherSubjectRepository;
+import tz.co.chambaka.school.management.repository.TimetableSlotRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,15 +25,27 @@ public class SectionService {
     private final SectionRepository sectionRepository;
     private final ClassService classService;
     private final TeacherRepository teacherRepository;
+    private final StudentRepository studentRepository;
+    private final TeacherSubjectRepository teacherSubjectRepository;
+    private final TimetableSlotRepository timetableSlotRepository;
+    private final StudentAttendanceRepository studentAttendanceRepository;
 
     public SectionService(
             SectionRepository sectionRepository,
             ClassService classService,
-            TeacherRepository teacherRepository
+            TeacherRepository teacherRepository,
+            StudentRepository studentRepository,
+            TeacherSubjectRepository teacherSubjectRepository,
+            TimetableSlotRepository timetableSlotRepository,
+            StudentAttendanceRepository studentAttendanceRepository
     ) {
         this.sectionRepository = sectionRepository;
         this.classService = classService;
         this.teacherRepository = teacherRepository;
+        this.studentRepository = studentRepository;
+        this.teacherSubjectRepository = teacherSubjectRepository;
+        this.timetableSlotRepository = timetableSlotRepository;
+        this.studentAttendanceRepository = studentAttendanceRepository;
     }
 
     @Transactional(readOnly = true)
@@ -59,6 +76,18 @@ public class SectionService {
         section.setCapacity(request.capacity());
         section.setClassTeacher(resolveTeacher(schoolId, request.classTeacherId()));
         return toResponse(section);
+    }
+
+    @Transactional
+    public void delete(Long schoolId, Long id) {
+        Section section = require(schoolId, id);
+        if (studentRepository.countBySectionId(id) > 0) {
+            throw new BusinessException("Move or remove students from this section first");
+        }
+        teacherSubjectRepository.deleteBySectionId(id);
+        timetableSlotRepository.deleteBySectionId(id);
+        studentAttendanceRepository.deleteBySectionId(id);
+        sectionRepository.delete(section);
     }
 
     public Section require(Long schoolId, Long id) {

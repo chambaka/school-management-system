@@ -70,7 +70,7 @@ public class School extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private SchoolStatus status = SchoolStatus.TRIAL;
+    private SchoolStatus status = SchoolStatus.ACTIVE;
 
     @Column(nullable = false, length = 30)
     private String subscriptionPlan = "STARTER";

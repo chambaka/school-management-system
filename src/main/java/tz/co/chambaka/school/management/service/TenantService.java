@@ -19,6 +19,7 @@ import tz.co.chambaka.school.management.model.enums.TenantStatus;
 import tz.co.chambaka.school.management.repository.CampusRepository;
 import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.TenantRepository;
+import tz.co.chambaka.school.management.sms.PhoneNumbers;
 import tz.co.chambaka.school.management.util.SlugUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,8 +27,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import jakarta.annotation.PostConstruct;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,24 +43,50 @@ public class TenantService {
     private final CampusRepository campusRepository;
     private final SchoolMapper schoolMapper;
     private final SmsProperties smsProperties;
+    private final UserAccountService userAccountService;
+    private final DepartmentService departmentService;
 
     public TenantService(
             TenantRepository tenantRepository,
             SchoolRepository schoolRepository,
             CampusRepository campusRepository,
             SchoolMapper schoolMapper,
-            SmsProperties smsProperties
+            SmsProperties smsProperties,
+            UserAccountService userAccountService,
+            DepartmentService departmentService
     ) {
         this.tenantRepository = tenantRepository;
         this.schoolRepository = schoolRepository;
         this.campusRepository = campusRepository;
         this.schoolMapper = schoolMapper;
         this.smsProperties = smsProperties;
+        this.userAccountService = userAccountService;
+        this.departmentService = departmentService;
+    }
+
+    @PostConstruct
+    @Transactional
+    public void activateLegacyTrials() {
+        for (Tenant tenant : tenantRepository.findAll()) {
+            if (tenant.getStatus() == TenantStatus.TRIAL) {
+                tenant.setStatus(TenantStatus.ACTIVE);
+                tenant.setTrialEndsAt(null);
+            }
+        }
+        for (School school : schoolRepository.findAll()) {
+            if (school.getStatus() == SchoolStatus.TRIAL) {
+                school.setStatus(SchoolStatus.ACTIVE);
+                school.setTrialEndsAt(null);
+            }
+        }
     }
 
     @Transactional(readOnly = true)
     public List<TenantResponse> list() {
-        return tenantRepository.findAll().stream().map(this::toResponse).toList();
+        return tenantRepository.findAll().stream()
+                .filter(tenant -> tenant.getStatus() != TenantStatus.ARCHIVED)
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -88,7 +116,7 @@ public class TenantService {
             tenant.setEmail(request.email());
         }
         if (request.phone() != null) {
-            tenant.setPhone(request.phone());
+            tenant.setPhone(PhoneNumbers.persist(request.phone()));
         }
         if (request.country() != null) {
             tenant.setCountry(request.country());
@@ -100,7 +128,14 @@ public class TenantService {
             tenant.setCurrency(request.currency());
         }
         if (request.status() != null) {
-            tenant.setStatus(request.status());
+            if (request.status() == TenantStatus.ARCHIVED) {
+                throw new BusinessException("Use delete to archive an organization");
+            }
+            if (request.status() == TenantStatus.TRIAL) {
+                tenant.setStatus(TenantStatus.ACTIVE);
+            } else {
+                tenant.setStatus(request.status());
+            }
         }
         if (request.subscriptionPlan() != null) {
             tenant.setSubscriptionPlan(request.subscriptionPlan());
@@ -123,18 +158,37 @@ public class TenantService {
 
     @Transactional(readOnly = true)
     public List<SchoolResponse> listSchools(Long tenantId) {
-        require(tenantId);
+        Tenant tenant = require(tenantId);
         return schoolRepository.findByTenantIdOrderByNameAsc(tenantId).stream()
-                .map(schoolMapper::toResponse)
+                .filter(school -> school.getStatus() != SchoolStatus.ARCHIVED)
+                .map(school -> schoolMapper.toResponse(school).withTenantName(tenant.getName()))
                 .toList();
     }
 
     @Transactional
     public SchoolResponse addSchool(Long tenantId, CreateSchoolRequest request) {
         Tenant tenant = require(tenantId);
-        School school = provisionSchool(tenant, request.name(), request.campusName(),
+        if (tenant.getStatus() != TenantStatus.ACTIVE) {
+            throw new BusinessException("Schools can only be added to an active organization");
+        }
+        School school = provisionSchool(tenant, request.name(),
                 request.email(), request.phone(), request.timezone(), request.currency(), request.country());
         return schoolMapper.toResponse(school);
+    }
+
+    @Transactional
+    public void archive(Long id) {
+        Tenant tenant = require(id);
+        tenant.setStatus(TenantStatus.ARCHIVED);
+        tenant.setTrialEndsAt(null);
+        List<Long> schoolIds = new ArrayList<>();
+        for (School school : schoolRepository.findByTenantIdOrderByNameAsc(id)) {
+            school.setStatus(SchoolStatus.ARCHIVED);
+            school.setTrialEndsAt(null);
+            schoolIds.add(school.getId());
+        }
+        userAccountService.deleteForTenant(id, schoolIds);
+        log.info("Archived tenant id={} and removed it from live", tenant.getId());
     }
 
     @Transactional
@@ -176,13 +230,21 @@ public class TenantService {
     }
 
     public Tenant require(Long id) {
-        return tenantRepository.findById(id)
+        Tenant tenant = tenantRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Tenant", id));
+        if (tenant.getStatus() == TenantStatus.ARCHIVED) {
+            throw ResourceNotFoundException.of("Tenant", id);
+        }
+        return tenant;
     }
 
     public School requireSchoolInTenant(Long tenantId, Long schoolId) {
-        return schoolRepository.findByIdAndTenantId(schoolId, tenantId)
+        School school = schoolRepository.findByIdAndTenantId(schoolId, tenantId)
                 .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "School is not part of this tenant"));
+        if (school.getStatus() == SchoolStatus.ARCHIVED) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "School is not part of this tenant");
+        }
+        return school;
     }
 
     private Tenant createTenant(
@@ -197,13 +259,13 @@ public class TenantService {
         tenant.setName(name);
         tenant.setSlug(uniqueTenantSlug(name));
         tenant.setEmail(email);
-        tenant.setPhone(phone);
+        tenant.setPhone(PhoneNumbers.persist(phone));
         tenant.setCountry(country);
         tenant.setTimezone(timezone != null && !timezone.isBlank() ? timezone : "Africa/Dar_es_Salaam");
         tenant.setCurrency(currency != null && !currency.isBlank() ? currency : "TZS");
-        tenant.setStatus(TenantStatus.TRIAL);
+        tenant.setStatus(TenantStatus.ACTIVE);
         tenant.setSubscriptionPlan("STARTER");
-        tenant.setTrialEndsAt(Instant.now().plus(14, ChronoUnit.DAYS));
+        tenant.setTrialEndsAt(null);
         tenant = tenantRepository.save(tenant);
         log.info("Created tenant id={} slug={}", tenant.getId(), tenant.getSlug());
         return tenant;
@@ -212,7 +274,6 @@ public class TenantService {
     private School provisionSchool(
             Tenant tenant,
             String schoolName,
-            String campusName,
             String email,
             String phone,
             String timezone,
@@ -224,25 +285,26 @@ public class TenantService {
         school.setName(schoolName);
         school.setSlug(uniqueSchoolSlug(schoolName));
         school.setEmail(email);
-        school.setPhone(phone);
+        school.setPhone(PhoneNumbers.persist(phone));
         school.setTimezone(timezone != null && !timezone.isBlank() ? timezone : tenant.getTimezone());
         school.setCurrency(currency != null && !currency.isBlank() ? currency : tenant.getCurrency());
         school.setCountry(country != null && !country.isBlank() ? country : tenant.getCountry());
-        school.setStatus(SchoolStatus.TRIAL);
-        school.setTrialEndsAt(Instant.now().plus(14, ChronoUnit.DAYS));
+        school.setStatus(SchoolStatus.ACTIVE);
+        school.setTrialEndsAt(null);
         school = schoolRepository.save(school);
 
         Campus campus = new Campus();
         campus.setTenantId(tenant.getId());
         campus.setSchoolId(school.getId());
-        campus.setName(blankTo(campusName, "Main campus"));
+        campus.setName(schoolName);
         campus.setCode("MAIN");
         campus.setEmail(email);
-        campus.setPhone(phone);
+        campus.setPhone(PhoneNumbers.persist(phone));
         campus.setTimezone(school.getTimezone());
         campus.setPrimaryCampus(true);
         campusRepository.save(campus);
-        log.info("Created school id={} tenantId={} campus={}", school.getId(), tenant.getId(), campus.getName());
+        departmentService.ensureDefaults(school.getId());
+        log.info("Created school id={} tenantId={}", school.getId(), tenant.getId());
         return school;
     }
 
@@ -258,8 +320,9 @@ public class TenantService {
                 tenant.getCurrency(),
                 tenant.getStatus(),
                 tenant.getSubscriptionPlan(),
-                tenant.getTrialEndsAt(),
-                schoolRepository.countByTenantId(tenant.getId()));
+                schoolRepository.findByTenantIdOrderByNameAsc(tenant.getId()).stream()
+                        .filter(school -> school.getStatus() != SchoolStatus.ARCHIVED)
+                        .count());
     }
 
     private String uniqueTenantSlug(String name) {

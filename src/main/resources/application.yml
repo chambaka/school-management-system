@@ -49,9 +49,9 @@ sms:
     access-token-ttl: ${SMS_JWT_ACCESS_TTL:PT1H}
     refresh-token-ttl: ${SMS_JWT_REFRESH_TTL:P7D}
   cors:
-    allowed-origins: ${SMS_CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
+    allowed-origins: ${SMS_CORS_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:5174}
   super-admin:
-    email: ${SMS_SUPER_ADMIN_EMAIL:oscar.d@example.net}
+    email: ${SMS_SUPER_ADMIN_EMAIL:halo.admin@halo-schools.net}
     password: ${SMS_SUPER_ADMIN_PASSWORD:ChangeMe123!}
     name: ${SMS_SUPER_ADMIN_NAME:Platform Admin}
   password-reset:

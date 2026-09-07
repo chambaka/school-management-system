@@ -8,6 +8,7 @@ import tz.co.chambaka.school.management.dto.academic.ExamSubjectRequest;
 import tz.co.chambaka.school.management.dto.academic.GradeRequest;
 import tz.co.chambaka.school.management.dto.academic.SchoolClassRequest;
 import tz.co.chambaka.school.management.dto.academic.SectionRequest;
+import tz.co.chambaka.school.management.dto.academic.DepartmentRequest;
 import tz.co.chambaka.school.management.dto.academic.SubjectRequest;
 import tz.co.chambaka.school.management.dto.academic.TimetableRequest;
 import tz.co.chambaka.school.management.dto.attendance.MarkStudentAttendanceRequest;
@@ -27,8 +28,6 @@ import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
 import tz.co.chambaka.school.management.dto.notice.NoticeRequest;
 import tz.co.chambaka.school.management.dto.parent.CreateParentRequest;
 import tz.co.chambaka.school.management.dto.parent.LinkParentRequest;
-import tz.co.chambaka.school.management.dto.campus.CreateCampusRequest;
-import tz.co.chambaka.school.management.dto.campus.UpdateCampusRequest;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.UpdateSchoolRequest;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
@@ -36,6 +35,8 @@ import tz.co.chambaka.school.management.dto.tenant.RenameOrganizationRequest;
 import tz.co.chambaka.school.management.dto.tenant.UpdateTenantRequest;
 import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
 import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
+import tz.co.chambaka.school.management.dto.admin.CreateSchoolAdminRequest;
+import tz.co.chambaka.school.management.dto.admin.UpdateSchoolAdminRequest;
 import tz.co.chambaka.school.management.dto.teacher.CreateTeacherRequest;
 import tz.co.chambaka.school.management.dto.teacher.UpdateTeacherRequest;
 import tz.co.chambaka.school.management.model.enums.ExamType;
@@ -61,15 +62,17 @@ import tz.co.chambaka.school.management.service.NoticeService;
 import tz.co.chambaka.school.management.service.StudentCommunicationService;
 import tz.co.chambaka.school.management.service.ParentService;
 import tz.co.chambaka.school.management.service.PasswordResetService;
-import tz.co.chambaka.school.management.service.CampusService;
+import tz.co.chambaka.school.management.service.SchoolAdminService;
 import tz.co.chambaka.school.management.service.SchoolService;
 import tz.co.chambaka.school.management.repository.TenantRepository;
 import tz.co.chambaka.school.management.service.TenantService;
 import tz.co.chambaka.school.management.service.SectionService;
 import tz.co.chambaka.school.management.service.StudentService;
+import tz.co.chambaka.school.management.service.DepartmentService;
 import tz.co.chambaka.school.management.service.SubjectService;
 import tz.co.chambaka.school.management.service.TeacherService;
 import tz.co.chambaka.school.management.service.TimetableService;
+import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.support.Fixtures;
 import tz.co.chambaka.school.management.tenant.TenantResolver;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,6 +81,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -108,8 +112,6 @@ class ControllersTest {
     @Mock
     private TenantRepository tenantRepository;
     @Mock
-    private CampusService campusService;
-    @Mock
     private AcademicYearService academicYearService;
     @Mock
     private ClassService classService;
@@ -118,7 +120,11 @@ class ControllersTest {
     @Mock
     private SubjectService subjectService;
     @Mock
+    private DepartmentService departmentService;
+    @Mock
     private TeacherService teacherService;
+    @Mock
+    private SchoolAdminService schoolAdminService;
     @Mock
     private StudentService studentService;
     @Mock
@@ -175,7 +181,15 @@ class ControllersTest {
 
         BrandingController branding = new BrandingController(schoolService);
         branding.bySlug("chambaka");
-        branding.byHost("school.test");
+        when(schoolService.brandingByHost("school.test")).thenReturn(Fixtures.branding());
+        assertThat(branding.byHost("school.test").getStatusCode()).isEqualTo(HttpStatus.OK);
+        when(schoolService.brandingByHost("localhost:5174"))
+                .thenThrow(new ResourceNotFoundException("No school is mapped to this domain"));
+        assertThat(branding.byHost("localhost:5174").getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        when(schoolService.brandingByHost("missing.school"))
+                .thenThrow(new ResourceNotFoundException("No school is mapped to this domain"));
+        org.junit.jupiter.api.Assertions.assertThrows(
+                ResourceNotFoundException.class, () -> branding.byHost("missing.school"));
         PublicConfigController publicConfig = new PublicConfigController(Fixtures.properties(), tenantRepository);
         assertThat(publicConfig.config().tenancyMode()).isEqualTo("multi");
         assertThat(publicConfig.config().registrationEnabled()).isTrue();
@@ -202,7 +216,9 @@ class ControllersTest {
                 null, null, null, null, null, null, null, null, null, null));
         schools.updatePlatform(1L, new UpdateSchoolRequest("N", null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null));
+        schools.archive(1L);
         verify(schoolService).list();
+        verify(schoolService).archive(1L);
 
         AuditEventController tenantAudit = new AuditEventController(auditQueryService, tenantResolver);
         tenantAudit.list(null, null, null, null, null, null, PageRequest.of(0, 10));
@@ -227,6 +243,7 @@ class ControllersTest {
         settings.replaceAll(new tz.co.chambaka.school.management.dto.audit.ReplaceAuditActionSettingsRequest(List.of(
                 new tz.co.chambaka.school.management.dto.audit.ReplaceAuditActionSettingsRequest.Item(
                         AuditAction.LOGIN, true))));
+
         verify(auditActionSettingsService).replaceAll(any());
     }
 
@@ -244,18 +261,27 @@ class ControllersTest {
         classes.list(null);
         classes.create(classReq);
         classes.update(1L, classReq);
+        classes.delete(1L);
 
         SectionController sections = new SectionController(sectionService, tenantResolver);
         SectionRequest sectionReq = new SectionRequest(1L, "A", 40, 1L);
         sections.list(1L);
         sections.create(sectionReq);
         sections.update(1L, sectionReq);
+        sections.delete(1L);
 
         SubjectController subjects = new SubjectController(subjectService, tenantResolver);
         SubjectRequest subjectReq = new SubjectRequest("Math", "M", null);
         subjects.list();
         subjects.create(subjectReq);
         subjects.update(1L, subjectReq);
+        subjects.delete(1L);
+
+        DepartmentController departments = new DepartmentController(departmentService, tenantResolver);
+        DepartmentRequest departmentReq = new DepartmentRequest("Science", null);
+        departments.list();
+        departments.create(departmentReq);
+        departments.update(1L, departmentReq);
 
         TeacherController teachers = new TeacherController(teacherService, tenantResolver);
         when(teacherService.requireByUser(10L)).thenReturn(Fixtures.teacher());
@@ -264,6 +290,13 @@ class ControllersTest {
         teachers.get(1L);
         teachers.create(new CreateTeacherRequest("T", "t@x.com", "password1", null, "E1", null, null, null, null));
         teachers.update(1L, new UpdateTeacherRequest(null, null, null, null, null, null, null));
+
+        SchoolAdminController schoolAdmins = new SchoolAdminController(schoolAdminService, tenantResolver);
+        schoolAdmins.list(PageRequest.of(0, 10));
+        schoolAdmins.get(5L);
+        schoolAdmins.create(new CreateSchoolAdminRequest("Asha", "asha@x.com", "HaloCampus1!", "07"));
+        schoolAdmins.update(5L, new UpdateSchoolAdminRequest("Asha", "08", true));
+        verify(schoolAdminService).create(eq(1L), any());
 
         StudentController students = new StudentController(studentService, parentService, gradeService, tenantResolver);
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
@@ -358,7 +391,7 @@ class ControllersTest {
         messages.inbox(Fixtures.principal(Role.PARENT));
         verify(communicationService).inbox(eq(1L), any());
 
-        TenantController tenants = new TenantController(tenantService, campusService, tenantResolver);
+        TenantController tenants = new TenantController(tenantService, tenantResolver);
         tenants.listAll();
         tenants.create(new CreateTenantRequest("Org", null, null, null, null, null));
         tenants.get(10L);
@@ -369,16 +402,8 @@ class ControllersTest {
         tenants.updateCurrent(new RenameOrganizationRequest("Halo Group"));
         tenants.currentSchools();
         tenants.addSchool(new CreateSchoolRequest("S2", null, null, null, null, null, null));
-        tenants.currentCampuses();
-        tenants.schoolCampuses(1L);
+        tenants.archive(10L);
+        verify(tenantService).archive(10L);
         verify(tenantService).list();
-
-        CampusController campuses = new CampusController(campusService, tenantService, tenantResolver);
-        UserPrincipal tenantAdmin = Fixtures.principal(Role.TENANT_ADMIN);
-        campuses.list(null, tenantAdmin);
-        campuses.create(null, new CreateCampusRequest("East", "EAST", null, null, null, null, false), tenantAdmin);
-        campuses.update(20L, null, new UpdateCampusRequest("East", null, null, null, null, null, null), tenantAdmin);
-        campuses.delete(20L, null, tenantAdmin);
-        verify(campusService, times(2)).listBySchool(1L);
     }
 }

@@ -23,7 +23,7 @@ public class OpenApiConfig {
                         .description("White-label SaaS school management system. "
                                 + "Send or read X-Correction-Id to correlate logs and audit events.")
                         .version("1.0.0")
-                        .contact(new Contact().name("School SMS").email("oscar.d@example.net")))
+                        .contact(new Contact().name("School SMS").email("halo.admin@halo-schools.net")))
                 .servers(List.of(new Server().url("/").description("Current host")))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components().addSecuritySchemes("bearerAuth",

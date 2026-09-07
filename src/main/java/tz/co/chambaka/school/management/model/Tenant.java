@@ -40,7 +40,7 @@ public class Tenant extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private TenantStatus status = TenantStatus.TRIAL;
+    private TenantStatus status = TenantStatus.ACTIVE;
 
     @Column(nullable = false, length = 30)
     private String subscriptionPlan = "STARTER";

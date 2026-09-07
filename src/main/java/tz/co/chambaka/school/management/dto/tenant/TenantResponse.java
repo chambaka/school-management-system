@@ -2,8 +2,6 @@ package tz.co.chambaka.school.management.dto.tenant;
 
 import tz.co.chambaka.school.management.model.enums.TenantStatus;
 
-import java.time.Instant;
-
 public record TenantResponse(
         Long id,
         String name,
@@ -15,7 +13,6 @@ public record TenantResponse(
         String currency,
         TenantStatus status,
         String subscriptionPlan,
-        Instant trialEndsAt,
         long schoolCount
 ) {
 }

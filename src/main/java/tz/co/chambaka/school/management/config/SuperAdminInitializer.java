@@ -13,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Component
 public class SuperAdminInitializer implements ApplicationRunner {
 
@@ -35,10 +37,13 @@ public class SuperAdminInitializer implements ApplicationRunner {
         this.tenantService = tenantService;
     }
 
+    private static final String LEGACY_SEED_EMAIL = "oscar.d@example.net";
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (userRepository.countByRole(Role.SUPER_ADMIN) == 0) {
+        List<User> existing = userRepository.findByRole(Role.SUPER_ADMIN);
+        if (existing.isEmpty()) {
             SmsProperties.SuperAdmin admin = properties.superAdmin();
             User user = User.builder()
                     .name(admin.name())
@@ -49,8 +54,21 @@ public class SuperAdminInitializer implements ApplicationRunner {
                     .build();
             userRepository.save(user);
             log.info("Created platform SUPER_ADMIN account: {}", admin.email());
+        } else {
+            renameLegacySeed(existing);
         }
         bindSuperAdminToDefaultTenant();
+    }
+
+    private void renameLegacySeed(List<User> existing) {
+        String email = properties.superAdmin().email().toLowerCase();
+        for (User user : existing) {
+            if (LEGACY_SEED_EMAIL.equalsIgnoreCase(user.getEmail()) && !email.equalsIgnoreCase(user.getEmail())) {
+                user.setEmail(email);
+                userRepository.save(user);
+                log.info("Renamed platform SUPER_ADMIN email to {}", email);
+            }
+        }
     }
 
     private void bindSuperAdminToDefaultTenant() {

@@ -15,7 +15,7 @@ import lombok.Setter;
 @Table(name = "parents")
 public class Parent extends TenantEntity {
 
-    @OneToOne(optional = false, fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", unique = true)
     private User user;
 

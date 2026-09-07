@@ -12,6 +12,7 @@ import tz.co.chambaka.school.management.mapper.SchoolMapper;
 import tz.co.chambaka.school.management.model.Campus;
 import tz.co.chambaka.school.management.model.School;
 import tz.co.chambaka.school.management.model.Tenant;
+import tz.co.chambaka.school.management.model.enums.SchoolStatus;
 import tz.co.chambaka.school.management.model.enums.TenantStatus;
 import tz.co.chambaka.school.management.repository.CampusRepository;
 import tz.co.chambaka.school.management.repository.SchoolRepository;
@@ -29,6 +30,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,6 +46,10 @@ class TenantServiceTest {
     private SchoolMapper schoolMapper;
     @Mock
     private SmsProperties smsProperties;
+    @Mock
+    private UserAccountService userAccountService;
+    @Mock
+    private DepartmentService departmentService;
     @InjectMocks
     private TenantService tenantService;
 
@@ -52,7 +58,7 @@ class TenantServiceTest {
         Tenant tenant = Fixtures.tenant();
         when(tenantRepository.findAll()).thenReturn(List.of(tenant));
         when(tenantRepository.findById(10L)).thenReturn(Optional.of(tenant));
-        when(schoolRepository.countByTenantId(10L)).thenReturn(2L);
+        when(schoolRepository.findByTenantIdOrderByNameAsc(any())).thenReturn(List.of(Fixtures.school(), Fixtures.school()));
         when(tenantRepository.existsBySlug("new-group")).thenReturn(false);
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> {
             Tenant saved = inv.getArgument(0);
@@ -83,7 +89,7 @@ class TenantServiceTest {
     void createUsesDefaultTimezoneCurrency() {
         when(tenantRepository.existsBySlug(any())).thenReturn(false);
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(schoolRepository.countByTenantId(null)).thenReturn(0L);
+        when(schoolRepository.findByTenantIdOrderByNameAsc(any())).thenReturn(List.of());
         var response = tenantService.create(new CreateTenantRequest("Org", null, null, null, "  ", ""));
         assertThat(response.timezone()).isEqualTo("Africa/Dar_es_Salaam");
         assertThat(response.currency()).isEqualTo("TZS");
@@ -104,6 +110,7 @@ class TenantServiceTest {
 
         assertThat(tenantService.addSchool(10L, new CreateSchoolRequest(
                 "East Campus School", "East", "e@e.com", "07", "UTC", "USD", "TZ")).id()).isEqualTo(1L);
+        verify(departmentService).ensureDefaults(3L);
         assertThat(tenantService.listSchools(10L)).hasSize(1);
     }
 
@@ -198,5 +205,96 @@ class TenantServiceTest {
         when(smsProperties.tenancy()).thenReturn(SmsProperties.Tenancy.defaults());
         when(tenantRepository.findBySlug("halo")).thenReturn(Optional.of(Fixtures.tenant()));
         assertThat(tenantService.requireDefaultTenant().getId()).isEqualTo(10L);
+    }
+
+    @Test
+    void listHidesArchivedAndActivateLegacyTrials() {
+        Tenant live = Fixtures.tenant();
+        Tenant archived = Fixtures.tenant();
+        archived.setId(11L);
+        archived.setStatus(TenantStatus.ARCHIVED);
+        Tenant trial = Fixtures.tenant();
+        trial.setId(12L);
+        trial.setStatus(TenantStatus.TRIAL);
+        School trialSchool = Fixtures.school();
+        trialSchool.setStatus(SchoolStatus.TRIAL);
+        when(tenantRepository.findAll()).thenReturn(List.of(live, archived, trial));
+        when(schoolRepository.findAll()).thenReturn(List.of(trialSchool, Fixtures.school()));
+        when(schoolRepository.findByTenantIdOrderByNameAsc(any())).thenReturn(List.of());
+
+        tenantService.activateLegacyTrials();
+        assertThat(trial.getStatus()).isEqualTo(TenantStatus.ACTIVE);
+        assertThat(trialSchool.getStatus()).isEqualTo(SchoolStatus.ACTIVE);
+        assertThat(tenantService.list()).extracting(tz.co.chambaka.school.management.dto.tenant.TenantResponse::id)
+                .containsExactly(10L, 12L);
+    }
+
+    @Test
+    void addSchoolRejectedWhenOrganizationNotActive() {
+        Tenant tenant = Fixtures.tenant();
+        tenant.setStatus(TenantStatus.SUSPENDED);
+        when(tenantRepository.findById(10L)).thenReturn(Optional.of(tenant));
+        assertThatThrownBy(() -> tenantService.addSchool(10L, new CreateSchoolRequest(
+                "East", "Main", null, null, null, null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("active organization");
+    }
+
+    @Test
+    void updateRejectsArchiveAndMapsTrialToActive() {
+        Tenant tenant = Fixtures.tenant();
+        when(tenantRepository.findById(10L)).thenReturn(Optional.of(tenant));
+        when(schoolRepository.findByTenantIdOrderByNameAsc(10L)).thenReturn(List.of());
+        assertThatThrownBy(() -> tenantService.update(10L, new UpdateTenantRequest(
+                null, null, null, null, null, null, TenantStatus.ARCHIVED, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("delete");
+        tenantService.update(10L, new UpdateTenantRequest(
+                null, null, null, null, null, null, TenantStatus.TRIAL, null));
+        assertThat(tenant.getStatus()).isEqualTo(TenantStatus.ACTIVE);
+    }
+
+    @Test
+    void requireArchivedIsNotFound() {
+        Tenant tenant = Fixtures.tenant();
+        tenant.setStatus(TenantStatus.ARCHIVED);
+        when(tenantRepository.findById(10L)).thenReturn(Optional.of(tenant));
+        assertThatThrownBy(() -> tenantService.require(10L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void requireSchoolInTenantRejectsArchived() {
+        School school = Fixtures.school();
+        school.setStatus(SchoolStatus.ARCHIVED);
+        when(schoolRepository.findByIdAndTenantId(1L, 10L)).thenReturn(Optional.of(school));
+        assertThatThrownBy(() -> tenantService.requireSchoolInTenant(10L, 1L))
+                .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void archiveDeletesUsersAndHidesOrganization() {
+        Tenant tenant = Fixtures.tenant();
+        School school = Fixtures.school();
+        when(tenantRepository.findById(10L)).thenReturn(Optional.of(tenant));
+        when(schoolRepository.findByTenantIdOrderByNameAsc(10L)).thenReturn(List.of(school));
+
+        tenantService.archive(10L);
+
+        assertThat(tenant.getStatus()).isEqualTo(TenantStatus.ARCHIVED);
+        assertThat(school.getStatus()).isEqualTo(SchoolStatus.ARCHIVED);
+        verify(userAccountService).deleteForTenant(10L, List.of(1L));
+    }
+
+    @Test
+    void createStartsActive() {
+        when(tenantRepository.existsBySlug(any())).thenReturn(false);
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> {
+            Tenant saved = inv.getArgument(0);
+            saved.setId(11L);
+            return saved;
+        });
+        when(schoolRepository.findByTenantIdOrderByNameAsc(11L)).thenReturn(List.of());
+        var created = tenantService.create(new CreateTenantRequest("Live Org", null, null, null, "UTC", "USD"));
+        assertThat(created.status()).isEqualTo(TenantStatus.ACTIVE);
     }
 }

@@ -2,11 +2,10 @@ package tz.co.chambaka.school.management.dto.school;
 
 import tz.co.chambaka.school.management.model.enums.SchoolStatus;
 
-import java.time.Instant;
-
 public record SchoolResponse(
         Long id,
         Long tenantId,
+        String tenantName,
         String name,
         String slug,
         String email,
@@ -25,9 +24,14 @@ public record SchoolResponse(
         String country,
         SchoolStatus status,
         String subscriptionPlan,
-        Instant trialEndsAt,
         boolean financeEnabled,
         boolean attendanceEnabled,
         boolean examsEnabled
 ) {
+    public SchoolResponse withTenantName(String organizationName) {
+        return new SchoolResponse(
+                id, tenantId, organizationName, name, slug, email, phone, address, website, logoUrl, faviconUrl,
+                primaryColor, secondaryColor, accentColor, customDomain, timezone, locale, currency, country,
+                status, subscriptionPlan, financeEnabled, attendanceEnabled, examsEnabled);
+    }
 }

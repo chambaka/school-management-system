@@ -10,6 +10,7 @@ import tz.co.chambaka.school.management.model.Teacher;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
+import tz.co.chambaka.school.management.sms.PhoneNumbers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
@@ -23,10 +24,16 @@ public class TeacherService {
 
     private final TeacherRepository teacherRepository;
     private final UserAccountService userAccountService;
+    private final DepartmentService departmentService;
 
-    public TeacherService(TeacherRepository teacherRepository, UserAccountService userAccountService) {
+    public TeacherService(
+            TeacherRepository teacherRepository,
+            UserAccountService userAccountService,
+            DepartmentService departmentService
+    ) {
         this.teacherRepository = teacherRepository;
         this.userAccountService = userAccountService;
+        this.departmentService = departmentService;
     }
 
     @Transactional(readOnly = true)
@@ -52,7 +59,7 @@ public class TeacherService {
         teacher.setEmployeeId(request.employeeId());
         teacher.setQualification(request.qualification());
         teacher.setSpecialization(request.specialization());
-        teacher.setDepartment(request.department());
+        teacher.setDepartment(resolveDepartment(schoolId, request.department()));
         teacher.setJoiningDate(request.joiningDate());
         Teacher saved = teacherRepository.save(teacher);
         log.info("Created teacher id={} schoolId={} employeeId={}", saved.getId(), schoolId, saved.getEmployeeId());
@@ -67,7 +74,7 @@ public class TeacherService {
             user.setName(request.name());
         }
         if (request.phone() != null) {
-            user.setPhone(request.phone());
+            user.setPhone(PhoneNumbers.persist(request.phone()));
         }
         if (request.enabled() != null) {
             user.setEnabled(request.enabled());
@@ -79,7 +86,7 @@ public class TeacherService {
             teacher.setSpecialization(request.specialization());
         }
         if (request.department() != null) {
-            teacher.setDepartment(request.department());
+            teacher.setDepartment(resolveDepartment(schoolId, request.department()));
         }
         if (request.joiningDate() != null) {
             teacher.setJoiningDate(request.joiningDate());
@@ -99,6 +106,13 @@ public class TeacherService {
 
     public Teacher requireByUserSafe(Long userId) {
         return teacherRepository.findByUserId(userId).orElse(null);
+    }
+
+    private String resolveDepartment(Long schoolId, String department) {
+        if (department == null || department.isBlank()) {
+            return null;
+        }
+        return departmentService.requireByName(schoolId, department).getName();
     }
 
     private TeacherResponse toResponse(Teacher teacher) {

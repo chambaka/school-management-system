@@ -70,6 +70,7 @@ class AuditPathClassifierTest {
         assertThat(AuditPathClassifier.shouldRecord("GET", "/api/v1/students", 403)).isTrue();
         assertThat(AuditPathClassifier.shouldRecord("DELETE", "/api/v1/allocations/1", 204)).isTrue();
         assertThat(AuditPathClassifier.resourceType("/api/v1/teachers")).isEqualTo("Teacher");
+        assertThat(AuditPathClassifier.resourceType("/api/v1/school-admins")).isEqualTo("SchoolAdmin");
         assertThat(AuditPathClassifier.resourceType("/api/v1/parents")).isEqualTo("Parent");
         assertThat(AuditPathClassifier.resourceType("/api/v1/invoices")).isEqualTo("Invoice");
         assertThat(AuditPathClassifier.resourceType("/api/v1/payments")).isEqualTo("Payment");
@@ -81,6 +82,7 @@ class AuditPathClassifierTest {
         assertThat(AuditPathClassifier.resourceType("/api/v1/classes")).isEqualTo("SchoolClass");
         assertThat(AuditPathClassifier.resourceType("/api/v1/sections")).isEqualTo("Section");
         assertThat(AuditPathClassifier.resourceType("/api/v1/subjects")).isEqualTo("Subject");
+        assertThat(AuditPathClassifier.resourceType("/api/v1/departments")).isEqualTo("Department");
         assertThat(AuditPathClassifier.resourceType("/api/v1/allocations")).isEqualTo("TeacherSubject");
         assertThat(AuditPathClassifier.resourceType("/api/v1/timetable")).isEqualTo("TimetableSlot");
         assertThat(AuditPathClassifier.resourceType("/api/v1/messages/inbox")).isEqualTo("StudentMessage");

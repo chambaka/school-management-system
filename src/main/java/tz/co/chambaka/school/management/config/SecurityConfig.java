@@ -20,7 +20,10 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Configuration
 @EnableMethodSecurity
@@ -81,7 +84,27 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(smsProperties.cors().allowedOrigins());
+        List<String> exact = new ArrayList<>();
+        Set<String> patterns = new LinkedHashSet<>();
+        patterns.add("http://localhost:*");
+        patterns.add("http://127.0.0.1:*");
+        List<String> configured = smsProperties.cors() == null ? List.of() : smsProperties.cors().allowedOrigins();
+        if (configured != null) {
+            for (String origin : configured) {
+                if (origin == null || origin.isBlank()) {
+                    continue;
+                }
+                if (origin.contains("*")) {
+                    patterns.add(origin);
+                } else {
+                    exact.add(origin);
+                }
+            }
+        }
+        if (!exact.isEmpty()) {
+            configuration.setAllowedOrigins(exact);
+        }
+        configuration.setAllowedOriginPatterns(List.copyOf(patterns));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of(
                 "Authorization", "Content-Type", "Accept", "X-Correction-Id", "X-Correlation-Id"));

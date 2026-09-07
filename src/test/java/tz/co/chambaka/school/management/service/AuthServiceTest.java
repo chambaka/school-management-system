@@ -1,7 +1,6 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.config.SmsProperties;
-import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.dto.auth.ChangePasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.LoginRequest;
 import tz.co.chambaka.school.management.dto.auth.RefreshTokenRequest;
@@ -162,6 +161,31 @@ class AuthServiceTest {
         when(schoolRepository.findById(1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void loginArchivedTenant() {
+        User user = Fixtures.user(2L, Role.ADMIN);
+        Tenant tenant = Fixtures.tenant();
+        tenant.setStatus(TenantStatus.ARCHIVED);
+        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        when(tenantRepository.findById(Fixtures.TENANT_ID)).thenReturn(Optional.of(tenant));
+        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("no longer available");
+    }
+
+    @Test
+    void loginArchivedSchool() {
+        User user = Fixtures.user(2L, Role.ADMIN);
+        School school = Fixtures.school();
+        school.setStatus(SchoolStatus.ARCHIVED);
+        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(user));
+        stubActiveTenant();
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
+        assertThatThrownBy(() -> authService.login(new LoginRequest("admin@example.com", "pw")))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("no longer available");
     }
 
     @Test
@@ -348,6 +372,17 @@ class AuthServiceTest {
     void changePasswordMissingUser() {
         when(userRepository.findById(9L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> authService.changePassword(9L, new ChangePasswordRequest("a", "bbbbbbbb")))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void switchSchoolRejectsArchivedSchool() {
+        User user = Fixtures.user(1L, Role.SUPER_ADMIN);
+        School school = Fixtures.school();
+        school.setStatus(SchoolStatus.ARCHIVED);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
+        assertThatThrownBy(() -> authService.switchSchool(1L, new SwitchSchoolRequest(1L, null)))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 

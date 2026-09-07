@@ -31,6 +31,62 @@ public class AuditService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(AuditEventDraft draft) {
+        persist(draft);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordAuth(AuditAction action, User user, String summary) {
+        AuditScope scope = user != null && user.getRole() == Role.SUPER_ADMIN
+                ? AuditScope.PLATFORM
+                : (action == AuditAction.REGISTER_SCHOOL ? AuditScope.PLATFORM : AuditScope.TENANT);
+        Long schoolId = user == null ? null : user.getSchoolId();
+        persist(new AuditEventDraft()
+                .scope(scope)
+                .action(action)
+                .schoolId(schoolId)
+                .actorUserId(user == null ? null : user.getId())
+                .actorEmail(user == null ? null : user.getEmail())
+                .actorRole(user == null || user.getRole() == null ? null : user.getRole().name())
+                .resourceType("Auth")
+                .resourceId(user == null || user.getId() == null ? null : String.valueOf(user.getId()))
+                .summary(summary)
+                .httpMethod("POST"));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordFinance(
+            Long schoolId,
+            AuditAction action,
+            String resourceType,
+            String resourceId,
+            String summary,
+            String details
+    ) {
+        persist(new AuditEventDraft()
+                .scope(AuditScope.TENANT)
+                .schoolId(schoolId)
+                .action(action)
+                .resourceType(resourceType)
+                .resourceId(resourceId)
+                .summary(summary)
+                .details(details)
+                .statusCode(200));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordAuthFailure(String email, String summary) {
+        persist(new AuditEventDraft()
+                .scope(AuditScope.PLATFORM)
+                .action(AuditAction.LOGIN_FAILED)
+                .actorEmail(email)
+                .resourceType("Auth")
+                .summary(summary)
+                .httpMethod("POST")
+                .httpPath("/api/v1/auth/login")
+                .statusCode(401));
+    }
+
+    private void persist(AuditEventDraft draft) {
         if (draft == null || draft.getAction() == null) {
             return;
         }
@@ -48,55 +104,6 @@ public class AuditService {
             log.error("Failed to persist audit event action={} correctionId={}",
                     draft.getAction(), RequestContext.getCorrectionId(), ex);
         }
-    }
-
-    public void recordAuth(AuditAction action, User user, String summary) {
-        AuditScope scope = user != null && user.getRole() == Role.SUPER_ADMIN
-                ? AuditScope.PLATFORM
-                : (action == AuditAction.REGISTER_SCHOOL ? AuditScope.PLATFORM : AuditScope.TENANT);
-        Long schoolId = user == null ? null : user.getSchoolId();
-        record(new AuditEventDraft()
-                .scope(scope)
-                .action(action)
-                .schoolId(schoolId)
-                .actorUserId(user == null ? null : user.getId())
-                .actorEmail(user == null ? null : user.getEmail())
-                .actorRole(user == null || user.getRole() == null ? null : user.getRole().name())
-                .resourceType("Auth")
-                .resourceId(user == null || user.getId() == null ? null : String.valueOf(user.getId()))
-                .summary(summary)
-                .httpMethod("POST"));
-    }
-
-    public void recordFinance(
-            Long schoolId,
-            AuditAction action,
-            String resourceType,
-            String resourceId,
-            String summary,
-            String details
-    ) {
-        record(new AuditEventDraft()
-                .scope(AuditScope.TENANT)
-                .schoolId(schoolId)
-                .action(action)
-                .resourceType(resourceType)
-                .resourceId(resourceId)
-                .summary(summary)
-                .details(details)
-                .statusCode(200));
-    }
-
-    public void recordAuthFailure(String email, String summary) {
-        record(new AuditEventDraft()
-                .scope(AuditScope.PLATFORM)
-                .action(AuditAction.LOGIN_FAILED)
-                .actorEmail(email)
-                .resourceType("Auth")
-                .summary(summary)
-                .httpMethod("POST")
-                .httpPath("/api/v1/auth/login")
-                .statusCode(401));
     }
 
     private AuditEvent toEvent(AuditEventDraft draft) {

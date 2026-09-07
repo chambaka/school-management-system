@@ -27,7 +27,7 @@ public class StudentCommunication extends TenantEntity {
     @JoinColumn(name = "student_id")
     private Student student;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_user_id")
     private User author;
 

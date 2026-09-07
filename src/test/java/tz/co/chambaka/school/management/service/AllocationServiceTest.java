@@ -45,8 +45,10 @@ class AllocationServiceTest {
         TeacherSubject without = allocation(false);
         when(teacherSubjectRepository.findBySchoolIdAndTeacherId(1L, 1L)).thenReturn(List.of(withSection));
         when(teacherSubjectRepository.findBySchoolIdAndAcademicYearId(1L, 1L)).thenReturn(List.of(without));
+        when(teacherSubjectRepository.findBySchoolId(1L)).thenReturn(List.of(withSection, without));
         assertThat(service.list(1L, 1L, 1L).getFirst().sectionName()).isEqualTo("A");
         assertThat(service.list(1L, 1L, null).getFirst().sectionId()).isNull();
+        assertThat(service.list(1L, null, null)).hasSize(2);
 
         when(teacherSubjectRepository.existsByTeacherIdAndSubjectIdAndSchoolClassIdAndSectionIdAndAcademicYearId(
                 1L, 1L, 1L, 1L, 1L)).thenReturn(false);

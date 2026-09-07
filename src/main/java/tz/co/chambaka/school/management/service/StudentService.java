@@ -13,6 +13,7 @@ import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.StudentRepository;
+import tz.co.chambaka.school.management.sms.PhoneNumbers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
@@ -89,7 +90,7 @@ public class StudentService {
             user.setName(request.name());
         }
         if (request.phone() != null) {
-            user.setPhone(request.phone());
+            user.setPhone(PhoneNumbers.persist(request.phone()));
         }
         if (request.enabled() != null) {
             user.setEnabled(request.enabled());

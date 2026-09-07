@@ -1,11 +1,16 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.academic.SectionRequest;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Section;
 import tz.co.chambaka.school.management.repository.SectionRepository;
+import tz.co.chambaka.school.management.repository.StudentAttendanceRepository;
+import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
+import tz.co.chambaka.school.management.repository.TeacherSubjectRepository;
+import tz.co.chambaka.school.management.repository.TimetableSlotRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +24,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +36,14 @@ class SectionServiceTest {
     private ClassService classService;
     @Mock
     private TeacherRepository teacherRepository;
+    @Mock
+    private StudentRepository studentRepository;
+    @Mock
+    private TeacherSubjectRepository teacherSubjectRepository;
+    @Mock
+    private TimetableSlotRepository timetableSlotRepository;
+    @Mock
+    private StudentAttendanceRepository studentAttendanceRepository;
     @InjectMocks
     private SectionService service;
 
@@ -65,5 +79,24 @@ class SectionServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
         when(sectionRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.require(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void deleteRemovesEmptySection() {
+        Section section = Fixtures.section();
+        when(sectionRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(section));
+        when(studentRepository.countBySectionId(1L)).thenReturn(0L);
+        service.delete(1L, 1L);
+        verify(teacherSubjectRepository).deleteBySectionId(1L);
+        verify(timetableSlotRepository).deleteBySectionId(1L);
+        verify(studentAttendanceRepository).deleteBySectionId(1L);
+        verify(sectionRepository).delete(section);
+    }
+
+    @Test
+    void deleteBlockedWhenStudentsAssigned() {
+        when(sectionRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(Fixtures.section()));
+        when(studentRepository.countBySectionId(1L)).thenReturn(2L);
+        assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class);
     }
 }

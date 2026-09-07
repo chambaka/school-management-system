@@ -2,12 +2,12 @@ package tz.co.chambaka.school.management.support;
 
 import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.dto.auth.UserProfileResponse;
-import tz.co.chambaka.school.management.dto.campus.CampusResponse;
 import tz.co.chambaka.school.management.dto.school.BrandingResponse;
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
 import tz.co.chambaka.school.management.dto.tenant.TenantResponse;
 import tz.co.chambaka.school.management.model.AcademicYear;
 import tz.co.chambaka.school.management.model.Campus;
+import tz.co.chambaka.school.management.model.Department;
 import tz.co.chambaka.school.management.model.Exam;
 import tz.co.chambaka.school.management.model.ExamSubject;
 import tz.co.chambaka.school.management.model.Parent;
@@ -45,7 +45,7 @@ public final class Fixtures {
                 new SmsProperties.Jwt("change-this-to-a-long-random-secret-key-of-at-least-256-bits",
                         Duration.ofHours(1), Duration.ofDays(7)),
                 new SmsProperties.Cors(List.of("http://localhost:3000")),
-                new SmsProperties.SuperAdmin("oscar.d@example.net", "ChangeMe123!", "Platform Admin")
+                new SmsProperties.SuperAdmin("halo.admin@halo-schools.net", "ChangeMe123!", "Platform Admin")
         );
     }
 
@@ -97,12 +97,7 @@ public final class Fixtures {
     public static TenantResponse tenantResponse() {
         return new TenantResponse(
                 TENANT_ID, "Chambaka Group", "chambaka-group", "org@example.com", null, "TZ",
-                "Africa/Dar_es_Salaam", "TZS", TenantStatus.ACTIVE, "STARTER", null, 1);
-    }
-
-    public static CampusResponse campusResponse() {
-        return new CampusResponse(CAMPUS_ID, TENANT_ID, SCHOOL_ID, "Main campus", "MAIN",
-                null, null, null, "Africa/Dar_es_Salaam", true);
+                "Africa/Dar_es_Salaam", "TZS", TenantStatus.ACTIVE, "STARTER", 1);
     }
 
     public static School school() {
@@ -120,9 +115,9 @@ public final class Fixtures {
 
     public static SchoolResponse schoolResponse() {
         return new SchoolResponse(
-                SCHOOL_ID, TENANT_ID, "Chambaka", "chambaka", "a@b.com", null, null, null, null, null,
+                SCHOOL_ID, TENANT_ID, "Chambaka Group", "Chambaka", "chambaka", "a@b.com", null, null, null, null, null,
                 "#000", "#111", "#222", null, "Africa/Dar_es_Salaam", "en", "TZS", "TZ",
-                SchoolStatus.ACTIVE, "STARTER", null, true, true, true);
+                SchoolStatus.ACTIVE, "STARTER", true, true, true);
     }
 
     public static BrandingResponse branding() {
@@ -198,6 +193,18 @@ public final class Fixtures {
         parent.setUser(user(5L, Role.PARENT));
         parent.setOccupation("Trader");
         return parent;
+    }
+
+    public static Department department() {
+        return department("Science");
+    }
+
+    public static Department department(String name) {
+        Department department = new Department();
+        department.setId(1L);
+        department.setSchoolId(SCHOOL_ID);
+        department.setName(name);
+        return department;
     }
 
     public static Subject subject() {

@@ -16,4 +16,8 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
     Optional<TimetableSlot> findByIdAndSchoolId(Long id, Long schoolId);
 
     List<TimetableSlot> findBySectionIdAndDayOfWeek(Long sectionId, DayOfWeek dayOfWeek);
+
+    void deleteBySectionId(Long sectionId);
+
+    void deleteBySubjectId(Long subjectId);
 }

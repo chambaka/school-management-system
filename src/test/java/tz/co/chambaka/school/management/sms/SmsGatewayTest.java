@@ -27,7 +27,12 @@ class SmsGatewayTest {
         assertThat(PhoneNumbers.normalize("0712345678")).isEqualTo("255712345678");
         assertThat(PhoneNumbers.normalize("+255712345678")).isEqualTo("255712345678");
         assertThat(PhoneNumbers.normalize("255712345678")).isEqualTo("255712345678");
+        assertThat(PhoneNumbers.normalize("753493500")).isEqualTo("255753493500");
         assertThat(PhoneNumbers.normalize("12345")).isEqualTo("12345");
+        assertThat(PhoneNumbers.persist(null)).isNull();
+        assertThat(PhoneNumbers.persist("   ")).isNull();
+        assertThat(PhoneNumbers.persist("0753493500")).isEqualTo("255753493500");
+        assertThat(PhoneNumbers.persist("255753493500")).isEqualTo("255753493500");
         assertThat(PhoneNumbers.toE164Like(null)).isNull();
         assertThat(PhoneNumbers.toE164Like("   ")).isNull();
         assertThat(PhoneNumbers.toE164Like("abc")).isNull();

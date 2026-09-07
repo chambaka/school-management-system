@@ -29,6 +29,7 @@ import tz.co.chambaka.school.management.audit.AuditService;
 import tz.co.chambaka.school.management.model.enums.AuditAction;
 import tz.co.chambaka.school.management.security.JwtService;
 import tz.co.chambaka.school.management.security.PasswordPolicy;
+import tz.co.chambaka.school.management.sms.PhoneNumbers;
 import tz.co.chambaka.school.management.util.TokenHash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,17 +108,25 @@ public class AuthService {
         if (user.getTenantId() != null) {
             Tenant tenant = tenantRepository.findById(user.getTenantId())
                     .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
-            if (tenant.getStatus() == TenantStatus.SUSPENDED) {
-                log.warn("Login blocked suspended tenant tenantId={} userId={}", tenant.getId(), user.getId());
-                throw new ApiException(HttpStatus.FORBIDDEN, "Organization account is suspended");
+            if (tenant.getStatus() == TenantStatus.SUSPENDED || tenant.getStatus() == TenantStatus.ARCHIVED) {
+                log.warn("Login blocked tenant status={} tenantId={} userId={}",
+                        tenant.getStatus(), tenant.getId(), user.getId());
+                throw new ApiException(HttpStatus.FORBIDDEN,
+                        tenant.getStatus() == TenantStatus.ARCHIVED
+                                ? "Organization account is no longer available"
+                                : "Organization account is suspended");
             }
         }
         if (user.getSchoolId() != null) {
             School school = schoolRepository.findById(user.getSchoolId())
                     .orElseThrow(() -> new ResourceNotFoundException("School not found"));
-            if (school.getStatus() == SchoolStatus.SUSPENDED) {
-                log.warn("Login blocked suspended school schoolId={} userId={}", school.getId(), user.getId());
-                throw new ApiException(HttpStatus.FORBIDDEN, "School account is suspended");
+            if (school.getStatus() == SchoolStatus.SUSPENDED || school.getStatus() == SchoolStatus.ARCHIVED) {
+                log.warn("Login blocked school status={} schoolId={} userId={}",
+                        school.getStatus(), school.getId(), user.getId());
+                throw new ApiException(HttpStatus.FORBIDDEN,
+                        school.getStatus() == SchoolStatus.ARCHIVED
+                                ? "School account is no longer available"
+                                : "School account is suspended");
             }
         }
         user.setLastLoginAt(Instant.now());
@@ -143,7 +152,7 @@ public class AuthService {
                 .email(request.adminEmail().toLowerCase())
                 .password(passwordEncoder.encode(request.password()))
                 .role(Role.TENANT_ADMIN)
-                .phone(request.phone())
+                .phone(PhoneNumbers.persist(request.phone()))
                 .enabled(true)
                 .build();
         admin = userRepository.save(admin);
@@ -166,6 +175,9 @@ public class AuthService {
         } else {
             school = schoolRepository.findById(request.schoolId())
                     .orElseThrow(() -> ResourceNotFoundException.of("School", request.schoolId()));
+        }
+        if (school.getStatus() == SchoolStatus.ARCHIVED) {
+            throw ResourceNotFoundException.of("School", request.schoolId());
         }
         Campus campus;
         if (request.campusId() != null) {

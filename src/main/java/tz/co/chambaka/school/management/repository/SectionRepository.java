@@ -13,4 +13,6 @@ public interface SectionRepository extends JpaRepository<Section, Long> {
     Optional<Section> findByIdAndSchoolId(Long id, Long schoolId);
 
     boolean existsBySchoolClassIdAndNameIgnoreCase(Long schoolClassId, String name);
+
+    long countBySchoolClassId(Long schoolClassId);
 }

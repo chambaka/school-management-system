@@ -38,30 +38,42 @@ class SuperAdminInitializerTest {
 
     @Test
     void skipsWhenExists() {
-        when(userRepository.countByRole(Role.SUPER_ADMIN)).thenReturn(1L);
+        when(userRepository.findByRole(Role.SUPER_ADMIN)).thenReturn(List.of(Fixtures.user(1L, Role.SUPER_ADMIN)));
+        when(properties.superAdmin()).thenReturn(Fixtures.properties().superAdmin());
         initializer.run(new DefaultApplicationArguments());
         verify(userRepository, never()).save(any());
     }
 
     @Test
     void createsWhenMissing() {
-        when(userRepository.countByRole(Role.SUPER_ADMIN)).thenReturn(0L);
+        when(userRepository.findByRole(Role.SUPER_ADMIN)).thenReturn(List.of());
         when(properties.superAdmin()).thenReturn(Fixtures.properties().superAdmin());
         when(passwordEncoder.encode("ChangeMe123!")).thenReturn("enc");
         initializer.run(new DefaultApplicationArguments());
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
         assertThat(captor.getValue().getRole()).isEqualTo(Role.SUPER_ADMIN);
-        assertThat(captor.getValue().getEmail()).isEqualTo("oscar.d@example.net");
+        assertThat(captor.getValue().getEmail()).isEqualTo("halo.admin@halo-schools.net");
+    }
+
+    @Test
+    void renamesLegacySeedEmail() {
+        User admin = Fixtures.user(1L, Role.SUPER_ADMIN);
+        admin.setEmail("oscar.d@example.net");
+        when(userRepository.findByRole(Role.SUPER_ADMIN)).thenReturn(List.of(admin));
+        when(properties.superAdmin()).thenReturn(Fixtures.properties().superAdmin());
+        initializer.run(new DefaultApplicationArguments());
+        assertThat(admin.getEmail()).isEqualTo("halo.admin@halo-schools.net");
+        verify(userRepository).save(admin);
     }
 
     @Test
     void bindsSuperAdminToDefaultTenantInSingleMode() {
         User admin = Fixtures.user(1L, Role.SUPER_ADMIN);
-        when(userRepository.countByRole(Role.SUPER_ADMIN)).thenReturn(1L);
+        when(userRepository.findByRole(Role.SUPER_ADMIN)).thenReturn(List.of(admin));
+        when(properties.superAdmin()).thenReturn(Fixtures.properties().superAdmin());
         when(properties.singleTenant()).thenReturn(true);
         when(tenantService.ensureDefaultTenant()).thenReturn(Fixtures.tenant());
-        when(userRepository.findByRole(Role.SUPER_ADMIN)).thenReturn(List.of(admin));
         initializer.run(new DefaultApplicationArguments());
         assertThat(admin.getTenantId()).isEqualTo(Fixtures.TENANT_ID);
         verify(userRepository).save(admin);
@@ -71,10 +83,10 @@ class SuperAdminInitializerTest {
     void skipsBindWhenSuperAdminAlreadyHasTenant() {
         User admin = Fixtures.user(1L, Role.SUPER_ADMIN);
         admin.setTenantId(10L);
-        when(userRepository.countByRole(Role.SUPER_ADMIN)).thenReturn(1L);
+        when(userRepository.findByRole(Role.SUPER_ADMIN)).thenReturn(List.of(admin));
+        when(properties.superAdmin()).thenReturn(Fixtures.properties().superAdmin());
         when(properties.singleTenant()).thenReturn(true);
         when(tenantService.ensureDefaultTenant()).thenReturn(Fixtures.tenant());
-        when(userRepository.findByRole(Role.SUPER_ADMIN)).thenReturn(List.of(admin));
         initializer.run(new DefaultApplicationArguments());
         verify(userRepository, never()).save(any());
     }

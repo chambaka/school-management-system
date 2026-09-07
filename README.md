@@ -137,7 +137,7 @@ If you do not already have that database, `docker compose up -d` starts a separa
 
 Default platform admin (created on first boot if none exists):
 
-- Email: `oscar.d@example.net`
+- Email: `halo.admin@halo-schools.net`
 - Password: `ChangeMe123!`
 
 Create an organization (tenant + `TENANT_ADMIN`). Schools are added later from the organization dashboard (`POST /api/v1/tenants/current/schools`):
@@ -227,7 +227,7 @@ Profiles:
 | `SMS_JWT_ACCESS_TTL` | `PT1H` | no | Access token lifetime (ISO-8601 duration) |
 | `SMS_JWT_REFRESH_TTL` | `P7D` | no | Refresh token lifetime |
 | `SMS_CORS_ORIGINS` | `http://localhost:3000,http://localhost:5173` | yes | Allowed frontend origins |
-| `SMS_SUPER_ADMIN_EMAIL` | `oscar.d@example.net` | yes | Seeded only if no `SUPER_ADMIN` exists |
+| `SMS_SUPER_ADMIN_EMAIL` | `halo.admin@halo-schools.net` | yes | Seeded only if no `SUPER_ADMIN` exists |
 | `SMS_SUPER_ADMIN_PASSWORD` | `ChangeMe123!` | yes | Seeded only if no `SUPER_ADMIN` exists |
 | `SMS_SUPER_ADMIN_NAME` | `Platform Admin` | no | Display name for the seed account |
 | `SMS_PASSWORD_RESET_TTL` | `PT30M` | no | Forgot-password code lifetime |

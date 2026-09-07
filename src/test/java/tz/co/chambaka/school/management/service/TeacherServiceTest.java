@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.teacher.CreateTeacherRequest;
 import tz.co.chambaka.school.management.dto.teacher.UpdateTeacherRequest;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Teacher;
@@ -32,6 +33,8 @@ class TeacherServiceTest {
     private TeacherRepository teacherRepository;
     @Mock
     private UserAccountService userAccountService;
+    @Mock
+    private DepartmentService departmentService;
     @InjectMocks
     private TeacherService service;
 
@@ -53,6 +56,8 @@ class TeacherServiceTest {
             saved.setId(2L);
             return saved;
         });
+        when(departmentService.requireByName(1L, "Science")).thenReturn(Fixtures.department("Science"));
+        when(departmentService.requireByName(1L, "Arts")).thenReturn(Fixtures.department("Arts"));
         CreateTeacherRequest create = new CreateTeacherRequest(
                 "Asha", "asha@x.com", "pw", "07", "T-002", "BSc", "Math", "Science", LocalDate.of(2024, 1, 1));
         assertThat(service.create(1L, create).id()).isEqualTo(2L);
@@ -62,6 +67,23 @@ class TeacherServiceTest {
         assertThat(teacher.getUser().getName()).isEqualTo("New");
         assertThat(teacher.getUser().isEnabled()).isFalse();
         assertThat(teacher.getDepartment()).isEqualTo("Arts");
+    }
+
+    @Test
+    void rejectsUnknownDepartmentAndClearsBlank() {
+        Teacher teacher = Fixtures.teacher();
+        when(teacherRepository.existsBySchoolIdAndEmployeeIdIgnoreCase(1L, "T-003")).thenReturn(false);
+        when(userAccountService.create(1L, "Asha", "asha@x.com", "pw", Role.TEACHER, null))
+                .thenReturn(Fixtures.user(3L, Role.TEACHER));
+        when(departmentService.requireByName(1L, "Unknown"))
+                .thenThrow(new BusinessException("Department is not configured for this school"));
+        assertThatThrownBy(() -> service.create(1L, new CreateTeacherRequest(
+                "Asha", "asha@x.com", "pw", null, "T-003", null, null, "Unknown", null)))
+                .isInstanceOf(BusinessException.class);
+
+        when(teacherRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(teacher));
+        service.update(1L, 1L, new UpdateTeacherRequest(null, null, null, null, "  ", null, null));
+        assertThat(teacher.getDepartment()).isNull();
     }
 
     @Test

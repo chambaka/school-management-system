@@ -40,9 +40,14 @@ public class AllocationService {
 
     @Transactional(readOnly = true)
     public List<AllocationResponse> list(Long schoolId, Long academicYearId, Long teacherId) {
-        List<TeacherSubject> allocations = teacherId != null
-                ? teacherSubjectRepository.findBySchoolIdAndTeacherId(schoolId, teacherId)
-                : teacherSubjectRepository.findBySchoolIdAndAcademicYearId(schoolId, academicYearId);
+        List<TeacherSubject> allocations;
+        if (teacherId != null) {
+            allocations = teacherSubjectRepository.findBySchoolIdAndTeacherId(schoolId, teacherId);
+        } else if (academicYearId != null) {
+            allocations = teacherSubjectRepository.findBySchoolIdAndAcademicYearId(schoolId, academicYearId);
+        } else {
+            allocations = teacherSubjectRepository.findBySchoolId(schoolId);
+        }
         return allocations.stream().map(this::toResponse).toList();
     }
 

@@ -1,19 +1,18 @@
 package tz.co.chambaka.school.management.controller;
 
-import tz.co.chambaka.school.management.dto.campus.CampusResponse;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
 import tz.co.chambaka.school.management.dto.tenant.RenameOrganizationRequest;
 import tz.co.chambaka.school.management.dto.tenant.TenantResponse;
 import tz.co.chambaka.school.management.dto.tenant.UpdateTenantRequest;
-import tz.co.chambaka.school.management.service.CampusService;
 import tz.co.chambaka.school.management.service.TenantService;
 import tz.co.chambaka.school.management.tenant.TenantResolver;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,12 +30,10 @@ import java.util.List;
 public class TenantController {
 
     private final TenantService tenantService;
-    private final CampusService campusService;
     private final TenantResolver tenantResolver;
 
-    public TenantController(TenantService tenantService, CampusService campusService, TenantResolver tenantResolver) {
+    public TenantController(TenantService tenantService, TenantResolver tenantResolver) {
         this.tenantService = tenantService;
-        this.campusService = campusService;
         this.tenantResolver = tenantResolver;
     }
 
@@ -63,6 +60,13 @@ public class TenantController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public TenantResponse update(@PathVariable Long id, @Valid @RequestBody UpdateTenantRequest request) {
         return tenantService.update(id, request);
+    }
+
+    @DeleteMapping("/platform/tenants/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void archive(@PathVariable Long id) {
+        tenantService.archive(id);
     }
 
     @GetMapping("/platform/tenants/{id}/schools")
@@ -103,16 +107,4 @@ public class TenantController {
         return tenantService.addSchool(tenantResolver.requireTenantId(), request);
     }
 
-    @GetMapping("/tenants/current/campuses")
-    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
-    public List<CampusResponse> currentCampuses() {
-        return campusService.listByTenant(tenantResolver.requireTenantId());
-    }
-
-    @GetMapping("/tenants/current/schools/{schoolId}/campuses")
-    @PreAuthorize("hasAnyRole('TENANT_ADMIN','SUPER_ADMIN')")
-    public List<CampusResponse> schoolCampuses(@PathVariable Long schoolId) {
-        tenantService.requireSchoolInTenant(tenantResolver.requireTenantId(), schoolId);
-        return campusService.listBySchool(schoolId);
-    }
 }

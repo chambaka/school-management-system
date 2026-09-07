@@ -19,7 +19,18 @@ public final class PhoneNumbers {
         if (digits.startsWith("255") && digits.length() >= 12) {
             return digits;
         }
+        if (digits.length() == 9) {
+            return "255" + digits;
+        }
         return digits.isBlank() ? null : digits;
+    }
+
+    /** Store Tanzania mobiles as {@code 255753493500} whether typed as {@code 0753493500} or {@code 255753493500}. */
+    public static String persist(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return normalize(raw.trim());
     }
 
     /**

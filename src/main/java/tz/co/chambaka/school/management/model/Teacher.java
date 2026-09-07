@@ -17,7 +17,7 @@ import java.time.LocalDate;
 @Table(name = "teachers")
 public class Teacher extends TenantEntity {
 
-    @OneToOne(optional = false, fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", unique = true)
     private User user;
 

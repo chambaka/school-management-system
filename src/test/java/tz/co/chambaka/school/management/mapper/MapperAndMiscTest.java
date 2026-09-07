@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.mapper;
 
 import tz.co.chambaka.school.management.config.OpenApiConfig;
 import tz.co.chambaka.school.management.dto.academic.AcademicYearResponse;
+import tz.co.chambaka.school.management.dto.academic.DepartmentResponse;
 import tz.co.chambaka.school.management.dto.academic.SubjectResponse;
 import tz.co.chambaka.school.management.dto.auth.UserProfileResponse;
 import tz.co.chambaka.school.management.dto.common.PageResponse;
@@ -34,8 +35,10 @@ class MapperAndMiscTest {
         AcademicMapper academicMapper = new AcademicMapperImpl();
         AcademicYearResponse year = academicMapper.toYear(Fixtures.year());
         SubjectResponse subject = academicMapper.toSubject(Fixtures.subject());
+        DepartmentResponse department = academicMapper.toDepartment(Fixtures.department());
         assertThat(year.name()).isEqualTo("2026/2027");
         assertThat(subject.code()).isEqualTo("MATH");
+        assertThat(department.name()).isEqualTo("Science");
     }
 
     @Test

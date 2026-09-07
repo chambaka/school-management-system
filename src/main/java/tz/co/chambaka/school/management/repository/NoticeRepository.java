@@ -17,4 +17,6 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
             Long schoolId, List<NoticeAudience> audiences);
 
     Optional<Notice> findByIdAndSchoolId(Long id, Long schoolId);
+
+    List<Notice> findBySchoolClassId(Long schoolClassId);
 }

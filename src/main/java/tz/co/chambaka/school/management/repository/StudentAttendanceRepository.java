@@ -21,4 +21,6 @@ public interface StudentAttendanceRepository extends JpaRepository<StudentAttend
             Long studentId, LocalDate start, LocalDate end, AttendanceStatus status);
 
     long countByStudentIdAndAttendanceDateBetween(Long studentId, LocalDate start, LocalDate end);
+
+    void deleteBySectionId(Long sectionId);
 }

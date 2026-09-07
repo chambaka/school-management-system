@@ -13,4 +13,6 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
     List<Exam> findBySchoolIdOrderByStartDateDesc(Long schoolId);
 
     Optional<Exam> findByIdAndSchoolId(Long id, Long schoolId);
+
+    boolean existsBySchoolClassId(Long schoolClassId);
 }

@@ -1,10 +1,18 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.academic.SchoolClassRequest;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
+import tz.co.chambaka.school.management.model.Notice;
 import tz.co.chambaka.school.management.model.SchoolClass;
+import tz.co.chambaka.school.management.repository.ExamRepository;
+import tz.co.chambaka.school.management.repository.FeeStructureRepository;
+import tz.co.chambaka.school.management.repository.NoticeRepository;
 import tz.co.chambaka.school.management.repository.SchoolClassRepository;
+import tz.co.chambaka.school.management.repository.SectionRepository;
+import tz.co.chambaka.school.management.repository.StudentRepository;
+import tz.co.chambaka.school.management.repository.TeacherSubjectRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +36,18 @@ class ClassServiceTest {
     private SchoolClassRepository schoolClassRepository;
     @Mock
     private AcademicYearService academicYearService;
+    @Mock
+    private StudentRepository studentRepository;
+    @Mock
+    private SectionRepository sectionRepository;
+    @Mock
+    private ExamRepository examRepository;
+    @Mock
+    private FeeStructureRepository feeStructureRepository;
+    @Mock
+    private TeacherSubjectRepository teacherSubjectRepository;
+    @Mock
+    private NoticeRepository noticeRepository;
     @InjectMocks
     private ClassService service;
 
@@ -61,5 +82,39 @@ class ClassServiceTest {
                 .isInstanceOf(DuplicateResourceException.class);
         when(schoolClassRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.require(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void deleteRemovesClassAndClearsNotices() {
+        SchoolClass schoolClass = Fixtures.schoolClass();
+        Notice notice = new Notice();
+        notice.setSchoolClass(schoolClass);
+        when(schoolClassRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(schoolClass));
+        when(studentRepository.countBySchoolClassId(1L)).thenReturn(0L);
+        when(sectionRepository.countBySchoolClassId(1L)).thenReturn(0L);
+        when(examRepository.existsBySchoolClassId(1L)).thenReturn(false);
+        when(feeStructureRepository.existsBySchoolClassId(1L)).thenReturn(false);
+        when(noticeRepository.findBySchoolClassId(1L)).thenReturn(List.of(notice));
+        service.delete(1L, 1L);
+        assertThat(notice.getSchoolClass()).isNull();
+        verify(teacherSubjectRepository).deleteBySchoolClassId(1L);
+        verify(schoolClassRepository).delete(schoolClass);
+    }
+
+    @Test
+    void deleteBlockedWhenInUse() {
+        SchoolClass schoolClass = Fixtures.schoolClass();
+        when(schoolClassRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(schoolClass));
+        when(studentRepository.countBySchoolClassId(1L)).thenReturn(1L);
+        assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class);
+        when(studentRepository.countBySchoolClassId(1L)).thenReturn(0L);
+        when(sectionRepository.countBySchoolClassId(1L)).thenReturn(1L);
+        assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class);
+        when(sectionRepository.countBySchoolClassId(1L)).thenReturn(0L);
+        when(examRepository.existsBySchoolClassId(1L)).thenReturn(true);
+        assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class);
+        when(examRepository.existsBySchoolClassId(1L)).thenReturn(false);
+        when(feeStructureRepository.existsBySchoolClassId(1L)).thenReturn(true);
+        assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class);
     }
 }
