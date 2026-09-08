@@ -2,7 +2,6 @@ package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.academic.GradeRequest;
 import tz.co.chambaka.school.management.exception.BusinessException;
-import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Grade;
 import tz.co.chambaka.school.management.model.Student;
@@ -45,7 +44,7 @@ class GradeServiceTest {
         when(examService.require(1L, 1L)).thenReturn(Fixtures.exam());
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
         when(examSubjectRepository.findByExamIdAndSubjectId(1L, 1L)).thenReturn(Optional.of(Fixtures.examSubject()));
-        when(gradeRepository.existsByExamIdAndStudentIdAndSubjectId(1L, 1L, 1L)).thenReturn(false);
+        when(gradeRepository.findByExamIdAndStudentIdAndSubjectId(1L, 1L, 1L)).thenReturn(Optional.empty());
         when(teacherService.requireByUserSafe(3L)).thenReturn(Fixtures.teacher());
         when(gradeRepository.save(any(Grade.class))).thenAnswer(inv -> {
             Grade saved = inv.getArgument(0);
@@ -95,9 +94,12 @@ class GradeServiceTest {
                 .isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> service.record(1L, new GradeRequest(1L, 1L, 1L, new BigDecimal("-1"), null), 1L))
                 .isInstanceOf(BusinessException.class);
-        when(gradeRepository.existsByExamIdAndStudentIdAndSubjectId(1L, 1L, 1L)).thenReturn(true);
-        assertThatThrownBy(() -> service.record(1L, new GradeRequest(1L, 1L, 1L, new BigDecimal("10"), null), 1L))
-                .isInstanceOf(DuplicateResourceException.class);
+        Grade existing = grade(new BigDecimal("40"));
+        when(gradeRepository.findByExamIdAndStudentIdAndSubjectId(1L, 1L, 1L)).thenReturn(Optional.of(existing));
+        when(teacherService.requireByUserSafe(1L)).thenReturn(Fixtures.teacher());
+        when(gradeRepository.save(existing)).thenReturn(existing);
+        assertThat(service.record(1L, new GradeRequest(1L, 1L, 1L, new BigDecimal("10"), null), 1L).marksObtained())
+                .isEqualByComparingTo("10");
     }
 
     private tz.co.chambaka.school.management.dto.academic.ReportCardResponse card(BigDecimal marks) {

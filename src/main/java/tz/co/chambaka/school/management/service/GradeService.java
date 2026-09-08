@@ -4,7 +4,6 @@ import tz.co.chambaka.school.management.dto.academic.GradeRequest;
 import tz.co.chambaka.school.management.dto.academic.GradeResponse;
 import tz.co.chambaka.school.management.dto.academic.ReportCardResponse;
 import tz.co.chambaka.school.management.exception.BusinessException;
-import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Exam;
 import tz.co.chambaka.school.management.model.ExamSubject;
@@ -57,11 +56,11 @@ public class GradeService {
                 || request.marksObtained().compareTo(examSubject.getMaxMarks()) > 0) {
             throw new BusinessException("Marks must be between 0 and " + examSubject.getMaxMarks());
         }
-        if (gradeRepository.existsByExamIdAndStudentIdAndSubjectId(exam.getId(), student.getId(), request.subjectId())) {
-            throw new DuplicateResourceException("Grade already recorded for this student and subject");
-        }
         Teacher grader = teacherService.requireByUserSafe(currentUserId);
-        Grade grade = new Grade();
+        Grade grade = gradeRepository
+                .findByExamIdAndStudentIdAndSubjectId(exam.getId(), student.getId(), request.subjectId())
+                .orElseGet(Grade::new);
+        boolean created = grade.getId() == null;
         grade.setSchoolId(schoolId);
         grade.setExam(exam);
         grade.setExamSubject(examSubject);
@@ -71,8 +70,8 @@ public class GradeService {
         grade.setRemarks(request.remarks());
         grade.setGradedBy(grader);
         Grade saved = gradeRepository.save(grade);
-        log.info("Recorded grade id={} examId={} studentId={} subjectId={}",
-                saved.getId(), exam.getId(), student.getId(), request.subjectId());
+        log.info("{} grade id={} examId={} studentId={} subjectId={}",
+                created ? "Recorded" : "Updated", saved.getId(), exam.getId(), student.getId(), request.subjectId());
         return toResponse(saved);
     }
 

@@ -58,9 +58,12 @@ class SchoolAdminServiceTest {
         assertThat(created.id()).isEqualTo(5L);
         assertThat(admin.getCampusId()).isEqualTo(Fixtures.CAMPUS_ID);
 
-        service.update(1L, 5L, new UpdateSchoolAdminRequest("New", "08", false));
+        service.update(1L, 5L, new UpdateSchoolAdminRequest("New", "08", false, Role.ACCOUNTANT));
         assertThat(admin.getName()).isEqualTo("New");
         assertThat(admin.isEnabled()).isFalse();
+        assertThat(admin.getRole()).isEqualTo(Role.ACCOUNTANT);
+        assertThatThrownBy(() -> service.update(1L, 5L, new UpdateSchoolAdminRequest(null, null, null, Role.TEACHER)))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test

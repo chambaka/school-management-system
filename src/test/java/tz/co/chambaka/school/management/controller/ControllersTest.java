@@ -326,7 +326,7 @@ class ControllersTest {
         schoolAdmins.list(1L, platform, PageRequest.of(0, 10));
         schoolAdmins.get(1L, 5L, platform);
         schoolAdmins.create(1L, platform, new CreateSchoolAdminRequest("Asha", "asha@x.com", "HaloCampus1!", "07", Role.HEADMASTER));
-        schoolAdmins.update(1L, 5L, platform, new UpdateSchoolAdminRequest("Asha", "08", true));
+        schoolAdmins.update(1L, 5L, platform, new UpdateSchoolAdminRequest("Asha", "08", true, null));
         verify(schoolAdminService, times(4)).assertCanManage(1L, platform);
         verify(schoolAdminService).create(eq(1L), any());
 

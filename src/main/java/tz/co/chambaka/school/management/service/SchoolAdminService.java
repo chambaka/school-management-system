@@ -90,7 +90,11 @@ public class SchoolAdminService {
         if (request.enabled() != null) {
             user.setEnabled(request.enabled());
         }
-        log.info("Updated school admin userId={} schoolId={} enabled={}", user.getId(), schoolId, user.isEnabled());
+        if (request.role() != null) {
+            user.setRole(officerRole(request.role()));
+        }
+        log.info("Updated school admin userId={} schoolId={} enabled={} role={}",
+                user.getId(), schoolId, user.isEnabled(), user.getRole());
         return toResponse(user);
     }
 
