@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
+import tz.co.chambaka.school.management.dto.school.RenameSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
 import tz.co.chambaka.school.management.dto.tenant.RenameOrganizationRequest;
@@ -101,8 +102,17 @@ public class TenantController {
         return tenantService.listSchools(tenantResolver.requireTenantId());
     }
 
-    @PostMapping("/tenants/current/schools")
+    @PutMapping("/tenants/current/schools/{schoolId}")
     @PreAuthorize(Access.ORG_SCHOOLS)
+    public SchoolResponse renameSchool(
+            @PathVariable Long schoolId,
+            @Valid @RequestBody RenameSchoolRequest request
+    ) {
+        return tenantService.renameSchool(tenantResolver.requireTenantId(), schoolId, request.name());
+    }
+
+    @PostMapping("/tenants/current/schools")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     public SchoolResponse addSchool(@Valid @RequestBody CreateSchoolRequest request) {
         return tenantService.addSchool(tenantResolver.requireTenantId(), request);

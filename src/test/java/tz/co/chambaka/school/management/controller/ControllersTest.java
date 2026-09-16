@@ -31,6 +31,7 @@ import tz.co.chambaka.school.management.dto.parent.CreateParentRequest;
 import tz.co.chambaka.school.management.dto.parent.LinkParentRequest;
 import tz.co.chambaka.school.management.dto.parent.UpdateParentRequest;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
+import tz.co.chambaka.school.management.dto.school.RenameSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.UpdateSchoolRequest;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
 import tz.co.chambaka.school.management.dto.tenant.RenameOrganizationRequest;
@@ -478,6 +479,7 @@ class ControllersTest {
         tenants.current();
         tenants.updateCurrent(new RenameOrganizationRequest("Halo Group"));
         tenants.currentSchools();
+        tenants.renameSchool(1L, new RenameSchoolRequest("East Campus"));
         tenants.addSchool(new CreateSchoolRequest("S2", null, null, null, null, null, null));
         tenants.archive(10L);
         verify(tenantService).archive(10L);

@@ -1,6 +1,7 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.dashboard.DashboardResponse;
+import tz.co.chambaka.school.management.model.enums.AttendanceStatus;
 import tz.co.chambaka.school.management.model.enums.ExamApprovalStatus;
 import tz.co.chambaka.school.management.model.enums.InvoiceStatus;
 import tz.co.chambaka.school.management.model.enums.Role;
@@ -8,6 +9,7 @@ import tz.co.chambaka.school.management.model.enums.StudentStatus;
 import tz.co.chambaka.school.management.repository.ExamRepository;
 import tz.co.chambaka.school.management.repository.InvoiceRepository;
 import tz.co.chambaka.school.management.repository.NoticeRepository;
+import tz.co.chambaka.school.management.repository.StudentAttendanceRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
 import org.springframework.data.domain.PageRequest;
@@ -15,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,19 +30,22 @@ public class DashboardService {
     private final InvoiceRepository invoiceRepository;
     private final NoticeRepository noticeRepository;
     private final ExamRepository examRepository;
+    private final StudentAttendanceRepository studentAttendanceRepository;
 
     public DashboardService(
             StudentRepository studentRepository,
             TeacherRepository teacherRepository,
             InvoiceRepository invoiceRepository,
             NoticeRepository noticeRepository,
-            ExamRepository examRepository
+            ExamRepository examRepository,
+            StudentAttendanceRepository studentAttendanceRepository
     ) {
         this.studentRepository = studentRepository;
         this.teacherRepository = teacherRepository;
         this.invoiceRepository = invoiceRepository;
         this.noticeRepository = noticeRepository;
         this.examRepository = examRepository;
+        this.studentAttendanceRepository = studentAttendanceRepository;
     }
 
     @Transactional(readOnly = true)
@@ -55,6 +62,9 @@ public class DashboardService {
                 .filter(i -> i.getStatus() != InvoiceStatus.CANCELLED)
                 .map(i -> i.getBalance())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        LocalDate today = LocalDate.now(ZoneId.of("Africa/Dar_es_Salaam"));
+        long absentToday = studentAttendanceRepository.countBySchoolIdAndAttendanceDateAndStatus(
+                schoolId, today, AttendanceStatus.ABSENT);
         List<String> tasks = new ArrayList<>();
         if (role == Role.HEADMASTER || role == Role.ACADEMIC_MASTER) {
             if (pending > 0) {
@@ -65,11 +75,16 @@ public class DashboardService {
             }
         }
         if (role == Role.ACCOUNTANT || role == Role.HEADMASTER) {
-            tasks.add("Outstanding fees: " + outstanding + " TZS");
+            if (outstanding.signum() > 0) {
+                tasks.add("Collect outstanding fees: " + outstanding + " TZS");
+            }
         }
         if (role == Role.TEACHER) {
             tasks.add("Mark today's register and enter pending grades");
         }
-        return new DashboardResponse(students, teachers, invoices, notices, exams.size(), pending, unpublished, 0, outstanding, tasks);
+        if (absentToday > 0 && (role == Role.HEADMASTER || role == Role.ACADEMIC_MASTER)) {
+            tasks.add(absentToday + " student(s) marked absent today");
+        }
+        return new DashboardResponse(students, teachers, invoices, notices, exams.size(), pending, unpublished, absentToday, outstanding, tasks);
     }
 }

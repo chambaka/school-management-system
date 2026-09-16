@@ -10,12 +10,14 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import tz.co.chambaka.school.management.model.Exam;
 import tz.co.chambaka.school.management.model.Invoice;
+import tz.co.chambaka.school.management.model.enums.AttendanceStatus;
 import tz.co.chambaka.school.management.model.enums.ExamApprovalStatus;
 import tz.co.chambaka.school.management.model.enums.InvoiceStatus;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.ExamRepository;
 import tz.co.chambaka.school.management.repository.InvoiceRepository;
 import tz.co.chambaka.school.management.repository.NoticeRepository;
+import tz.co.chambaka.school.management.repository.StudentAttendanceRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
@@ -25,6 +27,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +38,7 @@ class DashboardServiceTest {
     @Mock InvoiceRepository invoiceRepository;
     @Mock NoticeRepository noticeRepository;
     @Mock ExamRepository examRepository;
+    @Mock StudentAttendanceRepository studentAttendanceRepository;
     @InjectMocks DashboardService service;
 
     @BeforeEach
@@ -53,6 +57,8 @@ class DashboardServiceTest {
                 invoice(InvoiceStatus.PENDING, "100"),
                 invoice(InvoiceStatus.PARTIAL, "50"),
                 invoice(InvoiceStatus.CANCELLED, "999"))));
+        when(studentAttendanceRepository.countBySchoolIdAndAttendanceDateAndStatus(
+                eq(1L), any(), eq(AttendanceStatus.ABSENT))).thenReturn(4L);
     }
 
     @Test
@@ -61,13 +67,14 @@ class DashboardServiceTest {
         assertThat(snapshot.students()).isEqualTo(2);
         assertThat(snapshot.pendingApprovals()).isEqualTo(2);
         assertThat(snapshot.outstandingFees()).isEqualByComparingTo("150");
-        assertThat(snapshot.tasks()).hasSize(3);
+        assertThat(snapshot.absentToday()).isEqualTo(4);
+        assertThat(snapshot.tasks()).hasSize(4);
     }
 
     @Test
     void roleSpecificTasksAreGenerated() {
-        assertThat(service.snapshot(1L, Role.ACADEMIC_MASTER).tasks()).hasSize(2);
-        assertThat(service.snapshot(1L, Role.ACCOUNTANT).tasks()).containsExactly("Outstanding fees: 150 TZS");
+        assertThat(service.snapshot(1L, Role.ACADEMIC_MASTER).tasks()).hasSize(3);
+        assertThat(service.snapshot(1L, Role.ACCOUNTANT).tasks()).containsExactly("Collect outstanding fees: 150 TZS");
         assertThat(service.snapshot(1L, Role.TEACHER).tasks()).containsExactly(
                 "Mark today's register and enter pending grades");
         assertThat(service.snapshot(1L, Role.STUDENT).tasks()).isEmpty();

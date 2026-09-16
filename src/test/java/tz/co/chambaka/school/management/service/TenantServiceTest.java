@@ -115,6 +115,34 @@ class TenantServiceTest {
     }
 
     @Test
+    void renameSchool() {
+        School school = Fixtures.school();
+        when(tenantRepository.findById(10L)).thenReturn(Optional.of(Fixtures.tenant()));
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
+        when(schoolMapper.toResponse(school)).thenReturn(Fixtures.schoolResponse());
+
+        assertThat(tenantService.renameSchool(10L, 1L, "  East Campus  ").id()).isEqualTo(1L);
+        assertThat(school.getName()).isEqualTo("East Campus");
+    }
+
+    @Test
+    void renameSchoolRequiresName() {
+        assertThatThrownBy(() -> tenantService.renameSchool(10L, 1L, "  "))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void renameSchoolRejectsOtherTenant() {
+        School school = Fixtures.school();
+        school.setTenantId(99L);
+        when(tenantRepository.findById(10L)).thenReturn(Optional.of(Fixtures.tenant()));
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
+
+        assertThatThrownBy(() -> tenantService.renameSchool(10L, 1L, "East Campus"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
     void provisionNewOrganizationCreatesTenantOnly() {
         when(tenantRepository.existsBySlug("chambaka-group")).thenReturn(true, false);
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> {

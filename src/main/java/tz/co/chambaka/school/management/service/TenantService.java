@@ -166,6 +166,22 @@ public class TenantService {
     }
 
     @Transactional
+    public SchoolResponse renameSchool(Long tenantId, Long schoolId, String name) {
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isBlank()) {
+            throw new BusinessException("School name is required");
+        }
+        Tenant tenant = require(tenantId);
+        School school = schoolRepository.findById(schoolId)
+                .filter(item -> item.getStatus() != SchoolStatus.ARCHIVED)
+                .filter(item -> tenantId.equals(item.getTenantId()))
+                .orElseThrow(() -> ResourceNotFoundException.of("School", schoolId));
+        school.setName(trimmed);
+        log.info("Renamed school id={} name={}", school.getId(), school.getName());
+        return schoolMapper.toResponse(school).withTenantName(tenant.getName());
+    }
+
+    @Transactional
     public SchoolResponse addSchool(Long tenantId, CreateSchoolRequest request) {
         Tenant tenant = require(tenantId);
         if (tenant.getStatus() != TenantStatus.ACTIVE) {
