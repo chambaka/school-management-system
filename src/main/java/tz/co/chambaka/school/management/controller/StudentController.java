@@ -13,6 +13,7 @@ import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.GradeService;
 import tz.co.chambaka.school.management.service.ParentService;
+import tz.co.chambaka.school.management.service.PromotionService;
 import tz.co.chambaka.school.management.service.StoredPhoto;
 import tz.co.chambaka.school.management.service.StudentService;
 import tz.co.chambaka.school.management.tenant.TenantResolver;
@@ -49,17 +50,20 @@ public class StudentController {
     private final StudentService studentService;
     private final ParentService parentService;
     private final GradeService gradeService;
+    private final PromotionService promotionService;
     private final TenantResolver tenantResolver;
 
     public StudentController(
             StudentService studentService,
             ParentService parentService,
             GradeService gradeService,
+            PromotionService promotionService,
             TenantResolver tenantResolver
     ) {
         this.studentService = studentService;
         this.parentService = parentService;
         this.gradeService = gradeService;
+        this.promotionService = promotionService;
         this.tenantResolver = tenantResolver;
     }
 
@@ -130,6 +134,12 @@ public class StudentController {
         return studentService.restore(tenantResolver.requireSchoolId(), id);
     }
 
+    @PostMapping("/promote")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
+    public List<StudentResponse> promote(@Valid @RequestBody tz.co.chambaka.school.management.dto.student.PromoteStudentsRequest request) {
+        return promotionService.promote(tenantResolver.requireSchoolId(), request);
+    }
+
     @GetMapping("/{id}/parents")
     @PreAuthorize(Access.ACADEMIC_STAFF)
     public List<StudentParentResponse> parents(@PathVariable Long id) {
@@ -146,14 +156,14 @@ public class StudentController {
         if (principal.getRole().name().equals("PARENT")) {
             parentService.assertLinked(principal.getId(), id);
         }
-        return gradeService.reportCard(tenantResolver.requireSchoolId(), id, examId);
+        return gradeService.reportCard(tenantResolver.requireSchoolId(), id, examId, principal.getRole());
     }
 
     @GetMapping("/me/report-card")
     @PreAuthorize("hasRole('STUDENT')")
     public ReportCardResponse myReportCard(@CurrentUser UserPrincipal principal, @RequestParam Long examId) {
         Long studentId = studentService.requireByUser(principal.getId()).getId();
-        return gradeService.reportCard(tenantResolver.requireSchoolId(), studentId, examId);
+        return gradeService.reportCard(tenantResolver.requireSchoolId(), studentId, examId, principal.getRole());
     }
 
     @PostMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

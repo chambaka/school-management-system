@@ -4,6 +4,13 @@ import tz.co.chambaka.school.management.dto.academic.TimetableRequest;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.TimetableSlot;
+import tz.co.chambaka.school.management.model.BellPeriod;
+import tz.co.chambaka.school.management.model.TeacherSubject;
+import tz.co.chambaka.school.management.model.TimetableLock;
+import tz.co.chambaka.school.management.model.enums.PeriodKind;
+import tz.co.chambaka.school.management.repository.ClassroomRepository;
+import tz.co.chambaka.school.management.repository.TeacherSubjectRepository;
+import tz.co.chambaka.school.management.repository.TimetableLockRepository;
 import tz.co.chambaka.school.management.repository.TimetableSlotRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
 import org.junit.jupiter.api.Test;
@@ -36,6 +43,14 @@ class TimetableServiceTest {
     private SubjectService subjectService;
     @Mock
     private TeacherService teacherService;
+    @Mock
+    private TimetableLockRepository timetableLockRepository;
+    @Mock
+    private TeacherSubjectRepository teacherSubjectRepository;
+    @Mock
+    private ClassroomRepository classroomRepository;
+    @Mock
+    private BellPeriodService bellPeriodService;
     @InjectMocks
     private TimetableService service;
 
@@ -139,6 +154,43 @@ class TimetableServiceTest {
         assertThat(service.bySection(1L, 1L).getFirst().schoolClassId()).isNull();
     }
 
+    @Test
+    void generatesTimetableFromAllocationsAndLocksIt() {
+        when(sectionService.require(1L, 1L)).thenReturn(Fixtures.section());
+        when(academicYearService.require(1L, 1L)).thenReturn(Fixtures.year());
+        when(subjectService.require(1L, 1L)).thenReturn(Fixtures.subject());
+        when(teacherService.require(1L, 1L)).thenReturn(Fixtures.teacher());
+        when(timetableSlotRepository.findBySchoolIdAndSectionIdOrderByDayOfWeekAscStartTimeAsc(1L, 1L))
+                .thenReturn(List.of(slot(LocalTime.of(7, 0), LocalTime.of(8, 0))));
+        when(teacherSubjectRepository.findBySchoolId(1L)).thenReturn(List.of(allocation()));
+        when(bellPeriodService.lessonPeriods(1L)).thenReturn(List.of(period()));
+        when(classroomRepository.findBySchoolIdOrderByNameAsc(1L)).thenReturn(List.of(Fixtures.classroom()));
+        when(timetableSlotRepository.save(any(TimetableSlot.class))).thenAnswer(invocation -> {
+            TimetableSlot saved = invocation.getArgument(0);
+            saved.setId(2L);
+            return saved;
+        });
+
+        assertThat(service.generate(1L, 1L, 1L)).singleElement()
+                .satisfies(row -> assertThat(row.room()).isEqualTo("Lab 1"));
+
+        when(timetableLockRepository.findBySchoolIdAndSectionIdAndAcademicYearId(1L, 1L, 1L))
+                .thenReturn(Optional.empty());
+        assertThat(service.lock(1L, 1L, 1L, true)).isTrue();
+        verify(timetableLockRepository).save(any(TimetableLock.class));
+    }
+
+    @Test
+    void reportsAndEnforcesStoredLock() {
+        TimetableLock lock = new TimetableLock();
+        lock.setLocked(true);
+        when(timetableLockRepository.findBySchoolIdAndSectionIdAndAcademicYearId(1L, 1L, 1L))
+                .thenReturn(Optional.of(lock));
+        assertThat(service.isLocked(1L, 1L, 1L)).isTrue();
+        assertThatThrownBy(() -> service.generate(1L, 1L, 1L)).isInstanceOf(BusinessException.class);
+        assertThat(service.isLocked(1L, 1L, null)).isFalse();
+    }
+
     private TimetableSlot slot(LocalTime start, LocalTime end) {
         TimetableSlot slot = new TimetableSlot();
         slot.setId(1L);
@@ -150,5 +202,24 @@ class TimetableServiceTest {
         slot.setEndTime(end);
         slot.setRoom("R1");
         return slot;
+    }
+
+    private TeacherSubject allocation() {
+        TeacherSubject allocation = new TeacherSubject();
+        allocation.setAcademicYear(Fixtures.year());
+        allocation.setSchoolClass(Fixtures.schoolClass());
+        allocation.setSection(Fixtures.section());
+        allocation.setSubject(Fixtures.subject());
+        allocation.setTeacher(Fixtures.teacher());
+        allocation.setWeeklyLessons(1);
+        return allocation;
+    }
+
+    private BellPeriod period() {
+        BellPeriod period = new BellPeriod();
+        period.setStartTime(LocalTime.of(8, 0));
+        period.setEndTime(LocalTime.of(9, 0));
+        period.setKind(PeriodKind.LESSON);
+        return period;
     }
 }

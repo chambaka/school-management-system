@@ -32,4 +32,10 @@ public class StudentParent extends TenantEntity {
 
     @Column(nullable = false)
     private boolean primaryContact = false;
+
+    @Column(nullable = false)
+    private boolean emergencyContact = false;
+
+    @Column(nullable = false)
+    private boolean invoiceRecipient = false;
 }

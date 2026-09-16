@@ -83,4 +83,21 @@ public class InvoiceController {
         Long studentId = studentService.requireByUser(principal.getId()).getId();
         return financeService.studentInvoices(tenantResolver.requireSchoolId(), studentId, principal);
     }
+
+    @GetMapping("/students/{studentId}/ledger")
+    @PreAuthorize(Access.FINANCE_RECORD)
+    public tz.co.chambaka.school.management.dto.finance.StudentLedgerResponse ledger(
+            @CurrentUser UserPrincipal principal, @PathVariable Long studentId) {
+        return financeService.ledger(tenantResolver.requireSchoolId(), studentId, principal);
+    }
+
+    @PostMapping("/{id}/discount")
+    @PreAuthorize(Access.INVOICE_MANAGE)
+    public InvoiceResponse discount(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody tz.co.chambaka.school.management.dto.finance.InvoiceDiscountRequest request
+    ) {
+        return financeService.applyDiscount(tenantResolver.requireSchoolId(), id, request, principal);
+    }
 }

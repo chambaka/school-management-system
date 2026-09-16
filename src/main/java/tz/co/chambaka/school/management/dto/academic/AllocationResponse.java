@@ -10,6 +10,7 @@ public record AllocationResponse(
         String schoolClassName,
         Long sectionId,
         String sectionName,
-        Long academicYearId
+        Long academicYearId,
+        int weeklyLessons
 ) {
 }

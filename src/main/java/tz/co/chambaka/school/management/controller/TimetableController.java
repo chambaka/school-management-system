@@ -66,4 +66,27 @@ public class TimetableController {
     public void delete(@PathVariable Long id) {
         timetableService.delete(tenantResolver.requireSchoolId(), id);
     }
+
+    @PostMapping("/generate")
+    @PreAuthorize(Access.TIMETABLE_MANAGE)
+    public List<TimetableResponse> generate(@RequestParam Long sectionId, @RequestParam Long academicYearId) {
+        return timetableService.generate(tenantResolver.requireSchoolId(), sectionId, academicYearId);
+    }
+
+    @PostMapping("/lock")
+    @PreAuthorize(Access.TIMETABLE_MANAGE)
+    public java.util.Map<String, Boolean> lock(
+            @RequestParam Long sectionId,
+            @RequestParam Long academicYearId,
+            @RequestParam boolean locked
+    ) {
+        boolean value = timetableService.lock(tenantResolver.requireSchoolId(), sectionId, academicYearId, locked);
+        return java.util.Map.of("locked", value);
+    }
+
+    @GetMapping("/lock")
+    @PreAuthorize(Access.TIMETABLE_VIEW)
+    public java.util.Map<String, Boolean> lockStatus(@RequestParam Long sectionId, @RequestParam Long academicYearId) {
+        return java.util.Map.of("locked", timetableService.isLocked(tenantResolver.requireSchoolId(), sectionId, academicYearId));
+    }
 }

@@ -14,6 +14,7 @@ public record InvoiceResponse(
         String admissionNo,
         String invoiceNumber,
         BigDecimal totalAmount,
+        BigDecimal discountAmount,
         BigDecimal paidAmount,
         BigDecimal balance,
         InvoiceStatus status,

@@ -33,4 +33,7 @@ public class TeacherSubject extends TenantEntity {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "academic_year_id")
     private AcademicYear academicYear;
+
+    @jakarta.persistence.Column(nullable = false)
+    private int weeklyLessons = 5;
 }

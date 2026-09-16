@@ -1,10 +1,13 @@
 package tz.co.chambaka.school.management.controller;
 
-import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.academic.ExamRequest;
 import tz.co.chambaka.school.management.dto.academic.ExamResponse;
+import tz.co.chambaka.school.management.dto.academic.ExamSeatResponse;
 import tz.co.chambaka.school.management.dto.academic.ExamSubjectRequest;
 import tz.co.chambaka.school.management.dto.academic.ExamSubjectResponse;
+import tz.co.chambaka.school.management.security.Access;
+import tz.co.chambaka.school.management.security.CurrentUser;
+import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.service.ExamService;
 import tz.co.chambaka.school.management.tenant.TenantResolver;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,8 +40,8 @@ public class ExamController {
 
     @GetMapping
     @PreAuthorize(Access.ACADEMIC_VIEW)
-    public List<ExamResponse> list(@RequestParam(required = false) Long academicYearId) {
-        return examService.list(tenantResolver.requireSchoolId(), academicYearId);
+    public List<ExamResponse> list(@CurrentUser UserPrincipal principal, @RequestParam(required = false) Long academicYearId) {
+        return examService.list(tenantResolver.requireSchoolId(), academicYearId, principal.getRole());
     }
 
     @PostMapping
@@ -48,8 +51,26 @@ public class ExamController {
         return examService.create(tenantResolver.requireSchoolId(), request);
     }
 
+    @PostMapping("/{id}/submit")
+    @PreAuthorize(Access.GRADE_ENTER)
+    public ExamResponse submit(@PathVariable Long id) {
+        return examService.submit(tenantResolver.requireSchoolId(), id);
+    }
+
+    @PostMapping("/{id}/verify")
+    @PreAuthorize(Access.EXAM_VERIFY)
+    public ExamResponse verify(@PathVariable Long id) {
+        return examService.verify(tenantResolver.requireSchoolId(), id);
+    }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize(Access.EXAM_APPROVE)
+    public ExamResponse approve(@PathVariable Long id) {
+        return examService.approve(tenantResolver.requireSchoolId(), id);
+    }
+
     @PostMapping("/{id}/publish")
-    @PreAuthorize(Access.EXAM_MANAGE)
+    @PreAuthorize(Access.EXAM_APPROVE)
     public ExamResponse publish(@PathVariable Long id, @RequestParam boolean published) {
         return examService.publish(tenantResolver.requireSchoolId(), id, published);
     }
@@ -65,5 +86,23 @@ public class ExamController {
     @PreAuthorize(Access.GRADE_ENTER)
     public ExamSubjectResponse addSubject(@PathVariable Long id, @Valid @RequestBody ExamSubjectRequest request) {
         return examService.addSubject(tenantResolver.requireSchoolId(), id, request);
+    }
+
+    @PostMapping("/{id}/schedule")
+    @PreAuthorize(Access.EXAM_MANAGE)
+    public List<ExamSubjectResponse> generateSchedule(@PathVariable Long id) {
+        return examService.generateSchedule(tenantResolver.requireSchoolId(), id);
+    }
+
+    @PostMapping("/{id}/schedule/lock")
+    @PreAuthorize(Access.EXAM_MANAGE)
+    public ExamResponse lockSchedule(@PathVariable Long id, @RequestParam boolean locked) {
+        return examService.lockSchedule(tenantResolver.requireSchoolId(), id, locked);
+    }
+
+    @GetMapping("/subjects/{examSubjectId}/seats")
+    @PreAuthorize(Access.GRADE_ENTER)
+    public List<ExamSeatResponse> seats(@PathVariable Long examSubjectId) {
+        return examService.seats(tenantResolver.requireSchoolId(), examSubjectId);
     }
 }

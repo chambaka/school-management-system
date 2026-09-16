@@ -43,6 +43,9 @@ public class Invoice extends TenantEntity {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal paidAmount = BigDecimal.ZERO;
 
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private InvoiceStatus status = InvoiceStatus.PENDING;
@@ -56,6 +59,7 @@ public class Invoice extends TenantEntity {
     private List<InvoiceItem> items = new ArrayList<>();
 
     public BigDecimal getBalance() {
-        return totalAmount.subtract(paidAmount);
+        BigDecimal discount = discountAmount == null ? BigDecimal.ZERO : discountAmount;
+        return totalAmount.subtract(discount).subtract(paidAmount);
     }
 }

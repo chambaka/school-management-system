@@ -10,6 +10,8 @@ public record StudentParentResponse(
         Long parentId,
         String parentName,
         RelationshipType relationship,
-        boolean primaryContact
+        boolean primaryContact,
+        boolean emergencyContact,
+        boolean invoiceRecipient
 ) {
 }

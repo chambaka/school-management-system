@@ -64,6 +64,7 @@ import tz.co.chambaka.school.management.service.NoticeService;
 import tz.co.chambaka.school.management.service.StudentCommunicationService;
 import tz.co.chambaka.school.management.service.ParentService;
 import tz.co.chambaka.school.management.service.PasswordResetService;
+import tz.co.chambaka.school.management.service.PromotionService;
 import tz.co.chambaka.school.management.service.SchoolAdminService;
 import tz.co.chambaka.school.management.service.SchoolService;
 import tz.co.chambaka.school.management.repository.TenantRepository;
@@ -148,6 +149,8 @@ class ControllersTest {
     @Mock
     private GradeService gradeService;
     @Mock
+    private PromotionService promotionService;
+    @Mock
     private AttendanceService attendanceService;
     @Mock
     private FinanceService financeService;
@@ -159,6 +162,22 @@ class ControllersTest {
     private AuditQueryService auditQueryService;
     @Mock
     private tz.co.chambaka.school.management.audit.AuditActionSettingsService auditActionSettingsService;
+    @Mock
+    private tz.co.chambaka.school.management.service.AcademicTermService academicTermService;
+    @Mock
+    private tz.co.chambaka.school.management.service.ResultConfigService resultConfigService;
+    @Mock
+    private tz.co.chambaka.school.management.service.AssignmentService assignmentService;
+    @Mock
+    private tz.co.chambaka.school.management.service.LessonLogService lessonLogService;
+    @Mock
+    private tz.co.chambaka.school.management.service.BellPeriodService bellPeriodService;
+    @Mock
+    private tz.co.chambaka.school.management.service.ReportExportService reportExportService;
+    @Mock
+    private tz.co.chambaka.school.management.service.AlertService alertService;
+    @Mock
+    private tz.co.chambaka.school.management.service.DashboardService dashboardService;
 
     @BeforeEach
     void tenant() {
@@ -330,7 +349,7 @@ class ControllersTest {
         verify(schoolAdminService, times(4)).assertCanManage(1L, platform);
         verify(schoolAdminService).create(eq(1L), any());
 
-        StudentController students = new StudentController(studentService, parentService, gradeService, tenantResolver);
+        StudentController students = new StudentController(studentService, parentService, gradeService, promotionService, tenantResolver);
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
         students.list(null, false, PageRequest.of(0, 10));
         students.suspend(1L);
@@ -340,15 +359,15 @@ class ControllersTest {
         students.me(Fixtures.principal(Role.STUDENT));
         students.get(1L);
         students.create(new CreateStudentRequest("S", "s@x.com", "password1", null,
-                null, null, null, null, null, null, null, null, null, null));
-        students.update(1L, new UpdateStudentRequest(null, null, null, null, null, null, null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null, null, null, null));
+        students.update(1L, new UpdateStudentRequest(null, null, null, null, null, null, null, null, null, null, null, null, null));
         students.linkParent(1L, new LinkParentRequest(1L, RelationshipType.MOTHER, true));
         students.parents(1L);
         students.reportCard(Fixtures.principal(Role.HEADMASTER), 1L, 1L);
         students.reportCard(Fixtures.principal(Role.PARENT), 1L, 1L);
         verify(parentService).assertLinked(10L, 1L);
         students.myReportCard(Fixtures.principal(Role.STUDENT), 1L);
-        verify(gradeService, times(3)).reportCard(1L, 1L, 1L);
+        verify(gradeService, times(3)).reportCard(eq(1L), eq(1L), eq(1L), any());
         when(studentService.photoFile(1L, 1L)).thenReturn(new StoredPhoto(Path.of("x.jpg"), "image/jpeg"));
         students.uploadPhoto(1L, new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1}));
         students.deletePhoto(1L);
@@ -393,7 +412,7 @@ class ControllersTest {
         timetable.delete(1L);
 
         ExamController exams = new ExamController(examService, tenantResolver);
-        exams.list(null);
+        exams.list(Fixtures.principal(Role.HEADMASTER), null);
         exams.create(new ExamRequest(1L, 1L, "Mid", ExamType.MIDTERM, LocalDate.now(), LocalDate.now().plusDays(1)));
         exams.publish(1L, true);
         exams.subjects(1L);
@@ -463,5 +482,100 @@ class ControllersTest {
         tenants.archive(10L);
         verify(tenantService).archive(10L);
         verify(tenantService).list();
+    }
+
+    @Test
+    void mvpControllersAndAdditionalEndpoints() {
+        var teacher = Fixtures.principal(Role.TEACHER);
+        var headmaster = Fixtures.principal(Role.HEADMASTER);
+        var today = LocalDate.of(2026, 9, 16);
+
+        AcademicTermController terms = new AcademicTermController(academicTermService, tenantResolver);
+        var termRequest = new tz.co.chambaka.school.management.dto.academic.AcademicTermRequest(
+                1L, "Term One", today, today.plusMonths(3), true);
+        terms.list(null);
+        terms.list(1L);
+        terms.create(termRequest);
+
+        ResultConfigController resultConfig = new ResultConfigController(resultConfigService, tenantResolver);
+        var weights = new tz.co.chambaka.school.management.dto.academic.ResultWeightRequest(
+                1L, null, null, BigDecimal.TEN, BigDecimal.valueOf(90),
+                BigDecimal.valueOf(50), BigDecimal.valueOf(50));
+        resultConfig.weights(1L);
+        resultConfig.saveWeight(weights);
+        resultConfig.bands();
+        resultConfig.replaceBands(List.of(new tz.co.chambaka.school.management.dto.academic.GradingBandRequest(
+                80, 100, "A", BigDecimal.valueOf(5), 1)));
+
+        AssignmentController assignments = new AssignmentController(assignmentService, tenantResolver);
+        var assignment = new tz.co.chambaka.school.management.dto.academic.AssignmentRequest(
+                1L, 1L, 1L, "Algebra", "Complete", today.plusDays(2));
+        var file = new MockMultipartFile("file", "work.pdf", "application/pdf", new byte[]{1});
+        assignments.list(teacher);
+        assignments.create(teacher, assignment);
+        assignments.attach(1L, file);
+        assignments.marks(1L, 1L, BigDecimal.TEN);
+
+        LessonLogController lessons = new LessonLogController(lessonLogService, tenantResolver);
+        var lesson = new tz.co.chambaka.school.management.dto.academic.LessonLogRequest(
+                null, 1L, 1L, today, "Fractions", "Add", "Board", "Exercise");
+        lessons.list(1L, today);
+        lessons.create(teacher, lesson);
+
+        BellPeriodController bells = new BellPeriodController(bellPeriodService, tenantResolver);
+        var bell = new tz.co.chambaka.school.management.dto.academic.BellPeriodRequest(
+                "P1", LocalTime.of(8, 0), LocalTime.of(9, 0),
+                tz.co.chambaka.school.management.model.enums.PeriodKind.LESSON, 1);
+        bells.list();
+        bells.create(bell);
+        bells.delete(1L);
+
+        when(reportExportService.reportCardPdf(any(), any(), any(), any())).thenReturn(new byte[]{1});
+        when(reportExportService.reportCardCsv(any(), any(), any(), any())).thenReturn(new byte[]{2});
+        ReportController reports = new ReportController(reportExportService, studentService, tenantResolver);
+        when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
+        assertThat(reports.reportCardPdf(Fixtures.principal(Role.STUDENT), null, 1L).getBody()).containsExactly(1);
+        assertThat(reports.reportCardPdf(headmaster, 1L, 1L).getHeaders().getContentType().toString())
+                .isEqualTo("application/pdf");
+        assertThat(reports.reportCardCsv(headmaster, 1L, 1L).getBody()).containsExactly(2);
+
+        NotificationController notifications = new NotificationController(alertService, tenantResolver);
+        notifications.inbox(headmaster);
+        notifications.markRead(headmaster, 1L);
+
+        DashboardController dashboard = new DashboardController(dashboardService, tenantResolver);
+        dashboard.snapshot(headmaster);
+
+        ExamController exams = new ExamController(examService, tenantResolver);
+        exams.submit(1L);
+        exams.verify(1L);
+        exams.approve(1L);
+        exams.generateSchedule(1L);
+        exams.lockSchedule(1L, true);
+        exams.seats(1L);
+
+        GradeController grades = new GradeController(gradeService, tenantResolver);
+        var bulk = new tz.co.chambaka.school.management.dto.academic.BulkGradeRequest(
+                1L, 1L, List.of(new tz.co.chambaka.school.management.dto.academic.BulkGradeRequest.Entry(
+                        1L, BigDecimal.TEN, "Good")));
+        grades.grid(1L, 1L);
+        grades.bulk(teacher, bulk);
+        grades.termResult(1L, 1L, 1L, null);
+
+        TimetableController timetable = new TimetableController(timetableService, tenantResolver);
+        timetable.generate(1L, 1L);
+        when(timetableService.lock(1L, 1L, 1L, true)).thenReturn(true);
+        assertThat(timetable.lock(1L, 1L, true)).containsEntry("locked", true);
+        when(timetableService.isLocked(1L, 1L, 1L)).thenReturn(true);
+        assertThat(timetable.lockStatus(1L, 1L)).containsEntry("locked", true);
+
+        InvoiceController invoices = new InvoiceController(financeService, studentService, tenantResolver);
+        invoices.ledger(headmaster, 1L);
+        invoices.discount(headmaster, 1L,
+                new tz.co.chambaka.school.management.dto.finance.InvoiceDiscountRequest(BigDecimal.ONE, "Scholarship"));
+
+        PaymentController payments = new PaymentController(financeService, tenantResolver);
+        when(financeService.receiptPdf(1L, 1L, headmaster)).thenReturn(new byte[]{3});
+        assertThat(payments.receipt(headmaster, 1L).getBody()).containsExactly(3);
     }
 }

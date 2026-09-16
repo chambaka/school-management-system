@@ -52,4 +52,16 @@ public class PaymentController {
     public List<PaymentResponse> byInvoice(@CurrentUser UserPrincipal principal, @PathVariable Long invoiceId) {
         return financeService.paymentsForInvoice(tenantResolver.requireSchoolId(), invoiceId, principal);
     }
+
+    @GetMapping("/{id}/receipt.pdf")
+    @PreAuthorize(Access.FINANCE_RECORD)
+    public org.springframework.http.ResponseEntity<byte[]> receipt(
+            @CurrentUser UserPrincipal principal, @PathVariable Long id) {
+        byte[] body = financeService.receiptPdf(tenantResolver.requireSchoolId(), id, principal);
+        return org.springframework.http.ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"receipt-" + id + ".pdf\"")
+                .body(body);
+    }
 }

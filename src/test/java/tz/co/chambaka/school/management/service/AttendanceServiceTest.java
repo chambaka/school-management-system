@@ -24,6 +24,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +42,8 @@ class AttendanceServiceTest {
     private TeacherService teacherService;
     @Mock
     private SectionService sectionService;
+    @Mock
+    private AlertService alertService;
     @InjectMocks
     private AttendanceService service;
 
@@ -111,6 +114,29 @@ class AttendanceServiceTest {
         var req = new MarkStudentAttendanceRequest(1L, LocalDate.now(),
                 List.of(new MarkStudentAttendanceRequest.StudentAttendanceItem(1L, AttendanceStatus.ABSENT, null)));
         assertThatThrownBy(() -> service.markStudents(1L, req, 2L)).isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void absenceNotifiesParents() {
+        LocalDate date = LocalDate.of(2026, 9, 16);
+        Student student = Fixtures.student();
+        when(sectionService.require(1L, 1L)).thenReturn(Fixtures.section());
+        when(userRepository.findById(2L)).thenReturn(Optional.empty());
+        when(studentService.require(1L, 1L)).thenReturn(student);
+        when(studentAttendanceRepository.findByStudentIdAndAttendanceDate(1L, date)).thenReturn(Optional.empty());
+        when(studentAttendanceRepository.save(any(StudentAttendance.class))).thenAnswer(invocation -> {
+            StudentAttendance saved = invocation.getArgument(0);
+            saved.setId(1L);
+            return saved;
+        });
+
+        service.markStudents(1L, new MarkStudentAttendanceRequest(1L, date,
+                List.of(new MarkStudentAttendanceRequest.StudentAttendanceItem(
+                        1L, AttendanceStatus.ABSENT, "Unexcused"))), 2L);
+
+        verify(alertService).notifyParentsOfStudent(
+                1L, student, "Attendance: ABSENT",
+                "User STUDENT was marked absent on 2026-09-16", "ATTENDANCE", true);
     }
 
     private StudentAttendance studentRow(LocalDate date) {

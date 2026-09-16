@@ -19,6 +19,7 @@ public record CreateStudentRequest(
         LocalDate admissionDate,
         String address,
         String emergencyContact,
+        String medicalNotes,
         Long academicYearId,
         Long schoolClassId,
         Long sectionId

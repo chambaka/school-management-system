@@ -112,8 +112,8 @@ public class ParentService {
         if (statusOf(parent) == ParentStatus.ARCHIVED) {
             throw new BusinessException("Restore this parent first");
         }
-        if (studentParentRepository.existsByStudentId(student.getId())) {
-            throw new DuplicateResourceException("This student already has a parent");
+        if (studentParentRepository.existsByStudentIdAndParentId(student.getId(), parent.getId())) {
+            throw new DuplicateResourceException("This parent is already linked to the student");
         }
         StudentParent link = new StudentParent();
         link.setSchoolId(schoolId);
@@ -121,6 +121,8 @@ public class ParentService {
         link.setParent(parent);
         link.setRelationship(request.relationship());
         link.setPrimaryContact(request.primaryContact());
+        link.setEmergencyContact(request.emergencyContact());
+        link.setInvoiceRecipient(request.invoiceRecipient());
         return toLink(studentParentRepository.save(link));
     }
 
@@ -205,7 +207,9 @@ public class ParentService {
                 link.getParent().getId(),
                 link.getParent().getUser().getName(),
                 link.getRelationship(),
-                link.isPrimaryContact()
+                link.isPrimaryContact(),
+                link.isEmergencyContact(),
+                link.isInvoiceRecipient()
         );
     }
 }

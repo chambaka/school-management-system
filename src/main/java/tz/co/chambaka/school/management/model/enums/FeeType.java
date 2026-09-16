@@ -7,5 +7,7 @@ public enum FeeType {
     LIBRARY,
     SPORTS,
     UNIFORM,
+    MEALS,
+    BOARDING,
     OTHER
 }

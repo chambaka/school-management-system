@@ -6,10 +6,18 @@ import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Exam;
+import tz.co.chambaka.school.management.model.ExamSeat;
 import tz.co.chambaka.school.management.model.ExamSubject;
+import tz.co.chambaka.school.management.model.enums.ExamApprovalStatus;
 import tz.co.chambaka.school.management.model.enums.ExamType;
+import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.model.enums.StudentStatus;
+import tz.co.chambaka.school.management.repository.ClassroomRepository;
 import tz.co.chambaka.school.management.repository.ExamRepository;
+import tz.co.chambaka.school.management.repository.ExamSeatRepository;
 import tz.co.chambaka.school.management.repository.ExamSubjectRepository;
+import tz.co.chambaka.school.management.repository.StudentRepository;
+import tz.co.chambaka.school.management.repository.TeacherRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +48,20 @@ class ExamServiceTest {
     private ClassService classService;
     @Mock
     private SubjectService subjectService;
+    @Mock
+    private TeacherService teacherService;
+    @Mock
+    private AcademicTermService academicTermService;
+    @Mock
+    private ClassroomRepository classroomRepository;
+    @Mock
+    private TeacherRepository teacherRepository;
+    @Mock
+    private StudentRepository studentRepository;
+    @Mock
+    private ExamSeatRepository examSeatRepository;
+    @Mock
+    private AlertService alertService;
     @InjectMocks
     private ExamService service;
 
@@ -63,6 +85,8 @@ class ExamServiceTest {
         assertThat(service.create(1L, req).examType()).isEqualTo(ExamType.FINAL);
 
         when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        exam.setApprovalStatus(ExamApprovalStatus.APPROVED);
+        when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L)).thenReturn(List.of());
         assertThat(service.publish(1L, 1L, true).published()).isTrue();
 
         when(examSubjectRepository.existsByExamIdAndSubjectId(1L, 1L)).thenReturn(false);
@@ -96,5 +120,91 @@ class ExamServiceTest {
                 .isInstanceOf(BusinessException.class);
         when(examRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.require(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void approvalChainAndVisibilityRules() {
+        Exam exam = Fixtures.exam();
+        exam.setApprovalStatus(ExamApprovalStatus.DRAFT);
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        assertThat(service.submit(1L, 1L).approvalStatus()).isEqualTo(ExamApprovalStatus.ENTERED);
+        assertThat(service.verify(1L, 1L).approvalStatus()).isEqualTo(ExamApprovalStatus.VERIFIED);
+        assertThat(service.approve(1L, 1L).approvalStatus()).isEqualTo(ExamApprovalStatus.APPROVED);
+        assertThat(exam.getVerifiedAt()).isNotNull();
+        assertThat(exam.getApprovedAt()).isNotNull();
+
+        exam.setApprovalStatus(ExamApprovalStatus.DRAFT);
+        assertThatThrownBy(() -> service.verify(1L, 1L)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.approve(1L, 1L)).isInstanceOf(BusinessException.class);
+        exam.setApprovalStatus(ExamApprovalStatus.VERIFIED);
+        assertThatThrownBy(() -> service.submit(1L, 1L)).isInstanceOf(BusinessException.class);
+
+        assertThatThrownBy(() -> service.publish(1L, 1L, true)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.assertMarksEditable(exam)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.assertVisibleTo(exam, Role.PARENT))
+                .isInstanceOf(ResourceNotFoundException.class);
+        service.assertVisibleTo(exam, Role.HEADMASTER);
+    }
+
+    @Test
+    void parentsAndStudentsListOnlyPublishedExams() {
+        Exam exam = Fixtures.exam();
+        exam.setPublished(true);
+        when(examRepository.findBySchoolIdAndPublishedTrueOrderByStartDateDesc(1L)).thenReturn(List.of(exam));
+        when(examRepository.findBySchoolIdAndAcademicYearIdAndPublishedTrueOrderByStartDateDesc(1L, 1L))
+                .thenReturn(List.of(exam));
+        assertThat(service.list(1L, null, Role.PARENT)).hasSize(1);
+        assertThat(service.list(1L, 1L, Role.STUDENT)).hasSize(1);
+    }
+
+    @Test
+    void generatesLocksAndReadsSeats() {
+        Exam exam = Fixtures.exam();
+        exam.setStartDate(LocalDate.of(2026, 3, 6));
+        exam.setEndDate(LocalDate.of(2026, 3, 10));
+        ExamSubject first = Fixtures.examSubject();
+        ExamSubject second = Fixtures.examSubject();
+        second.setId(2L);
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        when(examSubjectRepository.findByExamId(1L)).thenReturn(List.of(first, second));
+        when(classroomRepository.findBySchoolIdOrderByNameAsc(1L)).thenReturn(List.of(Fixtures.classroom()));
+        when(teacherRepository.findAllBySchoolId(1L)).thenReturn(List.of(Fixtures.teacher()));
+        var active = Fixtures.student();
+        active.setStatus(StudentStatus.ACTIVE);
+        var archived = Fixtures.student();
+        archived.setId(2L);
+        archived.setStatus(StudentStatus.ARCHIVED);
+        when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L)).thenReturn(List.of(active, archived));
+        when(examSeatRepository.save(any(ExamSeat.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var schedule = service.generateSchedule(1L, 1L);
+        assertThat(schedule).hasSize(2);
+        assertThat(schedule.getFirst().startTime()).isEqualTo(java.time.LocalTime.of(8, 0));
+        assertThat(schedule.get(1).startTime()).isEqualTo(java.time.LocalTime.of(11, 0));
+        assertThat(service.lockSchedule(1L, 1L, true).scheduleLocked()).isTrue();
+        assertThatThrownBy(() -> service.generateSchedule(1L, 1L)).isInstanceOf(BusinessException.class);
+
+        ExamSeat seat = new ExamSeat();
+        seat.setId(1L);
+        seat.setExamSubject(first);
+        seat.setStudent(active);
+        seat.setSeatNumber("S-01");
+        when(examSeatRepository.findByExamSubjectIdOrderBySeatNumberAsc(1L)).thenReturn(List.of(seat));
+        assertThat(service.seats(1L, 1L)).singleElement()
+                .satisfies(row -> assertThat(row.admissionNo()).isEqualTo("ADM-001"));
+    }
+
+    @Test
+    void unpublishingRestoresApprovedStatusAndLockedExamRejectsSubject() {
+        Exam exam = Fixtures.exam();
+        exam.setApprovalStatus(ExamApprovalStatus.PUBLISHED);
+        exam.setPublished(true);
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        assertThat(service.publish(1L, 1L, false).approvalStatus()).isEqualTo(ExamApprovalStatus.APPROVED);
+
+        exam.setScheduleLocked(true);
+        assertThatThrownBy(() -> service.addSubject(1L, 1L,
+                new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null)))
+                .isInstanceOf(BusinessException.class);
     }
 }

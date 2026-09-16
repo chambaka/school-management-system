@@ -65,6 +65,7 @@ public class AllocationService {
         allocation.setSchoolClass(classService.require(schoolId, request.schoolClassId()));
         allocation.setSection(request.sectionId() == null ? null : sectionService.require(schoolId, request.sectionId()));
         allocation.setAcademicYear(academicYearService.require(schoolId, request.academicYearId()));
+        allocation.setWeeklyLessons(request.weeklyLessons() == null || request.weeklyLessons() < 1 ? 5 : request.weeklyLessons());
         return toResponse(teacherSubjectRepository.save(allocation));
     }
 
@@ -87,7 +88,8 @@ public class AllocationService {
                 allocation.getSchoolClass().getName(),
                 section != null ? section.getId() : null,
                 section != null ? section.getName() : null,
-                allocation.getAcademicYear().getId()
+                allocation.getAcademicYear().getId(),
+                allocation.getWeeklyLessons() <= 0 ? 5 : allocation.getWeeklyLessons()
         );
     }
 }

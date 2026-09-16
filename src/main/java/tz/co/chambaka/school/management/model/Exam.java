@@ -1,5 +1,7 @@
 package tz.co.chambaka.school.management.model;
 
+import tz.co.chambaka.school.management.model.enums.AssessmentComponent;
+import tz.co.chambaka.school.management.model.enums.ExamApprovalStatus;
 import tz.co.chambaka.school.management.model.enums.ExamType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,6 +14,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Getter
@@ -28,12 +31,24 @@ public class Exam extends TenantEntity {
     @JoinColumn(name = "school_class_id")
     private SchoolClass schoolClass;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "academic_term_id")
+    private AcademicTerm academicTerm;
+
     @Column(nullable = false, length = 150)
     private String name;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private ExamType examType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private AssessmentComponent assessmentComponent = AssessmentComponent.OTHER;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private ExamApprovalStatus approvalStatus = ExamApprovalStatus.DRAFT;
 
     @Column(nullable = false)
     private LocalDate startDate;
@@ -43,4 +58,13 @@ public class Exam extends TenantEntity {
 
     @Column(nullable = false)
     private boolean published = false;
+
+    @Column(nullable = false)
+    private boolean scheduleLocked = false;
+
+    private Instant verifiedAt;
+
+    private Instant approvedAt;
+
+    private Instant publishedAt;
 }

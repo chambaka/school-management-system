@@ -35,6 +35,7 @@ public class AttendanceService {
     private final StudentService studentService;
     private final TeacherService teacherService;
     private final SectionService sectionService;
+    private final AlertService alertService;
 
     public AttendanceService(
             StudentAttendanceRepository studentAttendanceRepository,
@@ -42,7 +43,8 @@ public class AttendanceService {
             UserRepository userRepository,
             StudentService studentService,
             TeacherService teacherService,
-            SectionService sectionService
+            SectionService sectionService,
+            AlertService alertService
     ) {
         this.studentAttendanceRepository = studentAttendanceRepository;
         this.teacherAttendanceRepository = teacherAttendanceRepository;
@@ -50,6 +52,7 @@ public class AttendanceService {
         this.studentService = studentService;
         this.teacherService = teacherService;
         this.sectionService = sectionService;
+        this.alertService = alertService;
     }
 
     @Transactional
@@ -75,6 +78,18 @@ public class AttendanceService {
         }).toList();
         log.info("Marked student attendance schoolId={} sectionId={} date={} count={}",
                 schoolId, request.sectionId(), request.date(), marked.size());
+        marked.stream()
+                .filter(row -> row.status() == AttendanceStatus.ABSENT || row.status() == AttendanceStatus.LATE)
+                .forEach(row -> {
+                    Student student = studentService.require(schoolId, row.studentId());
+                    alertService.notifyParentsOfStudent(
+                            schoolId,
+                            student,
+                            "Attendance: " + row.status(),
+                            student.getUser().getName() + " was marked " + row.status().name().toLowerCase() + " on " + request.date(),
+                            "ATTENDANCE",
+                            true);
+                });
         return marked;
     }
 

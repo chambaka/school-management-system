@@ -21,6 +21,7 @@ public record StudentResponse(
         LocalDate admissionDate,
         String address,
         String emergencyContact,
+        String medicalNotes,
         Long academicYearId,
         Long schoolClassId,
         String schoolClassName,

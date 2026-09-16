@@ -66,7 +66,7 @@ class ParentServiceTest {
 
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
         when(parentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(parent));
-        when(studentParentRepository.existsByStudentId(1L)).thenReturn(false);
+        when(studentParentRepository.existsByStudentIdAndParentId(1L, 1L)).thenReturn(false);
         when(studentParentRepository.save(any(StudentParent.class))).thenAnswer(inv -> {
             StudentParent saved = inv.getArgument(0);
             saved.setId(1L);
@@ -120,7 +120,7 @@ class ParentServiceTest {
     void errors() {
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
         when(parentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(Fixtures.parent()));
-        when(studentParentRepository.existsByStudentId(1L)).thenReturn(true);
+        when(studentParentRepository.existsByStudentIdAndParentId(1L, 1L)).thenReturn(true);
         assertThatThrownBy(() -> service.link(1L, 1L, new LinkParentRequest(1L, RelationshipType.FATHER, false)))
                 .isInstanceOf(DuplicateResourceException.class);
         when(parentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());

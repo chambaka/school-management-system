@@ -48,6 +48,10 @@ public interface TeacherSubjectRepository extends JpaRepository<TeacherSubject, 
     List<TeacherSubject> findBySchoolIdAndTeacherId(
             @Param("schoolId") Long schoolId, @Param("teacherId") Long teacherId);
 
+    List<TeacherSubject> findBySchoolIdAndSectionId(Long schoolId, Long sectionId);
+
+    List<TeacherSubject> findBySchoolIdAndSchoolClassIdAndSectionId(Long schoolId, Long schoolClassId, Long sectionId);
+
     Optional<TeacherSubject> findByIdAndSchoolId(Long id, Long schoolId);
 
     boolean existsByTeacherIdAndSubjectIdAndSchoolClassIdAndSectionIdAndAcademicYearId(

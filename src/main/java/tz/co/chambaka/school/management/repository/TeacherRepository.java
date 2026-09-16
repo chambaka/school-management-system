@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TeacherRepository extends JpaRepository<Teacher, Long> {
@@ -32,6 +33,8 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
     Optional<Teacher> findByIdAndSchoolId(Long id, Long schoolId);
 
     Optional<Teacher> findByUserId(Long userId);
+
+    List<Teacher> findAllBySchoolId(Long schoolId);
 
     boolean existsBySchoolIdAndEmployeeIdIgnoreCase(Long schoolId, String employeeId);
 }

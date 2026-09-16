@@ -91,16 +91,36 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
+        String key = request.loginKey();
+        if (key.isBlank()) {
+            throw new BusinessException("Enter your email, phone, or username");
+        }
+        User lookup = findByIdentifier(key);
+        if (lookup != null && lookup.getLockedUntil() != null && lookup.getLockedUntil().isAfter(Instant.now())) {
+            throw new ApiException(HttpStatus.LOCKED, "Account is locked. Try again later.");
+        }
+        String authName = lookup != null ? lookup.getEmail() : key;
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+                    new UsernamePasswordAuthenticationToken(authName, request.password()));
         } catch (BadCredentialsException ex) {
-            log.warn("Login failed for email={}", request.email());
-            auditService.recordAuthFailure(request.email(), "Invalid email or password");
+            log.warn("Login failed for identifier={}", key);
+            auditService.recordAuthFailure(key, "Invalid email or password");
+            if (lookup != null) {
+                lookup.setFailedLoginAttempts(lookup.getFailedLoginAttempts() + 1);
+                if (lookup.getFailedLoginAttempts() >= 5) {
+                    lookup.setLockedUntil(Instant.now().plusSeconds(15 * 60));
+                    lookup.setFailedLoginAttempts(0);
+                    log.warn("Locked account userId={} for failed attempts", lookup.getId());
+                    throw new ApiException(HttpStatus.LOCKED, "Account is locked after too many failed attempts");
+                }
+            }
             throw ex;
         }
-        User user = userRepository.findByEmailIgnoreCase(request.email())
+        User user = lookup != null ? lookup : userRepository.findByEmailIgnoreCase(authName)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
         if (!user.isEnabled()) {
             log.warn("Login blocked disabled account userId={}", user.getId());
             throw new ApiException(HttpStatus.FORBIDDEN, "Account is disabled");
@@ -150,6 +170,7 @@ public class AuthService {
                 .tenantId(tenant.getId())
                 .name(request.adminName())
                 .email(request.adminEmail().toLowerCase())
+                .username(request.adminEmail().substring(0, request.adminEmail().indexOf('@')).toLowerCase())
                 .password(passwordEncoder.encode(request.password()))
                 .role(Role.HEADMASTER)
                 .phone(PhoneNumbers.persist(request.phone()))
@@ -244,5 +265,20 @@ public class AuthService {
         refreshTokenRepository.save(refreshToken);
         return new AuthResponse(access, refreshValue, jwtService.accessTokenTtlSeconds(), "Bearer",
                 userMapper.toProfile(user));
+    }
+
+    private User findByIdentifier(String raw) {
+        if (raw.contains("@")) {
+            return userRepository.findByEmailIgnoreCase(raw).orElse(null);
+        }
+        User byUsername = userRepository.findByUsernameIgnoreCase(raw).orElse(null);
+        if (byUsername != null) {
+            return byUsername;
+        }
+        String phone = PhoneNumbers.persist(raw);
+        if (phone != null) {
+            return userRepository.findFirstByPhone(phone).orElse(null);
+        }
+        return userRepository.findByEmailIgnoreCase(raw).orElse(null);
     }
 }

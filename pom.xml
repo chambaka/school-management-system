@@ -12,9 +12,9 @@
     </parent>
 
     <groupId>tz.co.chambaka</groupId>
-    <artifactId>sms</artifactId>
+    <artifactId>shule-hub</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <name>school-sms</name>
+    <name>shule-hub</name>
     <description>White-label SaaS school management system</description>
 
     <properties>

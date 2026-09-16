@@ -3,11 +3,19 @@ package tz.co.chambaka.school.management.service;
 import tz.co.chambaka.school.management.dto.academic.GradeRequest;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
+import tz.co.chambaka.school.management.academic.ResultMath;
+import tz.co.chambaka.school.management.model.Exam;
 import tz.co.chambaka.school.management.model.Grade;
+import tz.co.chambaka.school.management.model.ResultWeightConfig;
 import tz.co.chambaka.school.management.model.Student;
+import tz.co.chambaka.school.management.model.enums.AssessmentComponent;
+import tz.co.chambaka.school.management.model.enums.StudentStatus;
+import tz.co.chambaka.school.management.repository.ExamRepository;
 import tz.co.chambaka.school.management.repository.ExamSubjectRepository;
 import tz.co.chambaka.school.management.repository.GradeRepository;
+import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,8 +44,20 @@ class GradeServiceTest {
     private StudentService studentService;
     @Mock
     private TeacherService teacherService;
+    @Mock
+    private ResultConfigService resultConfigService;
+    @Mock
+    private ExamRepository examRepository;
+    @Mock
+    private StudentRepository studentRepository;
     @InjectMocks
     private GradeService service;
+
+    @BeforeEach
+    void resultLetters() {
+        org.mockito.Mockito.lenient().when(resultConfigService.letterFor(any(), any()))
+                .thenAnswer(invocation -> ResultMath.letter(invocation.getArgument(1), null));
+    }
 
     @Test
     void recordAndListAndReportCardLetters() {
@@ -102,6 +122,72 @@ class GradeServiceTest {
                 .isEqualByComparingTo("10");
     }
 
+    @Test
+    void gridRanksActiveStudentsAndComputesAverage() {
+        Exam exam = Fixtures.exam();
+        when(examService.require(1L, 1L)).thenReturn(exam);
+        when(examSubjectRepository.findByExamIdAndSubjectId(1L, 1L)).thenReturn(Optional.of(Fixtures.examSubject()));
+        Student first = Fixtures.student();
+        first.getUser().setName("Alice");
+        Student second = Fixtures.student();
+        second.setId(2L);
+        second.getUser().setName("Bob");
+        second.setStatus(StudentStatus.ACTIVE);
+        Student archived = Fixtures.student();
+        archived.setId(3L);
+        archived.setStatus(StudentStatus.ARCHIVED);
+        when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L)).thenReturn(List.of(second, archived, first));
+        Grade grade = grade(new BigDecimal("80"));
+        grade.setStudent(first);
+        when(gradeRepository.findByExamIdAndSubjectId(1L, 1L)).thenReturn(List.of(grade));
+
+        var grid = service.grid(1L, 1L, 1L);
+
+        assertThat(grid.subjectAverage()).isEqualByComparingTo("80");
+        assertThat(grid.rows()).hasSize(2);
+        assertThat(grid.rows().getFirst().classPosition()).isEqualTo(1);
+        assertThat(grid.rows().get(1).marksObtained()).isNull();
+    }
+
+    @Test
+    void bulkRecordsEveryEntryAndTermResultUsesConfiguredWeights() {
+        when(examService.require(1L, 1L)).thenReturn(Fixtures.exam());
+        when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
+        when(examSubjectRepository.findByExamIdAndSubjectId(1L, 1L)).thenReturn(Optional.of(Fixtures.examSubject()));
+        when(gradeRepository.findByExamIdAndStudentIdAndSubjectId(1L, 1L, 1L)).thenReturn(Optional.empty());
+        when(teacherService.requireByUserSafe(3L)).thenReturn(Fixtures.teacher());
+        when(gradeRepository.save(any(Grade.class))).thenAnswer(invocation -> {
+            Grade saved = invocation.getArgument(0);
+            saved.setId(1L);
+            return saved;
+        });
+        var bulk = new tz.co.chambaka.school.management.dto.academic.BulkGradeRequest(
+                1L, 1L, List.of(
+                new tz.co.chambaka.school.management.dto.academic.BulkGradeRequest.Entry(
+                        1L, BigDecimal.valueOf(70), "Good")));
+        assertThat(service.recordBulk(1L, bulk, 3L)).hasSize(1);
+
+        Exam midterm = componentExam(1L, AssessmentComponent.MIDTERM);
+        Exam semi = componentExam(2L, AssessmentComponent.SEMI_TERMINAL);
+        Exam terminal = componentExam(3L, AssessmentComponent.TERMINAL);
+        when(examRepository.findBySchoolIdAndAcademicYearIdOrderByStartDateDesc(1L, 1L))
+                .thenReturn(List.of(midterm, semi, terminal));
+        when(gradeRepository.findByExamIdAndStudentId(1L, 1L)).thenReturn(List.of(componentGrade(midterm, "80")));
+        when(gradeRepository.findByExamIdAndStudentId(2L, 1L)).thenReturn(List.of(componentGrade(semi, "70")));
+        when(gradeRepository.findByExamIdAndStudentId(3L, 1L)).thenReturn(List.of(componentGrade(terminal, "90")));
+        ResultWeightConfig weights = new ResultWeightConfig();
+        weights.setMidtermWeight(BigDecimal.TEN);
+        weights.setSemiExamWeight(BigDecimal.valueOf(90));
+        weights.setSemiResultWeight(BigDecimal.valueOf(50));
+        weights.setTerminalExamWeight(BigDecimal.valueOf(50));
+        when(resultConfigService.resolve(1L, 1L, 1L, 1L)).thenReturn(weights);
+
+        var result = service.termResult(1L, 1L, 1L, 1L, 1L);
+        assertThat(result.midterm()).isEqualByComparingTo("80");
+        assertThat(result.subjectName()).isEqualTo("Mathematics");
+        assertThat(result.terminalResult()).isEqualByComparingTo("80.50");
+    }
+
     private tz.co.chambaka.school.management.dto.academic.ReportCardResponse card(BigDecimal marks) {
         when(gradeRepository.findByExamIdAndStudentId(1L, 1L)).thenReturn(List.of(grade(marks)));
         return service.reportCard(1L, 1L, 1L);
@@ -115,6 +201,19 @@ class GradeServiceTest {
         grade.setStudent(Fixtures.student());
         grade.setSubject(Fixtures.subject());
         grade.setMarksObtained(marks);
+        return grade;
+    }
+
+    private Exam componentExam(Long id, AssessmentComponent component) {
+        Exam exam = Fixtures.exam();
+        exam.setId(id);
+        exam.setAssessmentComponent(component);
+        return exam;
+    }
+
+    private Grade componentGrade(Exam exam, String marks) {
+        Grade grade = grade(new BigDecimal(marks));
+        grade.setExam(exam);
         return grade;
     }
 }

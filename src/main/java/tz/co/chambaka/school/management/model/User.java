@@ -38,6 +38,9 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true, length = 180)
     private String email;
 
+    @Column(unique = true, length = 80)
+    private String username;
+
     @Column(nullable = false)
     private String password;
 
@@ -54,6 +57,12 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private boolean enabled = true;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int failedLoginAttempts = 0;
+
+    private Instant lockedUntil;
 
     private Instant lastLoginAt;
 }

@@ -13,6 +13,7 @@ public record UpdateStudentRequest(
         String bloodGroup,
         String address,
         String emergencyContact,
+        String medicalNotes,
         Long academicYearId,
         Long schoolClassId,
         Long sectionId,

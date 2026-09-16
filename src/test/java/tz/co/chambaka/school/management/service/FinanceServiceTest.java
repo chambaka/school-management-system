@@ -3,6 +3,7 @@ package tz.co.chambaka.school.management.service;
 import tz.co.chambaka.school.management.audit.AuditService;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureRequest;
 import tz.co.chambaka.school.management.dto.finance.GenerateInvoicesRequest;
+import tz.co.chambaka.school.management.dto.finance.InvoiceDiscountRequest;
 import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
 import tz.co.chambaka.school.management.exception.ApiException;
 import tz.co.chambaka.school.management.exception.BusinessException;
@@ -225,6 +226,47 @@ class FinanceServiceTest {
                 .isInstanceOf(ApiException.class);
         assertThatThrownBy(() -> service.getInvoice(1L, 1L, null))
                 .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void ledgerDiscountAndReceiptReflectAdjustedBalance() {
+        Invoice invoice = invoice(InvoiceStatus.PENDING, new BigDecimal("100"), new BigDecimal("20"));
+        invoice.setDiscountAmount(BigDecimal.ZERO);
+        Payment payment = payment(invoice);
+        payment.setAmount(new BigDecimal("20"));
+        payment.setTransactionRef(null);
+        when(invoiceRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(invoice));
+
+        var discounted = service.applyDiscount(1L, 1L,
+                new InvoiceDiscountRequest(new BigDecimal("30"), "Scholarship"),
+                Fixtures.principal(Role.HEADMASTER));
+        assertThat(discounted.discountAmount()).isEqualByComparingTo("30");
+        assertThat(discounted.balance()).isEqualByComparingTo("50");
+
+        when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
+        when(invoiceRepository.findBySchoolIdAndStudentId(1L, 1L)).thenReturn(List.of(invoice));
+        when(paymentRepository.findBySchoolIdAndStudentId(1L, 1L)).thenReturn(List.of(payment));
+        var ledger = service.ledger(1L, 1L, Fixtures.principal(Role.HEADMASTER));
+        assertThat(ledger.discounts()).isEqualByComparingTo("30");
+        assertThat(ledger.outstanding()).isEqualByComparingTo("50");
+
+        when(paymentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(payment));
+        assertThat(service.receiptPdf(1L, 1L, Fixtures.principal(Role.HEADMASTER)))
+                .isNotEmpty().startsWith((byte) '%', (byte) 'P', (byte) 'D', (byte) 'F');
+    }
+
+    @Test
+    void discountCannotExceedUnpaidAmountAndCanSetInvoicePaid() {
+        Invoice invoice = invoice(InvoiceStatus.PENDING, new BigDecimal("100"), new BigDecimal("90"));
+        invoice.setDiscountAmount(BigDecimal.ZERO);
+        when(invoiceRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(invoice));
+        assertThatThrownBy(() -> service.applyDiscount(1L, 1L,
+                new InvoiceDiscountRequest(new BigDecimal("11"), "Too much"),
+                Fixtures.principal(Role.HEADMASTER))).isInstanceOf(BusinessException.class);
+
+        service.applyDiscount(1L, 1L, new InvoiceDiscountRequest(BigDecimal.TEN, "Waiver"),
+                Fixtures.principal(Role.HEADMASTER));
+        assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.PAID);
     }
 
     private FeeStructure fee() {

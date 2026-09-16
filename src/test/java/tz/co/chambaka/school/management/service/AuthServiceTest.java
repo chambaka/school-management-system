@@ -105,6 +105,52 @@ class AuthServiceTest {
     }
 
     @Test
+    void loginAcceptsUsernameAndPhoneIdentifiers() {
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        user.setUsername("head");
+        when(userRepository.findByUsernameIgnoreCase("head")).thenReturn(Optional.of(user));
+        stubActiveTenant();
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
+        stubTokens(user);
+        assertThat(authService.login(new LoginRequest(null, " head ", "pw")).accessToken()).isEqualTo("access");
+
+        when(userRepository.findByUsernameIgnoreCase("0753493500")).thenReturn(Optional.empty());
+        when(userRepository.findFirstByPhone("255753493500")).thenReturn(Optional.of(user));
+        assertThat(authService.login(new LoginRequest(null, "0753493500", "pw")).accessToken()).isEqualTo("access");
+    }
+
+    @Test
+    void fifthFailedLoginLocksAccountForFifteenMinutes() {
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
+        org.mockito.Mockito.doThrow(new BadCredentialsException("bad"))
+                .when(authenticationManager).authenticate(any());
+
+        for (int attempt = 1; attempt < 5; attempt++) {
+            assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
+                    .isInstanceOf(BadCredentialsException.class);
+        }
+        Instant before = Instant.now();
+        assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("locked");
+        assertThat(user.getFailedLoginAttempts()).isZero();
+        assertThat(user.getLockedUntil()).isBetween(before.plusSeconds(14 * 60), before.plusSeconds(16 * 60));
+    }
+
+    @Test
+    void loginRejectsBlankAndAlreadyLockedIdentifier() {
+        assertThatThrownBy(() -> authService.login(new LoginRequest(null, " ", "pw")))
+                .isInstanceOf(BusinessException.class);
+
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        user.setLockedUntil(Instant.now().plusSeconds(60));
+        when(userRepository.findByUsernameIgnoreCase("head")).thenReturn(Optional.of(user));
+        assertThatThrownBy(() -> authService.login(new LoginRequest(null, "head", "pw")))
+                .isInstanceOf(ApiException.class);
+    }
+
+    @Test
     void loginDisabled() {
         User user = Fixtures.user(2L, Role.HEADMASTER);
         user.setEnabled(false);

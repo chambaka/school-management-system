@@ -52,7 +52,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
         log.warn("Bad credentials path={}", request.getRequestURI());
-        return build(HttpStatus.UNAUTHORIZED, "Invalid email or password", request.getRequestURI(), null);
+        return build(HttpStatus.UNAUTHORIZED, "Invalid email, phone, username, or password", request.getRequestURI(), null);
     }
 
     @ExceptionHandler(AuthenticationException.class)

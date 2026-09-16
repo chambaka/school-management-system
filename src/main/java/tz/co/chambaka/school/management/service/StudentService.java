@@ -85,6 +85,7 @@ public class StudentService {
         student.setAdmissionDate(request.admissionDate());
         student.setAddress(request.address());
         student.setEmergencyContact(request.emergencyContact());
+        student.setMedicalNotes(request.medicalNotes());
         student.setStatus(StudentStatus.ACTIVE);
         applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId());
         Student saved = studentRepository.save(student);
@@ -123,6 +124,9 @@ public class StudentService {
         if (request.emergencyContact() != null) {
             student.setEmergencyContact(request.emergencyContact());
         }
+        if (request.medicalNotes() != null) {
+            student.setMedicalNotes(request.medicalNotes());
+        }
         applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId());
         return toResponse(student);
     }
@@ -140,6 +144,11 @@ public class StudentService {
     @Transactional
     public StudentResponse restore(Long schoolId, Long id) {
         return setStatus(schoolId, id, StudentStatus.ACTIVE);
+    }
+
+    @Transactional
+    public StudentResponse setLifecycle(Long schoolId, Long id, StudentStatus status) {
+        return setStatus(schoolId, id, status);
     }
 
     public Student require(Long schoolId, Long id) {
@@ -223,6 +232,7 @@ public class StudentService {
                 student.getAdmissionDate(),
                 student.getAddress(),
                 student.getEmergencyContact(),
+                student.getMedicalNotes(),
                 year != null ? year.getId() : null,
                 schoolClass != null ? schoolClass.getId() : null,
                 schoolClass != null ? schoolClass.getName() : null,
@@ -252,7 +262,9 @@ public class StudentService {
                 link.getParent().getId(),
                 link.getParent().getUser().getName(),
                 link.getRelationship(),
-                link.isPrimaryContact()
+                link.isPrimaryContact(),
+                link.isEmergencyContact(),
+                link.isInvoiceRecipient()
         );
     }
 

@@ -69,6 +69,7 @@ public class UserAccountService {
                 .schoolId(schoolId)
                 .name(name)
                 .email(email.toLowerCase())
+                .username(uniqueUsername(email))
                 .password(passwordEncoder.encode(rawPassword))
                 .role(role)
                 .phone(PhoneNumbers.persist(phone))
@@ -78,6 +79,19 @@ public class UserAccountService {
         log.info("Created user id={} email={} role={} tenantId={} schoolId={}",
                 saved.getId(), saved.getEmail(), role, tenantId, schoolId);
         return saved;
+    }
+
+    private String uniqueUsername(String email) {
+        String base = email.contains("@") ? email.substring(0, email.indexOf('@')).toLowerCase().replaceAll("[^a-z0-9]", "") : "user";
+        if (base.isBlank()) {
+            base = "user";
+        }
+        String candidate = base;
+        int n = 1;
+        while (userRepository.existsByUsernameIgnoreCase(candidate)) {
+            candidate = base + n++;
+        }
+        return candidate;
     }
 
     @Transactional

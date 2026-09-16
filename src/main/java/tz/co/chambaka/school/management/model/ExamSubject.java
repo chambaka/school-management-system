@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -33,4 +34,15 @@ public class ExamSubject extends TenantEntity {
     private BigDecimal passMarks;
 
     private LocalDate examDate;
+
+    private LocalTime startTime;
+
+    private LocalTime endTime;
+
+    @Column(length = 80)
+    private String venue;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "invigilator_id")
+    private Teacher invigilator;
 }

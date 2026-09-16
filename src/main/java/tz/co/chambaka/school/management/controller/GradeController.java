@@ -40,6 +40,33 @@ public class GradeController {
         return gradeService.byExam(tenantResolver.requireSchoolId(), examId);
     }
 
+    @GetMapping("/grid")
+    @PreAuthorize(Access.GRADE_ENTER)
+    public tz.co.chambaka.school.management.dto.academic.GradeGridResponse grid(
+            @RequestParam Long examId, @RequestParam Long subjectId) {
+        return gradeService.grid(tenantResolver.requireSchoolId(), examId, subjectId);
+    }
+
+    @PostMapping("/bulk")
+    @PreAuthorize(Access.GRADE_ENTER)
+    public List<GradeResponse> bulk(
+            @CurrentUser UserPrincipal principal,
+            @Valid @RequestBody tz.co.chambaka.school.management.dto.academic.BulkGradeRequest request
+    ) {
+        return gradeService.recordBulk(tenantResolver.requireSchoolId(), request, principal.getId());
+    }
+
+    @GetMapping("/term-result")
+    @PreAuthorize(Access.GRADE_ENTER)
+    public tz.co.chambaka.school.management.dto.academic.TermResultResponse termResult(
+            @RequestParam Long studentId,
+            @RequestParam Long subjectId,
+            @RequestParam Long academicYearId,
+            @RequestParam(required = false) Long academicTermId
+    ) {
+        return gradeService.termResult(tenantResolver.requireSchoolId(), studentId, subjectId, academicYearId, academicTermId);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize(Access.GRADE_ENTER)

@@ -15,6 +15,9 @@ public record ReportCardResponse(
         BigDecimal totalObtained,
         BigDecimal totalMax,
         BigDecimal percentage,
-        String overallGrade
+        String overallGrade,
+        BigDecimal gpa,
+        Integer classPosition,
+        boolean published
 ) {
 }

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub yearly subscriptions</title>
+  <style>
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10pt;
+      line-height: 1.4;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 22px 24px 20px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    header.cover h1 {
+      margin: 0 0 6px;
+      font-size: 22pt;
+      letter-spacing: 0.02em;
+    }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 4px; color: #c9d4e3; font-size: 10.5pt; }
+    header.cover .tagline {
+      margin-top: 10px;
+      color: #F5C451;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    h2 {
+      margin: 16px 0 8px;
+      font-size: 13pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 0 0 4px;
+      font-size: 12pt;
+      color: #06101F;
+    }
+    p { margin: 0 0 8px; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10px; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 5px 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 8.5pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .matrix th, .matrix td {
+      font-size: 8pt;
+      text-align: center;
+      padding: 4px 3px;
+    }
+    .matrix th:first-child, .matrix td:first-child {
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .yes { color: #0a7a4a; font-weight: 700; }
+    .no { color: #b0b8c2; }
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .card {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 10px 12px;
+      page-break-inside: avoid;
+    }
+    .card.featured { border: 2px solid #F5C451; }
+    .card .tag {
+      display: inline-block;
+      background: #F5C451;
+      color: #06101F;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 99px;
+      margin-bottom: 5px;
+    }
+    .card .price {
+      font-size: 9pt;
+      color: #3d4d5e;
+      margin: 0 0 6px;
+    }
+    .card ul { margin: 4px 0 0; padding-left: 16px; }
+    .card li { margin: 1px 0; }
+    .card .not { color: #6a7786; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      font-size: 9.5pt;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .step {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 8px 10px;
+      page-break-inside: avoid;
+    }
+    .step .n {
+      display: inline-block;
+      width: 20px; height: 20px; line-height: 20px;
+      text-align: center;
+      background: #06101F;
+      color: #F5C451;
+      border-radius: 50%;
+      font-size: 9pt;
+      font-weight: 800;
+      margin-right: 4px;
+    }
+    .step strong { display: block; margin: 4px 0 2px; color: #06101F; }
+    footer {
+      margin-top: 12px;
+      font-size: 8.5pt;
+      color: #5b6b7c;
+    }
+    .muted { color: #3d4d5e; font-size: 9.5pt; }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">yearly subscriptions</span></h1>
+    <p>White-label school SaaS · Chambaka · September 2026</p>
+    <p>Charge per school, paid in advance for 12 months. SMS, custom domain, and dedicated installs sit on top.</p>
+    <p class="tagline">Basic — run the register. &nbsp; Standard — run the school. &nbsp; Professional — run the group. &nbsp; Enterprise — run it as your own system.</p>
+  </header>
+
+  <h2>Commercial model</h2>
+  <p>Schools already plan in academic years. One yearly invoice is easier for a board to approve than twelve monthly ones. Cash comes in up front; you suspend if they do not renew.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Rule</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Unit of sale</td><td>One school. A group with four schools buys four subscriptions (with a volume discount), not one vague platform licence.</td></tr>
+      <tr><td>Term</td><td>12 months. Align to their academic year when you can (for example 1 October – 30 September).</td></tr>
+      <tr><td>Payment</td><td>100% in advance (bank or mobile money). Termly only if they cannot pay annually — then charge 10–15% more than the yearly price.</td></tr>
+      <tr><td>Includes</td><td>Hosting, updates, email support, and the modules in that package. One branding pack (name, colours, logo) from Professional up.</td></tr>
+      <tr><td>Extra (always billed separately)</td><td>SMS bundles, custom domain (if not in the package), on-site training, data import, extra storage.</td></tr>
+      <tr><td>Control today</td><td>Tenant and school status: Active, Suspended, Archived. Data stays on suspend; they cannot work until they pay.</td></tr>
+    </tbody>
+  </table>
+  <div class="note">Do not split “academics plan” vs “finance plan” in year one. One full school product, gated by package. Do not bury SMS in the yearly fee — one busy school will wipe the margin.</div>
+
+  <h2>Who each package is for</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Package</th>
+        <th>Buyer</th>
+        <th>Typical school</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Basic</td><td>One small school</td><td>Under ~250 students, still on paper, wants a digital register</td></tr>
+      <tr><td>Standard</td><td>One complete school</td><td>Needs academics, fees, and parent / student login — the main offer</td></tr>
+      <tr><td>Professional</td><td>Trust or education group</td><td>2–10 schools, own look, SMS to parents</td></tr>
+      <tr><td>Enterprise</td><td>Large group, diocese, or ministry</td><td>Many schools, own domain, dedicated install, written SLA</td></tr>
+    </tbody>
+  </table>
+
+  <h2>The four packages</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">1 school · ~300 students</div>
+      <h3>Basic — records only</h3>
+      <p class="price">TZS 800,000 – 1,200,000 / school / year</p>
+      <p><strong>Includes</strong></p>
+      <ul>
+        <li>Headmaster, Academic master, and Teacher accounts</li>
+        <li>Students, teachers, parents</li>
+        <li>Academic years, classes, subjects, classrooms</li>
+        <li>Teacher allocations and timetable</li>
+        <li>School notices and dashboard counts</li>
+        <li>Email login and password reset</li>
+        <li>School name on the login screen</li>
+      </ul>
+      <p class="not"><strong>Not included:</strong> attendance, exams, report cards, fees, parent/student portals, messages, SMS, audit, extra schools, logo and colours.</p>
+    </div>
+    <div class="card featured">
+      <div class="tag">Lead with this · 1 school · ~1,000 students</div>
+      <h3>Standard — one complete school</h3>
+      <p class="price">TZS 1,800,000 – 2,500,000 / school / year</p>
+      <p>Everything in Basic, plus:</p>
+      <ul>
+        <li>Student attendance register and summaries</li>
+        <li>Exams, marks, and published report cards</li>
+        <li>Fees, invoices, and payments (Accountant role)</li>
+        <li>Parent portal: children, balances, notices, report cards</li>
+        <li>Student portal: timetable, attendance, fees, notices, report card</li>
+        <li>Teacher home and in-app parent messages</li>
+        <li>School audit trail</li>
+        <li>Officers: Headmaster, Academic master, Accountant</li>
+      </ul>
+      <p class="not">Still one school. Still ShuleHub branding. No SMS. No extra schools.</p>
+    </div>
+    <div class="card">
+      <div class="tag">2–10 schools · volume discount</div>
+      <h3>Professional — group + own look</h3>
+      <p class="price">Standard list, minus 15–25% from school 2 · SMS extra</p>
+      <p>Everything in Standard, plus:</p>
+      <ul>
+        <li>Several schools under one organization</li>
+        <li>Switch school as Headmaster</li>
+        <li>Officers managed per school</li>
+        <li>Branding: logo, colours, timezone, currency</li>
+        <li>Custom domain (for example portal.haloschools.ac.tz)</li>
+        <li>Parent SMS alerts (prepaid bundle, not in the year fee)</li>
+        <li>Higher student cap per school, or unlimited</li>
+        <li>Priority email support</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="tag">Organization contract · 10+ schools or private instance</div>
+      <h3>Enterprise — dedicated platform</h3>
+      <p class="price">Quote — floor plus per-school rate, setup fee on top</p>
+      <p>Everything in Professional, plus:</p>
+      <ul>
+        <li>Dedicated install (single-tenant) or a locked-down organization</li>
+        <li>Full white-label — their name on the product, not ShuleHub</li>
+        <li>Platform console hidden; they only see their schools</li>
+        <li>Unlimited schools and students in that organization</li>
+        <li>Platform-grade audit and configuration if they operate it</li>
+        <li>Setup, data import, training</li>
+        <li>Named support contact and a written SLA</li>
+        <li>Optional own database or server</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 class="page-break">What is in each package</h2>
+  <table class="matrix">
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th>Basic</th>
+        <th>Standard</th>
+        <th>Professional</th>
+        <th>Enterprise</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Schools</td><td>1</td><td>1</td><td>2–10</td><td>Unlimited / dedicated</td></tr>
+      <tr><td>Students (guide)</td><td>~300</td><td>~1,000</td><td>High / unlimited</td><td>Unlimited</td></tr>
+      <tr><td>People (students, teachers, parents)</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Academics and timetable</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Notices</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Attendance</td><td class="no">—</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Exams and report cards</td><td class="no">—</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Fees, invoices, payments</td><td class="no">—</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Parent and student portals</td><td class="no">—</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>In-app messages</td><td class="no">—</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>SMS to parents</td><td class="no">—</td><td class="no">—</td><td>Add-on</td><td>Add-on</td></tr>
+      <tr><td>Logo and colours</td><td class="no">—</td><td class="no">—</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Custom domain</td><td class="no">—</td><td class="no">—</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Multi-school organization</td><td class="no">—</td><td class="no">—</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Audit trail</td><td class="no">—</td><td>School</td><td>School</td><td>School + platform</td></tr>
+      <tr><td>Dedicated / single-tenant</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">Yes</td></tr>
+      <tr><td>Full white-label</td><td class="no">—</td><td class="no">—</td><td>Domain only</td><td class="yes">Yes</td></tr>
+      <tr><td>Support</td><td>Email</td><td>Email</td><td>Priority</td><td>Named + SLA</td></tr>
+      <tr><td>Training and data import</td><td>Paid extra</td><td>Paid extra</td><td>Discounted</td><td>Included</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Yearly list prices (TZS, starting guide)</h2>
+  <p class="muted">Adjust after the first five sales. These are list prices, not costs. Lock the price for that year. Raise new and renewing prices next cycle, not mid-year.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Package</th>
+        <th>List / school / year</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Basic</td><td>800,000 – 1,200,000</td><td>Raise if they exceed the student cap</td></tr>
+      <tr><td>Standard</td><td>1,800,000 – 2,500,000</td><td>Main offer — most private schools</td></tr>
+      <tr><td>Professional</td><td>Standard minus 15–25% from school 2</td><td>SMS bundle separate (for example 5,000 or 20,000 texts)</td></tr>
+      <tr><td>Enterprise</td><td>Quote</td><td>Floor (about 3–4× one Standard school) plus per-school rate and setup</td></tr>
+    </tbody>
+  </table>
+
+  <h2>How a subscription year runs</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span><strong>Quote and pay</strong>They pay. You create the tenant and school, add officers, set status to Active.</div>
+    <div class="step"><span class="n">2</span><strong>Paid through</strong>End date = pay date + 12 months, or the academic year you agreed.</div>
+    <div class="step"><span class="n">3</span><strong>Renew</strong>Invoice next year 30 days before expiry.</div>
+    <div class="step"><span class="n">4</span><strong>Grace</strong>14–30 days after expiry if unpaid.</div>
+    <div class="step"><span class="n">5</span><strong>Suspend</strong>Organization or that school. Data stays. They cannot work.</div>
+    <div class="step"><span class="n">6</span><strong>Restore</strong>They pay. You set Active again.</div>
+  </div>
+
+  <h2>Contract one-pager</h2>
+  <table>
+    <thead>
+      <tr><th>Clause</th><th>What to write</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Parties</td><td>School name and organization (tenant)</td></tr>
+      <tr><td>Term</td><td>Start and end dates</td></tr>
+      <tr><td>Fee</td><td>Amount, package name, and what is included</td></tr>
+      <tr><td>Late pay</td><td>14–30 day grace, then suspend</td></tr>
+      <tr><td>Data</td><td>They own their data; they can export if they leave</td></tr>
+      <tr><td>Next year</td><td>You may change next year’s price with 30 days’ notice</td></tr>
+    </tbody>
+  </table>
+
+  <h2>How to sell it</h2>
+  <p>Lead with <strong>Standard</strong>. Show Basic only if they cannot pay for fees and exams. Show Professional when they say “we have another campus.” Show Enterprise only in a meeting.</p>
+  <p class="muted">Until plan flags are enforced in the product, sell packages on paper and turn Professional extras (extra schools, branding, SMS) on by hand. Existing fields: subscriptionPlan, financeEnabled, attendanceEnabled, examsEnabled, custom domain, and single-tenant mode.</p>
+
+  <footer>
+    ShuleHub · Chambaka · Yearly subscriptions · Prices are a starting list in TZS and may change after the first sales · SMS is never included in the year fee
+  </footer>
+</body>
+</html>

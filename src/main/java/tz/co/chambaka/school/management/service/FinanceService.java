@@ -5,10 +5,12 @@ import tz.co.chambaka.school.management.dto.common.PageResponse;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureRequest;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureResponse;
 import tz.co.chambaka.school.management.dto.finance.GenerateInvoicesRequest;
+import tz.co.chambaka.school.management.dto.finance.InvoiceDiscountRequest;
 import tz.co.chambaka.school.management.dto.finance.InvoiceItemResponse;
 import tz.co.chambaka.school.management.dto.finance.InvoiceResponse;
 import tz.co.chambaka.school.management.dto.finance.PaymentResponse;
 import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
+import tz.co.chambaka.school.management.dto.finance.StudentLedgerResponse;
 import tz.co.chambaka.school.management.exception.ApiException;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
@@ -150,6 +152,7 @@ public class FinanceService {
             invoice.setIssuedAt(Instant.now());
             invoice.setDueDate(request.dueDate() != null ? request.dueDate() : LocalDate.now().plusDays(14));
             invoice.setPaidAmount(BigDecimal.ZERO);
+            invoice.setDiscountAmount(BigDecimal.ZERO);
             invoice.setStatus(InvoiceStatus.PENDING);
             BigDecimal total = BigDecimal.ZERO;
             for (FeeStructure fee : fees) {
@@ -269,7 +272,7 @@ public class FinanceService {
         payment = paymentRepository.save(payment);
 
         invoice.setPaidAmount(invoice.getPaidAmount().add(request.amount()));
-        if (invoice.getPaidAmount().compareTo(invoice.getTotalAmount()) >= 0) {
+        if (invoice.getBalance().compareTo(BigDecimal.ZERO) <= 0) {
             invoice.setStatus(InvoiceStatus.PAID);
         } else {
             invoice.setStatus(InvoiceStatus.PARTIAL);
@@ -330,6 +333,53 @@ public class FinanceService {
                         + " method=" + payment.getMethod()
                         + " transactionRef=" + payment.getTransactionRef());
         return response;
+    }
+
+    @Transactional
+    public InvoiceResponse applyDiscount(Long schoolId, Long invoiceId, InvoiceDiscountRequest request, UserPrincipal principal) {
+        Invoice invoice = requireInvoice(schoolId, invoiceId);
+        if (request.amount().compareTo(invoice.getTotalAmount().subtract(invoice.getPaidAmount())) > 0) {
+            throw new BusinessException("Discount cannot exceed the unpaid amount");
+        }
+        invoice.setDiscountAmount((invoice.getDiscountAmount() == null ? BigDecimal.ZERO : invoice.getDiscountAmount())
+                .add(request.amount()));
+        if (invoice.getBalance().compareTo(BigDecimal.ZERO) <= 0) {
+            invoice.setStatus(InvoiceStatus.PAID);
+        }
+        return toInvoice(invoice);
+    }
+
+    @Transactional(readOnly = true)
+    public StudentLedgerResponse ledger(Long schoolId, Long studentId, UserPrincipal principal) {
+        requireStudentFinanceAccess(principal, studentId);
+        Student student = studentService.require(schoolId, studentId);
+        List<InvoiceResponse> invoices = invoiceRepository.findBySchoolIdAndStudentId(schoolId, studentId)
+                .stream().map(this::toInvoice).toList();
+        List<PaymentResponse> payments = paymentRepository.findBySchoolIdAndStudentId(schoolId, studentId)
+                .stream().map(this::toPayment).toList();
+        BigDecimal invoiced = invoices.stream().map(InvoiceResponse::totalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal discounts = invoices.stream().map(InvoiceResponse::discountAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal paid = payments.stream().map(PaymentResponse::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal outstanding = invoices.stream().map(InvoiceResponse::balance).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new StudentLedgerResponse(student.getId(), student.getUser().getName(), invoiced, discounts, paid, outstanding, invoices, payments);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] receiptPdf(Long schoolId, Long paymentId, UserPrincipal principal) {
+        Payment payment = paymentRepository.findByIdAndSchoolId(paymentId, schoolId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Payment", paymentId));
+        requireStudentFinanceAccess(principal, payment.getStudent().getId());
+        return tz.co.chambaka.school.management.export.SimpleDocuments.pdf(
+                "Official Receipt " + payment.getReceiptNumber(),
+                List.of(
+                        "Student: " + payment.getStudent().getUser().getName(),
+                        "Admission: " + payment.getStudent().getAdmissionNo(),
+                        "Invoice: " + payment.getInvoice().getInvoiceNumber(),
+                        "Amount: " + payment.getAmount() + " TZS",
+                        "Method: " + payment.getMethod(),
+                        "Reference: " + (payment.getTransactionRef() == null ? "-" : payment.getTransactionRef()),
+                        "Paid at: " + payment.getPaidAt()
+                ));
     }
 
     void requireStudentFinanceAccess(UserPrincipal principal, Long studentId) {
@@ -418,6 +468,7 @@ public class FinanceService {
                 invoice.getStudent().getAdmissionNo(),
                 invoice.getInvoiceNumber(),
                 invoice.getTotalAmount(),
+                invoice.getDiscountAmount() == null ? java.math.BigDecimal.ZERO : invoice.getDiscountAmount(),
                 invoice.getPaidAmount(),
                 invoice.getBalance(),
                 invoice.getStatus(),
