@@ -101,7 +101,7 @@ public class StudentService {
         student.setEmergencyContact(request.emergencyContact());
         student.setMedicalNotes(request.medicalNotes());
         student.setStatus(StudentStatus.ACTIVE);
-        applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId());
+        applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId(), false);
         Student saved = studentRepository.save(student);
         if (request.parent() != null && request.parent().provided()) {
             linkNewParent(schoolId, saved, request.parent());
@@ -148,7 +148,7 @@ public class StudentService {
         if (request.medicalNotes() != null) {
             student.setMedicalNotes(request.medicalNotes());
         }
-        applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId());
+        applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId(), true);
         return toResponse(student);
     }
 
@@ -261,15 +261,19 @@ public class StudentService {
         studentParentRepository.save(link);
     }
 
-    private void applyPlacement(Long schoolId, Student student, Long yearId, Long classId, Long sectionId) {
+    private void applyPlacement(Long schoolId, Student student, Long yearId, Long classId, Long sectionId, boolean replaceMissing) {
         if (yearId != null) {
             student.setAcademicYear(academicYearService.require(schoolId, yearId));
         }
         if (classId != null) {
             student.setSchoolClass(classService.require(schoolId, classId));
+        } else if (replaceMissing) {
+            student.setSchoolClass(null);
         }
         if (sectionId != null) {
             student.setSection(sectionService.require(schoolId, sectionId));
+        } else if (replaceMissing) {
+            student.setSection(null);
         }
     }
 

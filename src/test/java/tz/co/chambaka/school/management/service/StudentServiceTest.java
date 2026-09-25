@@ -115,6 +115,27 @@ class StudentServiceTest {
     }
 
     @Test
+    void updateCanClearClassAndSection() {
+        Student student = Fixtures.student();
+        when(studentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(student));
+        when(studentParentRepository.findByStudentId(1L)).thenReturn(List.of());
+        when(academicYearService.require(1L, 1L)).thenReturn(Fixtures.year());
+        when(classService.require(1L, 1L)).thenReturn(Fixtures.schoolClass());
+
+        service.update(1L, 1L, new UpdateStudentRequest(
+                null, null, null, null, null, null, null, null, null, 1L, 1L, null, null));
+        assertThat(student.getSchoolClass()).isNotNull();
+        assertThat(student.getSection()).isNull();
+
+        StudentResponse cleared = service.update(1L, 1L, new UpdateStudentRequest(
+                null, null, null, null, null, null, null, null, null, 1L, null, null, null));
+        assertThat(student.getSchoolClass()).isNull();
+        assertThat(student.getSection()).isNull();
+        assertThat(cleared.schoolClassId()).isNull();
+        assertThat(student.getAcademicYear()).isNotNull();
+    }
+
+    @Test
     void createWithoutPlacementAndErrors() {
         when(studentRepository.countBySchoolIdAndAdmissionNoStartingWithIgnoreCase(any(), any())).thenReturn(0L);
         when(studentRepository.existsBySchoolIdAndAdmissionNoIgnoreCase(any(), any())).thenReturn(true, false);
