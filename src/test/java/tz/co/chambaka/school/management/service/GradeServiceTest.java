@@ -80,6 +80,7 @@ class GradeServiceTest {
 
         when(gradeRepository.findByExamIdAndStudentId(1L, 1L)).thenReturn(List.of(grade));
         assertThat(service.reportCard(1L, 1L, 1L).overallGrade()).isEqualTo("B");
+        assertThat(service.reportCard(1L, 1L, 1L).termResults()).isEmpty();
 
         Student bare = Fixtures.student();
         bare.setSchoolClass(null);
@@ -168,10 +169,18 @@ class GradeServiceTest {
         assertThat(service.recordBulk(1L, bulk, 3L)).hasSize(1);
 
         Exam midterm = componentExam(1L, AssessmentComponent.MIDTERM);
+        tz.co.chambaka.school.management.model.AcademicTerm term = new tz.co.chambaka.school.management.model.AcademicTerm();
+        term.setId(1L);
+        term.setName("Term 1");
+        midterm.setAcademicTerm(term);
         Exam semi = componentExam(2L, AssessmentComponent.SEMI_TERMINAL);
         Exam terminal = componentExam(3L, AssessmentComponent.TERMINAL);
+        Exam otherClass = componentExam(9L, AssessmentComponent.MIDTERM);
+        tz.co.chambaka.school.management.model.SchoolClass other = Fixtures.schoolClass();
+        other.setId(99L);
+        otherClass.setSchoolClass(other);
         when(examRepository.findBySchoolIdAndAcademicYearIdOrderByStartDateDesc(1L, 1L))
-                .thenReturn(List.of(midterm, semi, terminal));
+                .thenReturn(List.of(midterm, semi, terminal, otherClass));
         when(gradeRepository.findByExamIdAndStudentId(1L, 1L)).thenReturn(List.of(componentGrade(midterm, "80")));
         when(gradeRepository.findByExamIdAndStudentId(2L, 1L)).thenReturn(List.of(componentGrade(semi, "70")));
         when(gradeRepository.findByExamIdAndStudentId(3L, 1L)).thenReturn(List.of(componentGrade(terminal, "90")));
@@ -185,7 +194,46 @@ class GradeServiceTest {
         var result = service.termResult(1L, 1L, 1L, 1L, 1L);
         assertThat(result.midterm()).isEqualByComparingTo("80");
         assertThat(result.subjectName()).isEqualTo("Mathematics");
+        assertThat(result.admissionNo()).isEqualTo(Fixtures.student().getAdmissionNo());
         assertThat(result.terminalResult()).isEqualByComparingTo("80.50");
+
+        when(examSubjectRepository.findByExamIdIn(any())).thenReturn(List.of(Fixtures.examSubject()));
+        var report = service.termReport(1L, 1L, 1L, 1L, tz.co.chambaka.school.management.model.enums.Role.HEADMASTER);
+        assertThat(report.subjects()).hasSize(1);
+        assertThat(report.average()).isEqualByComparingTo("80.50");
+        assertThat(report.academicYearName()).isEqualTo("2026/2027");
+        assertThat(report.academicTermName()).isEqualTo("Term 1");
+
+        Student archived = Fixtures.student();
+        archived.setId(8L);
+        archived.setStatus(StudentStatus.ARCHIVED);
+        when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L)).thenReturn(List.of(Fixtures.student(), archived));
+        assertThat(service.classTermResults(1L, 1L, 1L, 1L, 1L, tz.co.chambaka.school.management.model.enums.Role.TEACHER))
+                .hasSize(1);
+
+        when(examRepository.findBySchoolIdAndAcademicYearIdAndPublishedTrueOrderByStartDateDesc(1L, 1L))
+                .thenReturn(List.of());
+        assertThat(service.termReport(1L, 1L, 1L, 1L, tz.co.chambaka.school.management.model.enums.Role.STUDENT).subjects())
+                .isEmpty();
+        assertThat(service.termResult(1L, 1L, 1L, 1L, 1L, tz.co.chambaka.school.management.model.enums.Role.PARENT).subjectName())
+                .isEqualTo("Subject");
+        assertThat(service.reportCard(1L, 1L, 1L).termResults()).isNotEmpty();
+
+        Exam noYear = Fixtures.exam();
+        noYear.setId(5L);
+        noYear.setAcademicYear(null);
+        when(examService.require(1L, 5L)).thenReturn(noYear);
+        when(gradeRepository.findByExamIdAndStudentId(5L, 1L)).thenReturn(List.of());
+        assertThat(service.reportCard(1L, 1L, 5L).termResults()).isEmpty();
+
+        Student noClass = Fixtures.student();
+        noClass.setId(4L);
+        noClass.setSchoolClass(null);
+        when(studentService.require(1L, 4L)).thenReturn(noClass);
+        assertThat(service.termReport(1L, 4L, 1L, null, tz.co.chambaka.school.management.model.enums.Role.HEADMASTER).className())
+                .isNull();
+        assertThat(service.classTermResults(1L, 1L, null, 1L, 99L, tz.co.chambaka.school.management.model.enums.Role.TEACHER)
+                .getFirst().subjectName()).isEqualTo("Subject");
     }
 
     private tz.co.chambaka.school.management.dto.academic.ReportCardResponse card(BigDecimal marks) {

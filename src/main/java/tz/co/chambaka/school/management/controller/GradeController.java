@@ -57,14 +57,29 @@ public class GradeController {
     }
 
     @GetMapping("/term-result")
-    @PreAuthorize(Access.GRADE_ENTER)
+    @PreAuthorize(Access.TERM_RESULT)
     public tz.co.chambaka.school.management.dto.academic.TermResultResponse termResult(
+            @CurrentUser UserPrincipal principal,
             @RequestParam Long studentId,
             @RequestParam Long subjectId,
             @RequestParam Long academicYearId,
             @RequestParam(required = false) Long academicTermId
     ) {
-        return gradeService.termResult(tenantResolver.requireSchoolId(), studentId, subjectId, academicYearId, academicTermId);
+        return gradeService.termResult(
+                tenantResolver.requireSchoolId(), studentId, subjectId, academicYearId, academicTermId, principal.getRole());
+    }
+
+    @GetMapping("/term-results")
+    @PreAuthorize(Access.GRADE_ENTER)
+    public java.util.List<tz.co.chambaka.school.management.dto.academic.TermResultResponse> classTermResults(
+            @CurrentUser UserPrincipal principal,
+            @RequestParam Long academicYearId,
+            @RequestParam(required = false) Long academicTermId,
+            @RequestParam Long schoolClassId,
+            @RequestParam Long subjectId
+    ) {
+        return gradeService.classTermResults(
+                tenantResolver.requireSchoolId(), academicYearId, academicTermId, schoolClassId, subjectId, principal.getRole());
     }
 
     @PostMapping

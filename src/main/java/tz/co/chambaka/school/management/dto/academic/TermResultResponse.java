@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public record TermResultResponse(
         Long studentId,
         String studentName,
+        String admissionNo,
         Long subjectId,
         String subjectName,
         BigDecimal midterm,

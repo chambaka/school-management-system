@@ -122,6 +122,21 @@ public class ReportController {
                 reportExportService.attendanceSummary(tenantResolver.requireSchoolId(), start, end, format));
     }
 
+    @GetMapping("/term-result")
+    @PreAuthorize(Access.REPORT_CARD + " or hasRole('STUDENT')")
+    public ResponseEntity<byte[]> termResult(
+            @CurrentUser UserPrincipal principal,
+            @RequestParam(required = false) Long studentId,
+            @RequestParam Long academicYearId,
+            @RequestParam(required = false) Long academicTermId,
+            @RequestParam(defaultValue = "pdf") String format
+    ) {
+        Long id = studentId == null ? studentService.requireByUser(principal.getId()).getId() : studentId;
+        byte[] body = reportExportService.termResult(
+                tenantResolver.requireSchoolId(), id, academicYearId, academicTermId, principal.getRole(), format);
+        return file("term-result." + extension(format), media(format), body);
+    }
+
     @GetMapping("/enrolment-history.pdf")
     @PreAuthorize(Access.REPORT_EXPORT)
     public ResponseEntity<byte[]> enrolmentHistoryPdf(

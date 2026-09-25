@@ -30,6 +30,7 @@ public final class Access {
     public static final String INVOICE_VIEW = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACCOUNTANT')";
     public static final String INVOICE_MANAGE = "hasRole('ACCOUNTANT')";
     public static final String REPORT_CARD = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER','TEACHER','PARENT')";
+    public static final String TERM_RESULT = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER','TEACHER','PARENT','STUDENT')";
     public static final String PAYMENT_RECORD = "hasRole('ACCOUNTANT')";
     public static final String FINANCE_RECORD = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACCOUNTANT','PARENT','STUDENT')";
     public static final String NOTICE_WRITE = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER','TEACHER','ACCOUNTANT','STAFF')";

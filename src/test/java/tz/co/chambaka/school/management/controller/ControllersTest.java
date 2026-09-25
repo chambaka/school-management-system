@@ -399,6 +399,10 @@ class ControllersTest {
         verify(parentService).assertLinked(10L, 1L);
         students.myReportCard(Fixtures.principal(Role.STUDENT), 1L);
         verify(gradeService, times(3)).reportCard(eq(1L), eq(1L), eq(1L), any());
+        students.termReport(Fixtures.principal(Role.HEADMASTER), 1L, 1L, 1L);
+        students.termReport(Fixtures.principal(Role.PARENT), 1L, 1L, null);
+        students.myTermReport(Fixtures.principal(Role.STUDENT), 1L, null);
+        verify(gradeService, times(3)).termReport(eq(1L), eq(1L), eq(1L), any(), any());
         when(studentService.photoFile(1L, 1L)).thenReturn(new StoredPhoto(Path.of("x.jpg"), "image/jpeg"));
         students.uploadPhoto(1L, new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1}));
         students.deletePhoto(1L);
@@ -407,7 +411,7 @@ class ControllersTest {
         students.photo(Fixtures.principal(Role.TEACHER), 1L);
         students.photo(Fixtures.principal(Role.STUDENT), 1L);
         students.photo(Fixtures.principal(Role.PARENT), 1L);
-        verify(parentService, times(2)).assertLinked(10L, 1L);
+        verify(parentService, times(3)).assertLinked(10L, 1L);
         var other = Fixtures.student();
         other.setId(99L);
         when(studentService.requireByUser(10L)).thenReturn(other);
@@ -596,6 +600,9 @@ class ControllersTest {
         assertThat(reports.collections(null, null, "pdf").getBody()).containsExactly(7);
         assertThat(reports.meritList(headmaster, 1L, "xlsx").getBody()).containsExactly(8);
         assertThat(reports.attendance(java.time.LocalDate.now(), java.time.LocalDate.now(), "csv").getBody()).containsExactly(9);
+        when(reportExportService.termResult(any(), any(), any(), any(), any(), any())).thenReturn(new byte[]{10});
+        assertThat(reports.termResult(headmaster, 1L, 1L, 1L, "pdf").getBody()).containsExactly(10);
+        assertThat(reports.termResult(Fixtures.principal(Role.STUDENT), null, 1L, null, "csv").getBody()).containsExactly(10);
 
         NotificationController notifications = new NotificationController(alertService, tenantResolver);
         notifications.inbox(headmaster);
@@ -619,7 +626,8 @@ class ControllersTest {
                         1L, BigDecimal.TEN, "Good")));
         grades.grid(1L, 1L);
         grades.bulk(teacher, bulk);
-        grades.termResult(1L, 1L, 1L, null);
+        grades.termResult(teacher, 1L, 1L, 1L, null);
+        grades.classTermResults(teacher, 1L, null, 1L, 1L);
 
         TimetableController timetable = new TimetableController(timetableService, tenantResolver);
         timetable.generate(1L, 1L);

@@ -44,6 +44,50 @@ class ReportExportServiceTest {
     }
 
     @Test
+    void reportCardExportIncludesTermResults() {
+        var term = new tz.co.chambaka.school.management.dto.academic.TermResultResponse(
+                1L, "Student", "ADM-001", 1L, "Mathematics",
+                BigDecimal.valueOf(80), BigDecimal.valueOf(60), BigDecimal.valueOf(62),
+                BigDecimal.valueOf(70), BigDecimal.valueOf(66), "C");
+        GradeResponse subject = new GradeResponse(
+                1L, 1L, 1L, "Student", 1L, "Mathematics",
+                BigDecimal.valueOf(78), BigDecimal.valueOf(100), BigDecimal.valueOf(40), true, "Good");
+        var card = new ReportCardResponse(
+                1L, "Student", "ADM-001", "Form 1", "A",
+                1L, "Midterm", List.of(subject), BigDecimal.valueOf(78), BigDecimal.valueOf(100),
+                BigDecimal.valueOf(78), "B", BigDecimal.valueOf(4), 1, true, List.of(term));
+        when(gradeService.reportCard(1L, 1L, 1L, Role.TEACHER)).thenReturn(card);
+        assertThat(new String(service.reportCardPdf(1L, 1L, 1L, Role.TEACHER), StandardCharsets.ISO_8859_1))
+                .contains("Term result");
+        assertThat(new String(service.reportCardCsv(1L, 1L, 1L, Role.TEACHER), StandardCharsets.UTF_8))
+                .contains("Mathematics (term)");
+        assertThat(service.reportCardXlsx(1L, 1L, 1L, Role.TEACHER)).isNotEmpty();
+    }
+
+    @Test
+    void exportsTermResultPack() {
+        var term = new tz.co.chambaka.school.management.dto.academic.TermResultResponse(
+                1L, "Student", "ADM-001", 1L, "Mathematics",
+                BigDecimal.valueOf(80), BigDecimal.valueOf(60), BigDecimal.valueOf(62),
+                BigDecimal.valueOf(70), BigDecimal.valueOf(66), "C");
+        var report = new tz.co.chambaka.school.management.dto.academic.TermReportResponse(
+                1L, "Student", "ADM-001", "Form 1", 1L, "2026/2027", 1L, "Term 1",
+                List.of(term), BigDecimal.valueOf(66), "C");
+        when(gradeService.termReport(1L, 1L, 1L, 1L, Role.HEADMASTER)).thenReturn(report);
+        assertThat(new String(service.termResult(1L, 1L, 1L, 1L, Role.HEADMASTER, "csv"), StandardCharsets.UTF_8))
+                .contains("Mathematics")
+                .contains("66");
+        assertThat(service.termResult(1L, 1L, 1L, 1L, Role.HEADMASTER, "xlsx")).isNotEmpty();
+        assertThat(service.termResult(1L, 1L, 1L, 1L, Role.HEADMASTER, "pdf")).isNotEmpty();
+        when(gradeService.termReport(1L, 1L, 1L, null, Role.STUDENT)).thenReturn(
+                new tz.co.chambaka.school.management.dto.academic.TermReportResponse(
+                        1L, "Student", "ADM-001", "Form 1", 1L, null, null, null,
+                        List.of(), BigDecimal.ZERO, "F"));
+        assertThat(new String(service.termResult(1L, 1L, 1L, null, Role.STUDENT, "pdf"), StandardCharsets.ISO_8859_1))
+                .contains("No published exam components");
+    }
+
+    @Test
     void pdfHandlesMissingSectionAndPosition() {
         when(gradeService.reportCard(1L, 1L, 1L, Role.STUDENT)).thenReturn(card(null));
         assertThat(service.reportCardPdf(1L, 1L, 1L, Role.STUDENT)).isNotEmpty();
@@ -116,6 +160,6 @@ class ReportExportServiceTest {
         return new ReportCardResponse(
                 1L, "Student", "ADM-001", "Form 1", position == null ? null : "A",
                 1L, "Midterm", List.of(subject), BigDecimal.valueOf(78), BigDecimal.valueOf(100),
-                BigDecimal.valueOf(78), "B", BigDecimal.valueOf(4), position, true);
+                BigDecimal.valueOf(78), "B", BigDecimal.valueOf(4), position, true, List.of());
     }
 }

@@ -194,6 +194,33 @@ public class StudentController {
         return gradeService.reportCard(tenantResolver.requireSchoolId(), studentId, examId, principal.getRole());
     }
 
+    @GetMapping("/{id}/term-report")
+    @PreAuthorize(Access.REPORT_CARD)
+    public tz.co.chambaka.school.management.dto.academic.TermReportResponse termReport(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam Long academicYearId,
+            @RequestParam(required = false) Long academicTermId
+    ) {
+        if (principal.getRole() == Role.PARENT) {
+            parentService.assertLinked(principal.getId(), id);
+        }
+        return gradeService.termReport(
+                tenantResolver.requireSchoolId(), id, academicYearId, academicTermId, principal.getRole());
+    }
+
+    @GetMapping("/me/term-report")
+    @PreAuthorize("hasRole('STUDENT')")
+    public tz.co.chambaka.school.management.dto.academic.TermReportResponse myTermReport(
+            @CurrentUser UserPrincipal principal,
+            @RequestParam Long academicYearId,
+            @RequestParam(required = false) Long academicTermId
+    ) {
+        Long studentId = studentService.requireByUser(principal.getId()).getId();
+        return gradeService.termReport(
+                tenantResolver.requireSchoolId(), studentId, academicYearId, academicTermId, principal.getRole());
+    }
+
     @PostMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize(Access.PEOPLE_MANAGE)
     public StudentResponse uploadPhoto(@PathVariable Long id, @RequestParam("file") MultipartFile file) {

@@ -2,6 +2,8 @@ package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.academic.MeritRowResponse;
 import tz.co.chambaka.school.management.dto.academic.ReportCardResponse;
+import tz.co.chambaka.school.management.dto.academic.TermReportResponse;
+import tz.co.chambaka.school.management.dto.academic.TermResultResponse;
 import tz.co.chambaka.school.management.dto.attendance.AttendanceSummaryResponse;
 import tz.co.chambaka.school.management.export.SimpleDocuments;
 import tz.co.chambaka.school.management.export.XlsxDocuments;
@@ -54,6 +56,10 @@ public class ReportExportService {
         card.subjects().forEach(s -> lines.add(s.subjectName() + ": " + s.marksObtained() + "/" + s.maxMarks()));
         lines.add("Overall " + card.overallGrade() + " · " + card.percentage() + "% · GPA " + card.gpa()
                 + (card.classPosition() == null ? "" : " · Position " + card.classPosition()));
+        if (card.termResults() != null && !card.termResults().isEmpty()) {
+            lines.add("Term result (midterm + semi + terminal)");
+            card.termResults().forEach(row -> lines.add(termLine(row)));
+        }
         return SimpleDocuments.pdf("Report Card", lines);
     }
 
@@ -62,7 +68,18 @@ public class ReportExportService {
         List<List<String>> rows = card.subjects().stream()
                 .map(s -> List.of(s.subjectName(), String.valueOf(s.marksObtained()), String.valueOf(s.maxMarks()), s.passed() ? "Yes" : "No"))
                 .toList();
-        return SimpleDocuments.csv(List.of("Subject", "Marks", "Max", "Passed"), rows);
+        List<List<String>> table = new ArrayList<>(rows);
+        if (card.termResults() != null) {
+            for (TermResultResponse row : card.termResults()) {
+                table.add(List.of(
+                        row.subjectName() + " (term)",
+                        money(row.terminalResult()),
+                        "",
+                        blank(row.letterGrade())
+                ));
+            }
+        }
+        return SimpleDocuments.csv(List.of("Subject", "Marks", "Max", "Passed"), table);
     }
 
     public byte[] enrolmentHistoryCsv(Long schoolId, Long studentId, Long academicYearId, PromotionAction action) {
@@ -103,10 +120,42 @@ public class ReportExportService {
 
     public byte[] reportCardXlsx(Long schoolId, Long studentId, Long examId, Role role) {
         ReportCardResponse card = gradeService.reportCard(schoolId, studentId, examId, role);
-        List<List<String>> rows = card.subjects().stream()
+        List<List<String>> rows = new ArrayList<>(card.subjects().stream()
                 .map(s -> List.of(s.subjectName(), String.valueOf(s.marksObtained()), String.valueOf(s.maxMarks()), s.passed() ? "Yes" : "No"))
-                .toList();
+                .toList());
+        if (card.termResults() != null) {
+            for (TermResultResponse row : card.termResults()) {
+                rows.add(List.of(
+                        row.subjectName() + " (term)",
+                        money(row.terminalResult()),
+                        "",
+                        blank(row.letterGrade())
+                ));
+            }
+        }
         return XlsxDocuments.xlsx("Report card", List.of("Subject", "Marks", "Max", "Passed"), rows);
+    }
+
+    public byte[] termResult(Long schoolId, Long studentId, Long academicYearId, Long termId, Role role, String format) {
+        TermReportResponse report = gradeService.termReport(schoolId, studentId, academicYearId, termId, role);
+        List<String> headers = List.of("Subject", "Midterm", "Semi exam", "Semi result", "Terminal exam", "Term result", "Grade");
+        List<List<String>> table = report.subjects().stream()
+                .map(row -> List.of(
+                        blank(row.subjectName()),
+                        money(row.midterm()),
+                        money(row.semiTerminalExam()),
+                        money(row.semiTerminalResult()),
+                        money(row.terminalExam()),
+                        money(row.terminalResult()),
+                        blank(row.letterGrade())
+                ))
+                .toList();
+        String title = "Term result · " + blank(report.studentName())
+                + (report.academicYearName() == null ? "" : " · " + report.academicYearName());
+        if (table.isEmpty() && "pdf".equalsIgnoreCase(format)) {
+            return SimpleDocuments.pdf(title, List.of("No published exam components for this term result yet."));
+        }
+        return export(title, headers, table, format);
     }
 
     public byte[] defaulters(Long schoolId, String format) {
@@ -184,5 +233,15 @@ public class ReportExportService {
 
     private static String blank(String value) {
         return value == null ? "" : value;
+    }
+
+    private static String termLine(TermResultResponse row) {
+        return blank(row.subjectName())
+                + ": midterm " + money(row.midterm())
+                + " · semi " + money(row.semiTerminalExam())
+                + " → " + money(row.semiTerminalResult())
+                + " · terminal " + money(row.terminalExam())
+                + " → " + money(row.terminalResult())
+                + " " + blank(row.letterGrade());
     }
 }

@@ -18,6 +18,7 @@ public record ReportCardResponse(
         String overallGrade,
         BigDecimal gpa,
         Integer classPosition,
-        boolean published
+        boolean published,
+        List<TermResultResponse> termResults
 ) {
 }

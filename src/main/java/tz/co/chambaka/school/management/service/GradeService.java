@@ -7,6 +7,7 @@ import tz.co.chambaka.school.management.dto.academic.GradeRequest;
 import tz.co.chambaka.school.management.dto.academic.GradeResponse;
 import tz.co.chambaka.school.management.dto.academic.MeritRowResponse;
 import tz.co.chambaka.school.management.dto.academic.ReportCardResponse;
+import tz.co.chambaka.school.management.dto.academic.TermReportResponse;
 import tz.co.chambaka.school.management.dto.academic.TermResultResponse;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
@@ -15,6 +16,7 @@ import tz.co.chambaka.school.management.model.ExamSubject;
 import tz.co.chambaka.school.management.model.Grade;
 import tz.co.chambaka.school.management.model.ResultWeightConfig;
 import tz.co.chambaka.school.management.model.Student;
+import tz.co.chambaka.school.management.model.Subject;
 import tz.co.chambaka.school.management.model.Teacher;
 import tz.co.chambaka.school.management.model.enums.AssessmentComponent;
 import tz.co.chambaka.school.management.model.enums.Role;
@@ -32,6 +34,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -181,6 +184,11 @@ public class GradeService {
                 : totalObtained.multiply(BigDecimal.valueOf(100)).divide(totalMax, 2, RoundingMode.HALF_UP);
         String overall = letterGrade(schoolId, percentage);
         Integer position = classPosition(schoolId, exam, studentId);
+        Long yearId = exam.getAcademicYear() == null ? null : exam.getAcademicYear().getId();
+        Long termId = exam.getAcademicTerm() == null ? null : exam.getAcademicTerm().getId();
+        List<TermResultResponse> termResults = yearId == null
+                ? List.of()
+                : termReport(schoolId, studentId, yearId, termId, role).subjects();
         return new ReportCardResponse(
                 student.getId(),
                 student.getUser().getName(),
@@ -196,39 +204,66 @@ public class GradeService {
                 overall,
                 ResultMath.gpaPoints(overall),
                 position,
-                exam.isPublished()
+                exam.isPublished(),
+                termResults
         );
     }
 
     @Transactional(readOnly = true)
     public TermResultResponse termResult(Long schoolId, Long studentId, Long subjectId, Long academicYearId, Long termId) {
+        return termResult(schoolId, studentId, subjectId, academicYearId, termId, Role.HEADMASTER);
+    }
+
+    @Transactional(readOnly = true)
+    public TermResultResponse termResult(
+            Long schoolId, Long studentId, Long subjectId, Long academicYearId, Long termId, Role role
+    ) {
         Student student = studentService.require(schoolId, studentId);
-        List<Exam> exams = examRepository.findBySchoolIdAndAcademicYearIdOrderByStartDateDesc(schoolId, academicYearId);
-        BigDecimal midterm = componentScore(exams, studentId, subjectId, AssessmentComponent.MIDTERM);
-        BigDecimal semiExam = componentScore(exams, studentId, subjectId, AssessmentComponent.SEMI_TERMINAL);
-        BigDecimal terminalExam = componentScore(exams, studentId, subjectId, AssessmentComponent.TERMINAL);
-        ResultWeightConfig weights = resultConfigService == null
-                ? fallbackWeights()
-                : resultConfigService.resolve(schoolId, academicYearId, termId, subjectId);
-        BigDecimal semi = ResultMath.semiTerminal(midterm, semiExam, weights.getMidtermWeight(), weights.getSemiExamWeight());
-        BigDecimal terminal = ResultMath.terminal(semi, terminalExam, weights.getSemiResultWeight(), weights.getTerminalExamWeight());
-        String subjectName = exams.stream()
-                .flatMap(exam -> gradeRepository.findByExamIdAndStudentId(exam.getId(), studentId).stream())
-                .filter(g -> g.getSubject().getId().equals(subjectId))
-                .map(g -> g.getSubject().getName())
-                .findFirst().orElse("Subject");
-        return new TermResultResponse(
+        Long classId = student.getSchoolClass() == null ? null : student.getSchoolClass().getId();
+        List<Exam> exams = visibleExams(schoolId, academicYearId, classId, role);
+        return computeTermResult(schoolId, student, subjectId, subjectName(exams, studentId, subjectId), academicYearId, termId, exams);
+    }
+
+    @Transactional(readOnly = true)
+    public TermReportResponse termReport(Long schoolId, Long studentId, Long academicYearId, Long termId, Role role) {
+        Student student = studentService.require(schoolId, studentId);
+        Long classId = student.getSchoolClass() == null ? null : student.getSchoolClass().getId();
+        List<Exam> exams = visibleExams(schoolId, academicYearId, classId, role);
+        List<TermResultResponse> rows = subjectsFor(exams).entrySet().stream()
+                .map(entry -> computeTermResult(schoolId, student, entry.getKey(), entry.getValue(), academicYearId, termId, exams))
+                .sorted(Comparator.comparing(TermResultResponse::subjectName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .toList();
+        BigDecimal average = averageTerminal(rows);
+        Exam sample = exams.isEmpty() ? null : exams.getFirst();
+        String yearName = sample != null && sample.getAcademicYear() != null ? sample.getAcademicYear().getName() : null;
+        String termName = sample != null && sample.getAcademicTerm() != null ? sample.getAcademicTerm().getName() : null;
+        return new TermReportResponse(
                 student.getId(),
                 student.getUser().getName(),
-                subjectId,
-                subjectName,
-                midterm,
-                semiExam,
-                semi,
-                terminalExam,
-                terminal,
-                letterGrade(schoolId, terminal)
+                student.getAdmissionNo(),
+                student.getSchoolClass() != null ? student.getSchoolClass().getName() : null,
+                academicYearId,
+                yearName,
+                termId,
+                termName,
+                rows,
+                average,
+                letterGrade(schoolId, average)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<TermResultResponse> classTermResults(
+            Long schoolId, Long academicYearId, Long termId, Long classId, Long subjectId, Role role
+    ) {
+        List<Exam> exams = visibleExams(schoolId, academicYearId, classId, role);
+        String subjectName = subjectsFor(exams).getOrDefault(subjectId, "Subject");
+        return studentRepository.findBySchoolIdAndSchoolClassId(schoolId, classId).stream()
+                .filter(s -> s.getStatus() == null || s.getStatus() == StudentStatus.ACTIVE)
+                .map(student -> computeTermResult(schoolId, student, subjectId, subjectName, academicYearId, termId, exams))
+                .sorted(Comparator.comparing(TermResultResponse::terminalResult).reversed()
+                        .thenComparing(TermResultResponse::studentName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -288,6 +323,87 @@ public class GradeService {
             pos++;
         }
         return pos;
+    }
+
+    private TermResultResponse computeTermResult(
+            Long schoolId,
+            Student student,
+            Long subjectId,
+            String subjectName,
+            Long academicYearId,
+            Long termId,
+            List<Exam> exams
+    ) {
+        BigDecimal midterm = componentScore(exams, student.getId(), subjectId, AssessmentComponent.MIDTERM);
+        BigDecimal semiExam = componentScore(exams, student.getId(), subjectId, AssessmentComponent.SEMI_TERMINAL);
+        BigDecimal terminalExam = componentScore(exams, student.getId(), subjectId, AssessmentComponent.TERMINAL);
+        ResultWeightConfig resolved = resultConfigService == null
+                ? null
+                : resultConfigService.resolve(schoolId, academicYearId, termId, subjectId);
+        ResultWeightConfig weights = resolved == null ? fallbackWeights() : resolved;
+        BigDecimal semi = ResultMath.semiTerminal(midterm, semiExam, weights.getMidtermWeight(), weights.getSemiExamWeight());
+        BigDecimal terminal = ResultMath.terminal(semi, terminalExam, weights.getSemiResultWeight(), weights.getTerminalExamWeight());
+        return new TermResultResponse(
+                student.getId(),
+                student.getUser().getName(),
+                student.getAdmissionNo(),
+                subjectId,
+                subjectName,
+                midterm,
+                semiExam,
+                semi,
+                terminalExam,
+                terminal,
+                letterGrade(schoolId, terminal)
+        );
+    }
+
+    private List<Exam> visibleExams(Long schoolId, Long academicYearId, Long classId, Role role) {
+        List<Exam> exams = role == Role.PARENT || role == Role.STUDENT
+                ? examRepository.findBySchoolIdAndAcademicYearIdAndPublishedTrueOrderByStartDateDesc(schoolId, academicYearId)
+                : examRepository.findBySchoolIdAndAcademicYearIdOrderByStartDateDesc(schoolId, academicYearId);
+        if (classId == null) {
+            return exams;
+        }
+        return exams.stream()
+                .filter(exam -> exam.getSchoolClass() == null || classId.equals(exam.getSchoolClass().getId()))
+                .toList();
+    }
+
+    private Map<Long, String> subjectsFor(List<Exam> exams) {
+        Map<Long, String> subjects = new LinkedHashMap<>();
+        List<Long> examIds = exams.stream().map(Exam::getId).toList();
+        if (examIds.isEmpty()) {
+            return subjects;
+        }
+        for (ExamSubject paper : examSubjectRepository.findByExamIdIn(examIds)) {
+            Subject subject = paper.getSubject();
+            if (subject != null && subject.getId() != null) {
+                subjects.putIfAbsent(subject.getId(), subject.getName());
+            }
+        }
+        return subjects;
+    }
+
+    private String subjectName(List<Exam> exams, Long studentId, Long subjectId) {
+        String fromPapers = subjectsFor(exams).get(subjectId);
+        if (fromPapers != null) {
+            return fromPapers;
+        }
+        return exams.stream()
+                .flatMap(exam -> gradeRepository.findByExamIdAndStudentId(exam.getId(), studentId).stream())
+                .filter(grade -> grade.getSubject() != null && subjectId.equals(grade.getSubject().getId()))
+                .map(grade -> grade.getSubject().getName())
+                .findFirst()
+                .orElse("Subject");
+    }
+
+    private static BigDecimal averageTerminal(List<TermResultResponse> rows) {
+        if (rows.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = rows.stream().map(TermResultResponse::terminalResult).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return total.divide(BigDecimal.valueOf(rows.size()), 2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal componentScore(List<Exam> exams, Long studentId, Long subjectId, AssessmentComponent component) {
