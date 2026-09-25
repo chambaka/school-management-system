@@ -24,7 +24,7 @@ public class Teacher extends TenantEntity {
     @JoinColumn(name = "user_id", unique = true, nullable = true)
     private User user;
 
-    @Column(length = 50)
+    @Column(nullable = true, length = 50)
     private String employeeId;
 
     @Column(length = 150)

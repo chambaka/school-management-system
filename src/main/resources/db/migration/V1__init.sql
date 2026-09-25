@@ -95,7 +95,7 @@ CREATE TABLE teachers (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     school_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
-    employee_id VARCHAR(50) NOT NULL,
+    employee_id VARCHAR(50),
     qualification VARCHAR(150),
     specialization VARCHAR(150),
     department VARCHAR(100),
