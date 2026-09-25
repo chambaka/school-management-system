@@ -29,6 +29,12 @@ public class AssignmentSubmission extends TenantEntity {
     @Column(length = 2000)
     private String notes;
 
+    @Column(length = 300)
+    private String attachmentName;
+
+    @Column(length = 400)
+    private String attachmentPath;
+
     @Column(precision = 8, scale = 2)
     private BigDecimal marksObtained;
 

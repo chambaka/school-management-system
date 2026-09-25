@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 public record CreateParentRequest(
         @NotBlank String name,
         @NotBlank @Email String email,
-        @NotBlank @Size(min = 8, max = 72) String password,
+        @Size(min = 8, max = 72) String password,
         String phone,
         String occupation,
         String address

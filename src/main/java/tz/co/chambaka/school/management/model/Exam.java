@@ -67,4 +67,7 @@ public class Exam extends TenantEntity {
     private Instant approvedAt;
 
     private Instant publishedAt;
+
+    @Column(length = 500)
+    private String rejectionNote;
 }

@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.academic.AssignmentRequest;
 import tz.co.chambaka.school.management.dto.academic.AssignmentResponse;
+import tz.co.chambaka.school.management.dto.academic.AssignmentSubmissionResponse;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Assignment;
@@ -102,6 +103,36 @@ public class AssignmentService {
     }
 
     @Transactional
+    public AssignmentSubmissionResponse submitWork(Long schoolId, Long userId, Long assignmentId, String notes, MultipartFile file) {
+        Assignment assignment = assignmentRepository.findByIdAndSchoolId(assignmentId, schoolId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Assignment", assignmentId));
+        Student student = studentService.requireByUser(userId);
+        AssignmentSubmission submission = submissionRepository.findByAssignmentIdAndStudentId(assignmentId, student.getId())
+                .orElseGet(AssignmentSubmission::new);
+        submission.setSchoolId(schoolId);
+        submission.setAssignment(assignment);
+        submission.setStudent(student);
+        submission.setNotes(notes);
+        submission.setSubmittedAt(Instant.now());
+        if (file != null && !file.isEmpty()) {
+            photoStorageService.storeStudentPhoto(schoolId, assignmentId + student.getId() + 800000, file);
+            submission.setAttachmentName(file.getOriginalFilename());
+            submission.setAttachmentPath("/api/v1/assignments/" + assignmentId + "/submissions/" + student.getId() + "/file");
+        }
+        AssignmentSubmission saved = submissionRepository.save(submission);
+        alertService.notifyParentsOfStudent(schoolId, student, "Assignment submitted",
+                student.getUser().getName() + " submitted " + assignment.getTitle(), "ASSIGNMENT", false);
+        return toSubmission(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AssignmentSubmissionResponse> submissions(Long schoolId, Long assignmentId) {
+        assignmentRepository.findByIdAndSchoolId(assignmentId, schoolId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Assignment", assignmentId));
+        return submissionRepository.findByAssignmentId(assignmentId).stream().map(this::toSubmission).toList();
+    }
+
+    @Transactional
     public void submitMarks(Long schoolId, Long assignmentId, Long studentId, BigDecimal marks) {
         Assignment assignment = assignmentRepository.findByIdAndSchoolId(assignmentId, schoolId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Assignment", assignmentId));
@@ -132,6 +163,19 @@ public class AssignmentService {
                 assignment.getDueDate(),
                 assignment.getAttachmentName(),
                 assignment.getPublishedAt()
+        );
+    }
+
+    private AssignmentSubmissionResponse toSubmission(AssignmentSubmission submission) {
+        return new AssignmentSubmissionResponse(
+                submission.getId(),
+                submission.getAssignment().getId(),
+                submission.getStudent().getId(),
+                submission.getStudent().getUser().getName(),
+                submission.getNotes(),
+                submission.getAttachmentName(),
+                submission.getMarksObtained(),
+                submission.getSubmittedAt()
         );
     }
 }

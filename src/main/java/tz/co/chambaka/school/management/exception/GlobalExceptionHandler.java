@@ -1,6 +1,7 @@
 package tz.co.chambaka.school.management.exception;
 
 import tz.co.chambaka.school.management.logging.RequestContext;
+import tz.co.chambaka.school.management.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -49,10 +51,10 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Validation failed", request.getRequestURI(), fields);
     }
 
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
+    @ExceptionHandler({BadCredentialsException.class, UsernameNotFoundException.class})
+    public ResponseEntity<ErrorResponse> handleBadCredentials(AuthenticationException ex, HttpServletRequest request) {
         log.warn("Bad credentials path={}", request.getRequestURI());
-        return build(HttpStatus.UNAUTHORIZED, "Invalid email, phone, username, or password", request.getRequestURI(), null);
+        return build(HttpStatus.UNAUTHORIZED, AuthService.INVALID_LOGIN, request.getRequestURI(), null);
     }
 
     @ExceptionHandler(AuthenticationException.class)

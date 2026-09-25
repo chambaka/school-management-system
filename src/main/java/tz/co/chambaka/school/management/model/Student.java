@@ -52,6 +52,9 @@ public class Student extends TenantEntity {
     @Column(length = 1000)
     private String medicalNotes;
 
+    @Column(length = 80)
+    private String nationality;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "academic_year_id")
     private AcademicYear academicYear;

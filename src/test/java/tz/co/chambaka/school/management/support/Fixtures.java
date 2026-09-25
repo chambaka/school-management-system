@@ -128,7 +128,9 @@ public final class Fixtures {
 
     public static UserProfileResponse profile(User user) {
         return new UserProfileResponse(user.getId(), user.getTenantId(), user.getSchoolId(), user.getCampusId(),
-                user.getName(), user.getEmail(), user.getRole(), user.getPhone(), user.getAvatarUrl(), user.isEnabled());
+                user.getName(), user.getFirstName(), user.getMiddleName(), user.getLastName(), user.getEmail(),
+                user.getRole(), user.getPhone(), user.getAvatarUrl(), user.isEnabled(),
+                user.isTotpEnabled());
     }
 
     public static AcademicYear year() {

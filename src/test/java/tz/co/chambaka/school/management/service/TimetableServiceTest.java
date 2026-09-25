@@ -51,6 +51,8 @@ class TimetableServiceTest {
     private ClassroomRepository classroomRepository;
     @Mock
     private BellPeriodService bellPeriodService;
+    @Mock
+    private tz.co.chambaka.school.management.solver.TeacherAvailabilityRepository teacherAvailabilityRepository;
     @InjectMocks
     private TimetableService service;
 

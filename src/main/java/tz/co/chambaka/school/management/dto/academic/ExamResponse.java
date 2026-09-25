@@ -20,6 +20,26 @@ public record ExamResponse(
         LocalDate startDate,
         LocalDate endDate,
         boolean published,
-        boolean scheduleLocked
+        boolean scheduleLocked,
+        String rejectionNote
 ) {
+    public ExamResponse(
+            Long id,
+            Long academicYearId,
+            Long academicTermId,
+            String academicTermName,
+            Long schoolClassId,
+            String schoolClassName,
+            String name,
+            ExamType examType,
+            AssessmentComponent assessmentComponent,
+            ExamApprovalStatus approvalStatus,
+            LocalDate startDate,
+            LocalDate endDate,
+            boolean published,
+            boolean scheduleLocked
+    ) {
+        this(id, academicYearId, academicTermId, academicTermName, schoolClassId, schoolClassName, name,
+                examType, assessmentComponent, approvalStatus, startDate, endDate, published, scheduleLocked, null);
+    }
 }

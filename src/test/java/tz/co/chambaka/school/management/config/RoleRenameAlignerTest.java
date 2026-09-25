@@ -50,8 +50,8 @@ class RoleRenameAlignerTest {
 
         RoleRenameAligner.align(jdbcTemplate);
 
+        verify(jdbcTemplate, times(2)).execute(contains("varchar(30)"));
         verify(jdbcTemplate).execute(contains("student_communications"));
-        verify(jdbcTemplate).execute(contains("varchar(30)"));
     }
 
     @Test
@@ -95,7 +95,7 @@ class RoleRenameAlignerTest {
         DataSource second = org.mockito.Mockito.mock(DataSource.class);
         assertThat(processor.postProcessAfterInitialization(first, "ds")).isSameAs(first);
         assertThat(processor.postProcessAfterInitialization(second, "ds2")).isSameAs(second);
-        verify(jdbcTemplate, times(3)).queryForObject(contains("information_schema.tables"), eq(Integer.class), anyString());
+        verify(jdbcTemplate, times(4)).queryForObject(contains("information_schema.tables"), eq(Integer.class), anyString());
         assertThat(RoleRenameEarlyConfig.roleRenameBeforeJpa()).isInstanceOf(RoleRenameBeforeJpa.class);
         assertThat(new RoleRenameBeforeJpa().jdbcTemplate(org.mockito.Mockito.mock(DataSource.class))).isNotNull();
     }

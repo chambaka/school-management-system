@@ -13,6 +13,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     Page<Invoice> findBySchoolId(Long schoolId, Pageable pageable);
 
+    List<Invoice> findBySchoolId(Long schoolId);
+
+    List<Invoice> findBySchoolIdAndStatusIn(Long schoolId, List<InvoiceStatus> statuses);
+
     List<Invoice> findBySchoolIdAndStudentId(Long schoolId, Long studentId);
 
     List<Invoice> findBySchoolIdAndStudentIdAndStatusIn(Long schoolId, Long studentId, List<InvoiceStatus> statuses);
@@ -20,4 +24,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     Optional<Invoice> findByIdAndSchoolId(Long id, Long schoolId);
 
     long countBySchoolId(Long schoolId);
+
+    boolean existsBySchoolIdAndStudentIdAndAcademicYearIdAndBillingQuarterAndStatusNot(
+            Long schoolId, Long studentId, Long academicYearId, Integer billingQuarter, InvoiceStatus status);
+
+    boolean existsByAcademicYearId(Long academicYearId);
 }

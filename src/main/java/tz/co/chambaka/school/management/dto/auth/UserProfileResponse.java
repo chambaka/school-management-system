@@ -8,10 +8,14 @@ public record UserProfileResponse(
         Long schoolId,
         Long campusId,
         String name,
+        String firstName,
+        String middleName,
+        String lastName,
         String email,
         Role role,
         String phone,
         String avatarUrl,
-        boolean enabled
+        boolean enabled,
+        boolean totpEnabled
 ) {
 }

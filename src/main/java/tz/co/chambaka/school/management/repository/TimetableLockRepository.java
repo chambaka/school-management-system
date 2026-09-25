@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface TimetableLockRepository extends JpaRepository<TimetableLock, Long> {
 
     Optional<TimetableLock> findBySchoolIdAndSectionIdAndAcademicYearId(Long schoolId, Long sectionId, Long academicYearId);
+
+    boolean existsByAcademicYearId(Long academicYearId);
 }

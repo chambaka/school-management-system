@@ -177,7 +177,9 @@ public class TeacherService {
                 teacher.getJoiningDate(),
                 user.isEnabled(),
                 statusOf(teacher),
-                user.getAvatarUrl()
+                user.getAvatarUrl(),
+                user.activeLockedUntil(),
+                user.isTotpEnabled()
         );
     }
 

@@ -19,4 +19,8 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
     Optional<Exam> findByIdAndSchoolId(Long id, Long schoolId);
 
     boolean existsBySchoolClassId(Long schoolClassId);
+
+    boolean existsByAcademicYearId(Long academicYearId);
+
+    boolean existsByAcademicTermId(Long academicTermId);
 }

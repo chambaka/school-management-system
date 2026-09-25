@@ -1,13 +1,19 @@
 package tz.co.chambaka.school.management.service;
 
+import tz.co.chambaka.school.management.dto.student.AdmitParentRequest;
 import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
 import tz.co.chambaka.school.management.dto.student.StudentResponse;
 import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
+import tz.co.chambaka.school.management.model.Parent;
 import tz.co.chambaka.school.management.model.Student;
+import tz.co.chambaka.school.management.model.StudentParent;
 import tz.co.chambaka.school.management.model.enums.Gender;
+import tz.co.chambaka.school.management.model.enums.RelationshipType;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.model.enums.StudentStatus;
+import tz.co.chambaka.school.management.repository.ParentRepository;
 import tz.co.chambaka.school.management.repository.StudentParentRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
@@ -38,6 +44,8 @@ class StudentServiceTest {
     private StudentRepository studentRepository;
     @Mock
     private StudentParentRepository studentParentRepository;
+    @Mock
+    private ParentRepository parentRepository;
     @Mock
     private UserAccountService userAccountService;
     @Mock
@@ -78,11 +86,13 @@ class StudentServiceTest {
             return saved;
         });
         CreateStudentRequest create = new CreateStudentRequest(
-                "Juma", "j@x.com", "pw", "07", "1", LocalDate.of(2010, 1, 1),
+                "Juma", "Juma", "Hassan", "Ally", "Tanzanian", "j@x.com", "pw", "07", "1", LocalDate.of(2010, 1, 1),
                 Gender.MALE, "O+", LocalDate.of(2026, 1, 1), "addr", "0711", null, 1L, 1L, 1L);
         StudentResponse created = service.create(1L, create);
         assertThat(created.id()).isEqualTo(2L);
         assertThat(created.admissionNo()).startsWith("ADM-");
+        assertThat(created.firstName()).isEqualTo("Juma");
+        assertThat(created.nationality()).isEqualTo("Tanzanian");
 
         service.update(1L, 1L, new UpdateStudentRequest(
                 "Juma 2", "08", "2", LocalDate.of(2011, 1, 1), Gender.FEMALE, "A+",
@@ -122,6 +132,41 @@ class StudentServiceTest {
         assertThatThrownBy(() -> service.requireByUser(8L)).isInstanceOf(ResourceNotFoundException.class);
         when(studentRepository.findByUserId(4L)).thenReturn(Optional.of(Fixtures.student()));
         assertThat(service.requireByUser(4L).getAdmissionNo()).isEqualTo("ADM-001");
+    }
+
+    @Test
+    void createLinksNewParent() {
+        when(studentRepository.countBySchoolIdAndAdmissionNoStartingWithIgnoreCase(any(), any())).thenReturn(0L);
+        when(studentRepository.existsBySchoolIdAndAdmissionNoIgnoreCase(any(), any())).thenReturn(false);
+        when(userAccountService.create(1L, "Juma", "j@x.com", "pw", Role.STUDENT, "07"))
+                .thenReturn(Fixtures.user(4L, Role.STUDENT));
+        when(userAccountService.create(1L, "Mama Juma", "m@x.com", null, Role.PARENT, "0753"))
+                .thenReturn(Fixtures.user(5L, Role.PARENT));
+        when(studentRepository.save(any(Student.class))).thenAnswer(inv -> {
+            Student saved = inv.getArgument(0);
+            saved.setId(2L);
+            return saved;
+        });
+        when(parentRepository.save(any(Parent.class))).thenAnswer(inv -> {
+            Parent saved = inv.getArgument(0);
+            saved.setId(9L);
+            return saved;
+        });
+        when(studentParentRepository.save(any(StudentParent.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(studentParentRepository.findByStudentId(2L)).thenReturn(List.of());
+        CreateStudentRequest create = new CreateStudentRequest(
+                "Juma", null, null, null, null, "j@x.com", "pw", "07", null, null, Gender.MALE, null,
+                null, null, null, null, null, null, null,
+                new AdmitParentRequest("Mama Juma", "m@x.com", null, "0753", "Trader", "Mikocheni", RelationshipType.MOTHER));
+        assertThat(service.create(1L, create).id()).isEqualTo(2L);
+        verify(parentRepository).save(any(Parent.class));
+        verify(studentParentRepository).save(any(StudentParent.class));
+        assertThatThrownBy(() -> service.create(1L, new CreateStudentRequest(
+                "A", null, null, null, null, "a@x.com", "pw", "07", null, null, null, null,
+                null, null, null, null, null, null, null,
+                new AdmitParentRequest("Only name", null, null, null, null, null, null))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Parent name and email");
     }
 
     @Test

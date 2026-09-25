@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.dto.teacher;
 
 import tz.co.chambaka.school.management.model.enums.TeacherStatus;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 public record TeacherResponse(
@@ -17,6 +18,8 @@ public record TeacherResponse(
         LocalDate joiningDate,
         boolean enabled,
         TeacherStatus status,
-        String photoUrl
+        String photoUrl,
+        Instant lockedUntil,
+        boolean totpEnabled
 ) {
 }

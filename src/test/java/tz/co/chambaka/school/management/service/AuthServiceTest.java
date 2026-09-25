@@ -1,6 +1,7 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.config.SmsProperties;
+import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.ChangePasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.LoginRequest;
 import tz.co.chambaka.school.management.dto.auth.RefreshTokenRequest;
@@ -25,6 +26,8 @@ import tz.co.chambaka.school.management.repository.UserRepository;
 import tz.co.chambaka.school.management.audit.AuditService;
 import tz.co.chambaka.school.management.model.enums.AuditAction;
 import tz.co.chambaka.school.management.security.JwtService;
+import tz.co.chambaka.school.management.sms.CredentialSmsService;
+import tz.co.chambaka.school.management.sms.SmsSendResult;
 import tz.co.chambaka.school.management.support.Fixtures;
 import tz.co.chambaka.school.management.util.TokenHash;
 import org.junit.jupiter.api.Test;
@@ -33,12 +36,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,6 +52,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -76,6 +84,12 @@ class AuthServiceTest {
     private AuditService auditService;
     @Mock
     private SmsProperties smsProperties;
+    @Mock
+    private TwoFactorService twoFactorService;
+    @Mock
+    private CredentialSmsService credentialSms;
+    @Mock
+    private tz.co.chambaka.school.management.ratelimit.LoginRateLimitService loginRateLimitService;
 
     @InjectMocks
     private AuthService authService;
@@ -96,12 +110,44 @@ class AuthServiceTest {
     }
 
     @Test
+    void loginReturnsTwoFactorChallengeWhenEnabled() {
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
+        stubActiveTenant();
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
+        when(twoFactorService.isRequired(any())).thenReturn(true);
+        when(twoFactorService.startChallenge(user)).thenReturn(
+                tz.co.chambaka.school.management.dto.auth.LoginResponse.challenge("pending", true, "SECRET", "otpauth://totp/x"));
+        var response = authService.login(new LoginRequest("headmaster@example.com", "pw"));
+        assertThat(response.twoFactorRequired()).isTrue();
+        assertThat(response.pendingToken()).isEqualTo("pending");
+        assertThat(response.accessToken()).isNull();
+        verify(jwtService, never()).generateAccessToken(any());
+        verify(auditService, never()).recordAuth(eq(AuditAction.LOGIN), any(), any());
+    }
+
+    @Test
+    void verifyTwoFactorIssuesTokens() {
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        when(twoFactorService.verify(any())).thenReturn(user);
+        stubTokens(user);
+        var response = authService.verifyTwoFactor(
+                new tz.co.chambaka.school.management.dto.auth.VerifyTwoFactorRequest("pending", "123456"));
+        assertThat(response.accessToken()).isEqualTo("access");
+        assertThat(response.twoFactorRequired()).isFalse();
+        verify(auditService).recordAuth(AuditAction.LOGIN, user, "User logged in");
+    }
+
+    @Test
     void loginFailedIsAudited() {
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(user));
         org.mockito.Mockito.doThrow(new BadCredentialsException("bad"))
                 .when(authenticationManager).authenticate(any());
         assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
-                .isInstanceOf(BadCredentialsException.class);
-        verify(auditService).recordAuthFailure("headmaster@example.com", "Invalid email or password");
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage(AuthService.INVALID_LOGIN);
+        verify(auditService).recordAuthFailure("headmaster@example.com", AuthService.INVALID_LOGIN);
     }
 
     @Test
@@ -126,7 +172,7 @@ class AuthServiceTest {
         org.mockito.Mockito.doThrow(new BadCredentialsException("bad"))
                 .when(authenticationManager).authenticate(any());
 
-        for (int attempt = 1; attempt < 5; attempt++) {
+        for (int attempt = 1; attempt < AuthService.MAX_FAILED_LOGINS; attempt++) {
             assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
                     .isInstanceOf(BadCredentialsException.class);
         }
@@ -193,10 +239,13 @@ class AuthServiceTest {
     }
 
     @Test
-    void loginMissingUserAfterAuth() {
+    void loginUnknownAccountUsesSameMessageAsWrongPassword() {
         when(userRepository.findByEmailIgnoreCase("x@y.z")).thenReturn(Optional.empty());
         assertThatThrownBy(() -> authService.login(new LoginRequest("x@y.z", "pw")))
-                .isInstanceOf(ResourceNotFoundException.class);
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage(AuthService.INVALID_LOGIN);
+        verify(auditService).recordAuthFailure("x@y.z", AuthService.INVALID_LOGIN);
+        verify(authenticationManager, never()).authenticate(any());
     }
 
     @Test
@@ -333,6 +382,53 @@ class AuthServiceTest {
     }
 
     @Test
+    void logoutRevokesRefreshToken() {
+        RefreshToken stored = new RefreshToken();
+        stored.setRevoked(false);
+        when(refreshTokenRepository.findByTokenHashAndRevokedFalse(TokenHash.sha256("rt")))
+                .thenReturn(Optional.of(stored));
+        authService.logout(new RefreshTokenRequest("rt"));
+        assertThat(stored.isRevoked()).isTrue();
+        authService.logout(null);
+        authService.logout(new RefreshTokenRequest("  "));
+    }
+
+    @Test
+    void platformAdminIsNeverLockedOut() {
+        User admin = Fixtures.user(1L, Role.SUPER_ADMIN);
+        admin.setLockedUntil(Instant.now().plusSeconds(3600));
+        admin.setFailedLoginAttempts(20);
+        when(userRepository.findByEmailIgnoreCase("super_admin@example.com")).thenReturn(Optional.of(admin));
+        org.mockito.Mockito.doThrow(new BadCredentialsException("bad"))
+                .when(authenticationManager).authenticate(any());
+
+        for (int attempt = 0; attempt < AuthService.MAX_FAILED_LOGINS + 3; attempt++) {
+            assertThatThrownBy(() -> authService.login(new LoginRequest("super_admin@example.com", "pw")))
+                    .isInstanceOf(BadCredentialsException.class)
+                    .hasMessage(AuthService.INVALID_LOGIN);
+        }
+        assertThat(admin.getFailedLoginAttempts()).isEqualTo(20);
+        assertThat(admin.getLockedUntil()).isAfter(Instant.now());
+        verify(loginRateLimitService, org.mockito.Mockito.never()).isBlocked(any());
+        verify(loginRateLimitService, org.mockito.Mockito.never()).recordFailure(any());
+
+        org.mockito.Mockito.reset(authenticationManager);
+        stubTokens(admin);
+        var response = authService.login(new LoginRequest("super_admin@example.com", "pw"));
+        assertThat(response.accessToken()).isEqualTo("access");
+        assertThat(admin.getFailedLoginAttempts()).isZero();
+        assertThat(admin.getLockedUntil()).isNull();
+    }
+
+    @Test
+    void loginBlockedByRateLimit() {
+        when(loginRateLimitService.isBlocked("headmaster@example.com")).thenReturn(true);
+        assertThatThrownBy(() -> authService.login(new LoginRequest("headmaster@example.com", "pw")))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("Too many login attempts");
+    }
+
+    @Test
     void refreshSuccess() {
         User user = Fixtures.user(2L, Role.HEADMASTER);
         RefreshToken stored = new RefreshToken();
@@ -437,6 +533,179 @@ class AuthServiceTest {
         when(userRepository.findById(9L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> authService.switchSchool(9L, new SwitchSchoolRequest(1L, null)))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void headmasterUnlocksLockedAccount() {
+        User student = Fixtures.user(4L, Role.STUDENT);
+        student.setFailedLoginAttempts(3);
+        student.setLockedUntil(Instant.now().plusSeconds(600));
+        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
+        when(userRepository.findByIdAndSchoolId(4L, 1L)).thenReturn(Optional.of(student));
+
+        var unlocked = authService.unlock(4L, null, Fixtures.principal(Role.HEADMASTER));
+
+        assertThat(student.getFailedLoginAttempts()).isZero();
+        assertThat(student.getLockedUntil()).isNull();
+        assertThat(unlocked.userId()).isEqualTo(4L);
+        assertThat(unlocked.lockedUntil()).isNull();
+        verify(auditService).record(any());
+    }
+
+    @Test
+    void academicMasterCannotUnlockAnotherSchool() {
+        assertThatThrownBy(() -> authService.unlock(4L, 99L, Fixtures.principal(Role.ACADEMIC_MASTER)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("your school");
+        verify(userRepository, never()).findByIdAndSchoolId(any(), any());
+    }
+
+    @Test
+    void teacherCannotUnlockAccounts() {
+        assertThatThrownBy(() -> authService.unlock(4L, 1L, Fixtures.principal(Role.TEACHER)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("headmaster or school admin");
+    }
+
+    @Test
+    void headmasterResetsTwoFactor() {
+        User student = Fixtures.user(4L, Role.STUDENT);
+        student.setTotpEnabled(true);
+        student.setTotpSecret("EXISTINGSECRET");
+        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
+        when(userRepository.findByIdAndSchoolId(4L, 1L)).thenReturn(Optional.of(student));
+        doAnswer(invocation -> {
+            User target = invocation.getArgument(0);
+            target.setTotpSecret(null);
+            target.setTotpEnabled(false);
+            return null;
+        }).when(twoFactorService).reset(student);
+
+        var reset = authService.resetTwoFactor(4L, null, Fixtures.principal(Role.HEADMASTER));
+
+        assertThat(student.isTotpEnabled()).isFalse();
+        assertThat(student.getTotpSecret()).isNull();
+        assertThat(reset.userId()).isEqualTo(4L);
+        assertThat(reset.totpEnabled()).isFalse();
+        verify(auditService).record(any());
+    }
+
+    @Test
+    void academicMasterCannotResetTwoFactorAtAnotherSchool() {
+        assertThatThrownBy(() -> authService.resetTwoFactor(4L, 99L, Fixtures.principal(Role.ACADEMIC_MASTER)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("your school");
+        verify(twoFactorService, never()).reset(any());
+    }
+
+    @Test
+    void schoolOfficerCannotResetSuperAdminTwoFactor() {
+        User platform = Fixtures.user(1L, Role.SUPER_ADMIN);
+        platform.setSchoolId(1L);
+        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
+        when(userRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(platform));
+        assertThatThrownBy(() -> authService.resetTwoFactor(1L, 1L, Fixtures.principal(Role.HEADMASTER)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("cannot be reset");
+        verify(twoFactorService, never()).reset(any());
+    }
+
+    @Test
+    void userResetsOwnTwoFactor() {
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        user.setTotpEnabled(true);
+        user.setTotpSecret("EXISTINGSECRET");
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        doAnswer(invocation -> {
+            User target = invocation.getArgument(0);
+            target.setTotpSecret(null);
+            target.setTotpEnabled(false);
+            return null;
+        }).when(twoFactorService).reset(user);
+
+        var reset = authService.resetOwnTwoFactor(2L);
+
+        assertThat(reset.totpEnabled()).isFalse();
+        verify(auditService).recordAuth(eq(AuditAction.TWO_FACTOR_RESET), eq(user), any());
+    }
+
+    @Test
+    void headmasterResetsPasswordAndSmsesTemporary() {
+        User student = Fixtures.user(4L, Role.STUDENT);
+        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
+        when(userRepository.findByIdAndSchoolId(4L, 1L)).thenReturn(Optional.of(student));
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed-new");
+        when(credentialSms.sendTemporaryPassword(eq(student), anyString())).thenReturn(SmsSendResult.ok("ref"));
+
+        var result = authService.resetPassword(4L, null, Fixtures.principal(Role.HEADMASTER), new AdminResetPasswordRequest(null));
+
+        assertThat(student.getPassword()).isEqualTo("hashed-new");
+        assertThat(student.getFailedLoginAttempts()).isZero();
+        assertThat(result.smsSent()).isTrue();
+        verify(refreshTokenRepository).deleteByUserId(4L);
+        verify(auditService).record(any());
+    }
+
+    @Test
+    void teacherCannotResetPassword() {
+        assertThatThrownBy(() -> authService.resetPassword(4L, 1L, Fixtures.principal(Role.TEACHER), null))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("headmaster or school admin");
+        verify(refreshTokenRepository, never()).deleteByUserId(any());
+    }
+
+    @Test
+    void headmasterListsSchoolUsers() {
+        User student = Fixtures.user(4L, Role.STUDENT);
+        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
+        when(userRepository.findBySchoolIdAndRoleNot(eq(1L), eq(Role.SUPER_ADMIN), any()))
+                .thenReturn(new PageImpl<>(List.of(student)));
+
+        var page = authService.listSchoolUsers(null, null, Fixtures.principal(Role.HEADMASTER), PageRequest.of(0, 20));
+
+        assertThat(page.content()).hasSize(1);
+        assertThat(page.content().get(0).role()).isEqualTo(Role.STUDENT);
+    }
+
+    @Test
+    void teacherCannotListSchoolUsers() {
+        assertThatThrownBy(() -> authService.listSchoolUsers(1L, null, Fixtures.principal(Role.TEACHER), PageRequest.of(0, 20)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("headmaster or school admin");
+    }
+
+    @Test
+    void superAdminListsAllPlatformUsers() {
+        User student = Fixtures.user(4L, Role.STUDENT);
+        User platform = Fixtures.user(1L, Role.SUPER_ADMIN);
+        when(userRepository.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(student, platform)));
+        when(schoolRepository.findAllById(any())).thenReturn(List.of(Fixtures.school()));
+        when(tenantRepository.findAllById(any())).thenReturn(List.of(Fixtures.tenant()));
+
+        var page = authService.listSchoolUsers(null, null, Fixtures.principal(Role.SUPER_ADMIN), PageRequest.of(0, 20));
+
+        assertThat(page.content()).hasSize(2);
+        assertThat(page.content().get(0).schoolName()).isEqualTo("Chambaka Secondary");
+        assertThat(page.content().get(0).tenantName()).isEqualTo("Chambaka Group");
+        assertThat(page.content().get(1).role()).isEqualTo(Role.SUPER_ADMIN);
+        assertThat(page.content().get(1).schoolId()).isNull();
+        verify(tenantService, never()).requireSchoolInTenant(any(), any());
+    }
+
+    @Test
+    void superAdminResetsPasswordWithoutSchoolId() {
+        User student = Fixtures.user(4L, Role.STUDENT);
+        when(userRepository.findById(4L)).thenReturn(Optional.of(student));
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed-new");
+        when(credentialSms.sendTemporaryPassword(eq(student), anyString())).thenReturn(SmsSendResult.ok("ref"));
+
+        var result = authService.resetPassword(4L, null, Fixtures.principal(Role.SUPER_ADMIN), new AdminResetPasswordRequest(null));
+
+        assertThat(result.smsSent()).isTrue();
+        assertThat(student.getPassword()).isEqualTo("hashed-new");
+        verify(userRepository).findById(4L);
+        verify(userRepository, never()).findByIdAndSchoolId(any(), any());
+        verify(refreshTokenRepository).deleteByUserId(4L);
     }
 
     private void stubActiveTenant() {

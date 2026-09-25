@@ -137,6 +137,12 @@ class ExamServiceTest {
         assertThatThrownBy(() -> service.verify(1L, 1L)).isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> service.approve(1L, 1L)).isInstanceOf(BusinessException.class);
         exam.setApprovalStatus(ExamApprovalStatus.VERIFIED);
+        assertThat(service.reject(1L, 1L, "Fix totals").approvalStatus()).isEqualTo(ExamApprovalStatus.REJECTED);
+        assertThat(exam.getRejectionNote()).isEqualTo("Fix totals");
+        assertThat(service.submit(1L, 1L).approvalStatus()).isEqualTo(ExamApprovalStatus.ENTERED);
+        exam.setApprovalStatus(ExamApprovalStatus.APPROVED);
+        assertThatThrownBy(() -> service.reject(1L, 1L, "no")).isInstanceOf(BusinessException.class);
+        exam.setApprovalStatus(ExamApprovalStatus.VERIFIED);
         assertThatThrownBy(() -> service.submit(1L, 1L)).isInstanceOf(BusinessException.class);
 
         assertThatThrownBy(() -> service.publish(1L, 1L, true)).isInstanceOf(BusinessException.class);

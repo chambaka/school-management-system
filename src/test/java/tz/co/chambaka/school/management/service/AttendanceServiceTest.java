@@ -44,6 +44,10 @@ class AttendanceServiceTest {
     private SectionService sectionService;
     @Mock
     private AlertService alertService;
+    @Mock
+    private tz.co.chambaka.school.management.repository.StudentRepository studentRepository;
+    @Mock
+    private tz.co.chambaka.school.management.repository.TimetableSlotRepository timetableSlotRepository;
     @InjectMocks
     private AttendanceService service;
 
@@ -102,6 +106,38 @@ class AttendanceServiceTest {
 
         when(studentAttendanceRepository.countByStudentIdAndAttendanceDateBetween(1L, date, date)).thenReturn(0L);
         assertThat(service.studentSummary(1L, 1L, date, date).attendancePercent()).isEqualTo(0.0);
+
+        when(studentRepository.findBySchoolIdOrderByAdmissionNoAsc(1L)).thenReturn(List.of(Fixtures.student()));
+        assertThat(service.schoolSummaries(1L, date, date)).hasSize(1);
+
+        when(studentAttendanceRepository.findBySchoolIdAndSectionIdAndAttendanceDateAndTimetableSlotId(1L, 1L, date, 9L))
+                .thenReturn(List.of(studentRow(date)));
+        assertThat(service.dailyStudents(1L, 1L, date, 9L)).hasSize(1);
+    }
+
+    @Test
+    void marksPerLessonSlot() {
+        LocalDate date = LocalDate.of(2026, 9, 24);
+        tz.co.chambaka.school.management.model.TimetableSlot slot = new tz.co.chambaka.school.management.model.TimetableSlot();
+        slot.setId(9L);
+        when(sectionService.require(1L, 1L)).thenReturn(Fixtures.section());
+        when(userRepository.findById(2L)).thenReturn(Optional.of(Fixtures.user(2L, tz.co.chambaka.school.management.model.enums.Role.TEACHER)));
+        when(timetableSlotRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.of(slot));
+        when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
+        when(studentAttendanceRepository.findByStudentIdAndAttendanceDateAndTimetableSlotId(1L, date, 9L))
+                .thenReturn(Optional.empty());
+        when(studentAttendanceRepository.save(any(StudentAttendance.class))).thenAnswer(inv -> {
+            StudentAttendance saved = inv.getArgument(0);
+            saved.setId(4L);
+            return saved;
+        });
+        var req = new MarkStudentAttendanceRequest(1L, date,
+                List.of(new MarkStudentAttendanceRequest.StudentAttendanceItem(1L, AttendanceStatus.PRESENT, null)), 9L);
+        assertThat(service.markStudents(1L, req, 2L).getFirst().timetableSlotId()).isEqualTo(9L);
+        when(timetableSlotRepository.findByIdAndSchoolId(8L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.markStudents(1L, new MarkStudentAttendanceRequest(1L, date,
+                List.of(new MarkStudentAttendanceRequest.StudentAttendanceItem(1L, AttendanceStatus.PRESENT, null)), 8L), 2L))
+                .isInstanceOf(tz.co.chambaka.school.management.exception.ResourceNotFoundException.class);
     }
 
     @Test

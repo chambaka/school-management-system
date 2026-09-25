@@ -13,7 +13,11 @@ import tz.co.chambaka.school.management.model.Teacher;
 import tz.co.chambaka.school.management.model.TeacherAttendance;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.AttendanceStatus;
+import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
+import tz.co.chambaka.school.management.model.TimetableSlot;
 import tz.co.chambaka.school.management.repository.StudentAttendanceRepository;
+import tz.co.chambaka.school.management.repository.StudentRepository;
+import tz.co.chambaka.school.management.repository.TimetableSlotRepository;
 import tz.co.chambaka.school.management.repository.TeacherAttendanceRepository;
 import tz.co.chambaka.school.management.repository.UserRepository;
 import org.slf4j.Logger;
@@ -36,6 +40,8 @@ public class AttendanceService {
     private final TeacherService teacherService;
     private final SectionService sectionService;
     private final AlertService alertService;
+    private final StudentRepository studentRepository;
+    private final TimetableSlotRepository timetableSlotRepository;
 
     public AttendanceService(
             StudentAttendanceRepository studentAttendanceRepository,
@@ -44,7 +50,9 @@ public class AttendanceService {
             StudentService studentService,
             TeacherService teacherService,
             SectionService sectionService,
-            AlertService alertService
+            AlertService alertService,
+            StudentRepository studentRepository,
+            TimetableSlotRepository timetableSlotRepository
     ) {
         this.studentAttendanceRepository = studentAttendanceRepository;
         this.teacherAttendanceRepository = teacherAttendanceRepository;
@@ -53,23 +61,32 @@ public class AttendanceService {
         this.teacherService = teacherService;
         this.sectionService = sectionService;
         this.alertService = alertService;
+        this.studentRepository = studentRepository;
+        this.timetableSlotRepository = timetableSlotRepository;
     }
 
     @Transactional
     public List<StudentAttendanceResponse> markStudents(Long schoolId, MarkStudentAttendanceRequest request, Long markedBy) {
         Section section = sectionService.require(schoolId, request.sectionId());
         User marker = userRepository.findById(markedBy).orElse(null);
+        TimetableSlot slot = request.timetableSlotId() == null ? null
+                : timetableSlotRepository.findByIdAndSchoolId(request.timetableSlotId(), schoolId)
+                .orElseThrow(() -> ResourceNotFoundException.of("TimetableSlot", request.timetableSlotId()));
         List<StudentAttendanceResponse> marked = request.entries().stream().map(entry -> {
             Student student = studentService.require(schoolId, entry.studentId());
             if (student.getSection() == null || !student.getSection().getId().equals(section.getId())) {
                 throw new BusinessException("Student " + student.getAdmissionNo() + " is not in this section");
             }
-            StudentAttendance attendance = studentAttendanceRepository
-                    .findByStudentIdAndAttendanceDate(student.getId(), request.date())
+            StudentAttendance attendance = request.timetableSlotId() == null
+                    ? studentAttendanceRepository.findByStudentIdAndAttendanceDate(student.getId(), request.date())
+                    .orElseGet(StudentAttendance::new)
+                    : studentAttendanceRepository
+                    .findByStudentIdAndAttendanceDateAndTimetableSlotId(student.getId(), request.date(), request.timetableSlotId())
                     .orElseGet(StudentAttendance::new);
             attendance.setSchoolId(schoolId);
             attendance.setStudent(student);
             attendance.setSection(section);
+            attendance.setTimetableSlot(slot);
             attendance.setAttendanceDate(request.date());
             attendance.setStatus(entry.status());
             attendance.setRemarks(entry.remarks());
@@ -115,8 +132,16 @@ public class AttendanceService {
 
     @Transactional(readOnly = true)
     public List<StudentAttendanceResponse> dailyStudents(Long schoolId, Long sectionId, LocalDate date) {
-        return studentAttendanceRepository.findBySchoolIdAndSectionIdAndAttendanceDate(schoolId, sectionId, date)
-                .stream().map(this::toStudent).toList();
+        return dailyStudents(schoolId, sectionId, date, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentAttendanceResponse> dailyStudents(Long schoolId, Long sectionId, LocalDate date, Long timetableSlotId) {
+        List<StudentAttendance> rows = timetableSlotId == null
+                ? studentAttendanceRepository.findBySchoolIdAndSectionIdAndAttendanceDate(schoolId, sectionId, date)
+                : studentAttendanceRepository.findBySchoolIdAndSectionIdAndAttendanceDateAndTimetableSlotId(
+                schoolId, sectionId, date, timetableSlotId);
+        return rows.stream().map(this::toStudent).toList();
     }
 
     @Transactional(readOnly = true)
@@ -129,6 +154,13 @@ public class AttendanceService {
     public AttendanceSummaryResponse studentSummary(Long schoolId, Long studentId, LocalDate start, LocalDate end) {
         Student student = studentService.require(schoolId, studentId);
         return buildSummary(student.getId(), student.getUser().getName(), start, end, true);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AttendanceSummaryResponse> schoolSummaries(Long schoolId, LocalDate start, LocalDate end) {
+        return studentRepository.findBySchoolIdOrderByAdmissionNoAsc(schoolId).stream()
+                .map(student -> buildSummary(student.getId(), student.getUser().getName(), start, end, true))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -162,7 +194,8 @@ public class AttendanceService {
                 attendance.getSection().getId(),
                 attendance.getAttendanceDate(),
                 attendance.getStatus(),
-                attendance.getRemarks()
+                attendance.getRemarks(),
+                attendance.getTimetableSlot() == null ? null : attendance.getTimetableSlot().getId()
         );
     }
 

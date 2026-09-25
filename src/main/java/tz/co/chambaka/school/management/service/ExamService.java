@@ -25,6 +25,7 @@ import tz.co.chambaka.school.management.repository.ExamSeatRepository;
 import tz.co.chambaka.school.management.repository.ExamSubjectRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
+import tz.co.chambaka.school.management.solver.ExamConflictEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -129,10 +130,28 @@ public class ExamService {
     @Transactional
     public ExamResponse submit(Long schoolId, Long id) {
         Exam exam = require(schoolId, id);
-        if (exam.getApprovalStatus() != ExamApprovalStatus.DRAFT && exam.getApprovalStatus() != ExamApprovalStatus.ENTERED) {
-            throw new BusinessException("Marks can only be submitted while the exam is in draft or entered");
+        if (exam.getApprovalStatus() != ExamApprovalStatus.DRAFT
+                && exam.getApprovalStatus() != ExamApprovalStatus.ENTERED
+                && exam.getApprovalStatus() != ExamApprovalStatus.REJECTED) {
+            throw new BusinessException("Marks can only be submitted while the exam is in draft, entered, or rejected");
         }
         exam.setApprovalStatus(ExamApprovalStatus.ENTERED);
+        exam.setRejectionNote(null);
+        return toExam(exam);
+    }
+
+    @Transactional
+    public ExamResponse reject(Long schoolId, Long id, String note) {
+        Exam exam = require(schoolId, id);
+        ExamApprovalStatus status = exam.getApprovalStatus();
+        if (status != ExamApprovalStatus.ENTERED && status != ExamApprovalStatus.VERIFIED) {
+            throw new BusinessException("Only entered or verified results can be rejected");
+        }
+        exam.setApprovalStatus(ExamApprovalStatus.REJECTED);
+        exam.setRejectionNote(note == null || note.isBlank() ? "Returned to the teacher" : note.trim());
+        exam.setVerifiedAt(null);
+        exam.setApprovedAt(null);
+        exam.setPublished(false);
         return toExam(exam);
     }
 
@@ -185,7 +204,9 @@ public class ExamService {
 
     public void assertMarksEditable(Exam exam) {
         ExamApprovalStatus status = exam.getApprovalStatus() == null ? ExamApprovalStatus.DRAFT : exam.getApprovalStatus();
-        if (status != ExamApprovalStatus.DRAFT && status != ExamApprovalStatus.ENTERED) {
+        if (status != ExamApprovalStatus.DRAFT
+                && status != ExamApprovalStatus.ENTERED
+                && status != ExamApprovalStatus.REJECTED) {
             throw new BusinessException("Marks are frozen after Academic Master verification");
         }
     }
@@ -242,19 +263,43 @@ public class ExamService {
         LocalDate date = exam.getStartDate();
         boolean morning = true;
         int teacherIndex = 0;
+        List<ExamSubject> placed = new ArrayList<>();
         for (ExamSubject paper : papers) {
-            paper.setExamDate(date);
-            paper.setStartTime(morning ? LocalTime.of(8, 0) : LocalTime.of(11, 0));
-            paper.setEndTime(morning ? LocalTime.of(10, 0) : LocalTime.of(12, 30));
-            paper.setVenue(rooms.isEmpty() ? "Hall A" : rooms.get(0).getName());
-            if (!teachers.isEmpty()) {
-                Teacher invigilator = teachers.get(teacherIndex % teachers.size());
-                paper.setInvigilator(invigilator);
-                teacherIndex++;
-            }
-            examSeatRepository.deleteByExamSubjectId(paper.getId());
             List<Student> students = studentRepository.findBySchoolIdAndSchoolClassId(schoolId, exam.getSchoolClass().getId())
                     .stream().filter(s -> s.getStatus() == null || s.getStatus() == StudentStatus.ACTIVE).toList();
+            int safety = 0;
+            while (safety++ < 20) {
+                paper.setExamDate(date);
+                paper.setStartTime(morning ? LocalTime.of(8, 0) : LocalTime.of(11, 0));
+                paper.setEndTime(morning ? LocalTime.of(10, 0) : LocalTime.of(12, 30));
+                Classroom room = rooms.isEmpty() ? null : rooms.get(Math.min(teacherIndex, rooms.size() - 1));
+                if (room != null && ExamConflictEngine.roomTooSmall(room, students.size())) {
+                    room = rooms.stream()
+                            .filter(candidate -> !ExamConflictEngine.roomTooSmall(candidate, students.size()))
+                            .findFirst()
+                            .orElse(room);
+                }
+                paper.setVenue(room == null ? "Hall A" : room.getName());
+                if (!teachers.isEmpty()) {
+                    paper.setInvigilator(teachers.get(teacherIndex % teachers.size()));
+                }
+                if (!ExamConflictEngine.invigilatorClash(paper, placed) && !ExamConflictEngine.venueClash(paper, placed)) {
+                    break;
+                }
+                teacherIndex++;
+                if (!morning) {
+                    date = date.plusDays(1);
+                    if (date.getDayOfWeek().getValue() > 5) {
+                        date = date.plusDays(8L - date.getDayOfWeek().getValue());
+                    }
+                }
+                morning = !morning;
+                if (date.isAfter(exam.getEndDate())) {
+                    date = exam.getEndDate();
+                }
+            }
+            placed.add(paper);
+            examSeatRepository.deleteByExamSubjectId(paper.getId());
             int seat = 1;
             for (Student student : students) {
                 ExamSeat examSeat = new ExamSeat();
@@ -327,7 +372,8 @@ public class ExamService {
                 exam.getStartDate(),
                 exam.getEndDate(),
                 exam.isPublished(),
-                exam.isScheduleLocked()
+                exam.isScheduleLocked(),
+                exam.getRejectionNote()
         );
     }
 

@@ -11,6 +11,13 @@ public record StudentAttendanceResponse(
         Long sectionId,
         LocalDate date,
         AttendanceStatus status,
-        String remarks
+        String remarks,
+        Long timetableSlotId
 ) {
+    public StudentAttendanceResponse(
+            Long id, Long studentId, String studentName, Long sectionId, LocalDate date,
+            AttendanceStatus status, String remarks
+    ) {
+        this(id, studentId, studentName, sectionId, date, status, remarks, null);
+    }
 }

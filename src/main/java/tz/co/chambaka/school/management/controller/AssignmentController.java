@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.dto.academic.AssignmentRequest;
 import tz.co.chambaka.school.management.dto.academic.AssignmentResponse;
+import tz.co.chambaka.school.management.dto.academic.AssignmentSubmissionResponse;
 import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
@@ -60,5 +61,22 @@ public class AssignmentController {
     @PreAuthorize(Access.ASSIGNMENT_WRITE)
     public void marks(@PathVariable Long id, @RequestParam Long studentId, @RequestParam BigDecimal marks) {
         assignmentService.submitMarks(tenantResolver.requireSchoolId(), id, studentId, marks);
+    }
+
+    @PostMapping(value = "/{id}/submit", consumes = "multipart/form-data")
+    @PreAuthorize(Access.ASSIGNMENT_SUBMIT)
+    public AssignmentSubmissionResponse submit(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam(required = false) String notes,
+            @RequestParam(value = "file", required = false) MultipartFile file
+    ) {
+        return assignmentService.submitWork(tenantResolver.requireSchoolId(), principal.getId(), id, notes, file);
+    }
+
+    @GetMapping("/{id}/submissions")
+    @PreAuthorize(Access.ASSIGNMENT_WRITE)
+    public List<AssignmentSubmissionResponse> submissions(@PathVariable Long id) {
+        return assignmentService.submissions(tenantResolver.requireSchoolId(), id);
     }
 }

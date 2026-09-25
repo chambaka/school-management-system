@@ -1,13 +1,21 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.config.SmsProperties;
+import tz.co.chambaka.school.management.dto.admin.SchoolUserResponse;
+import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordRequest;
+import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordResponse;
 import tz.co.chambaka.school.management.dto.auth.AuthResponse;
 import tz.co.chambaka.school.management.dto.auth.ChangePasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.LoginRequest;
+import tz.co.chambaka.school.management.dto.auth.LoginResponse;
 import tz.co.chambaka.school.management.dto.auth.RefreshTokenRequest;
 import tz.co.chambaka.school.management.dto.auth.RegisterSchoolRequest;
+import tz.co.chambaka.school.management.dto.auth.ResetTwoFactorResponse;
 import tz.co.chambaka.school.management.dto.auth.SwitchSchoolRequest;
+import tz.co.chambaka.school.management.dto.auth.UnlockAccountResponse;
 import tz.co.chambaka.school.management.dto.auth.UserProfileResponse;
+import tz.co.chambaka.school.management.dto.auth.VerifyTwoFactorRequest;
+import tz.co.chambaka.school.management.dto.common.PageResponse;
 import tz.co.chambaka.school.management.exception.ApiException;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
@@ -25,28 +33,44 @@ import tz.co.chambaka.school.management.repository.RefreshTokenRepository;
 import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.TenantRepository;
 import tz.co.chambaka.school.management.repository.UserRepository;
+import tz.co.chambaka.school.management.audit.AuditEventDraft;
 import tz.co.chambaka.school.management.audit.AuditService;
 import tz.co.chambaka.school.management.model.enums.AuditAction;
+import tz.co.chambaka.school.management.model.enums.AuditScope;
 import tz.co.chambaka.school.management.security.JwtService;
 import tz.co.chambaka.school.management.security.PasswordPolicy;
+import tz.co.chambaka.school.management.security.UserPrincipal;
+import tz.co.chambaka.school.management.ratelimit.LoginRateLimitService;
+import tz.co.chambaka.school.management.sms.CredentialSmsService;
 import tz.co.chambaka.school.management.sms.PhoneNumbers;
+import tz.co.chambaka.school.management.sms.SmsSendResult;
 import tz.co.chambaka.school.management.util.TokenHash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+    public static final String INVALID_LOGIN = "Login or password is incorrect";
+    public static final int MAX_FAILED_LOGINS = 5;
+    public static final long LOCKOUT_SECONDS = 15L * 60L;
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -60,6 +84,9 @@ public class AuthService {
     private final UserMapper userMapper;
     private final AuditService auditService;
     private final SmsProperties smsProperties;
+    private final TwoFactorService twoFactorService;
+    private final CredentialSmsService credentialSms;
+    private final LoginRateLimitService loginRateLimitService;
 
     public AuthService(
             AuthenticationManager authenticationManager,
@@ -73,7 +100,10 @@ public class AuthService {
             JwtService jwtService,
             UserMapper userMapper,
             AuditService auditService,
-            SmsProperties smsProperties
+            SmsProperties smsProperties,
+            TwoFactorService twoFactorService,
+            CredentialSmsService credentialSms,
+            LoginRateLimitService loginRateLimitService
     ) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
@@ -87,40 +117,56 @@ public class AuthService {
         this.userMapper = userMapper;
         this.auditService = auditService;
         this.smsProperties = smsProperties;
+        this.twoFactorService = twoFactorService;
+        this.credentialSms = credentialSms;
+        this.loginRateLimitService = loginRateLimitService;
     }
 
     @Transactional
-    public AuthResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request) {
         String key = request.loginKey();
         if (key.isBlank()) {
             throw new BusinessException("Enter your email, phone, or username");
         }
         User lookup = findByIdentifier(key);
-        if (lookup != null && lookup.getLockedUntil() != null && lookup.getLockedUntil().isAfter(Instant.now())) {
+        boolean platformAdmin = isPlatformAdmin(lookup);
+        if (!platformAdmin && loginRateLimitService != null && loginRateLimitService.isBlocked(key)) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "Too many login attempts. Try again later.");
+        }
+        if (lookup == null) {
+            log.warn("Login failed for unknown identifier={}", key);
+            auditService.recordAuthFailure(key, INVALID_LOGIN);
+            throw new BadCredentialsException(INVALID_LOGIN);
+        }
+        if (!platformAdmin && lookup.getLockedUntil() != null && lookup.getLockedUntil().isAfter(Instant.now())) {
             throw new ApiException(HttpStatus.LOCKED, "Account is locked. Try again later.");
         }
-        String authName = lookup != null ? lookup.getEmail() : key;
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(authName, request.password()));
-        } catch (BadCredentialsException ex) {
+                    new UsernamePasswordAuthenticationToken(lookup.getEmail(), request.password()));
+        } catch (BadCredentialsException | UsernameNotFoundException ex) {
             log.warn("Login failed for identifier={}", key);
-            auditService.recordAuthFailure(key, "Invalid email or password");
-            if (lookup != null) {
+            auditService.recordAuthFailure(key, INVALID_LOGIN);
+            if (!platformAdmin) {
+                if (loginRateLimitService != null) {
+                    loginRateLimitService.recordFailure(key);
+                }
                 lookup.setFailedLoginAttempts(lookup.getFailedLoginAttempts() + 1);
-                if (lookup.getFailedLoginAttempts() >= 5) {
-                    lookup.setLockedUntil(Instant.now().plusSeconds(15 * 60));
+                if (lookup.getFailedLoginAttempts() >= MAX_FAILED_LOGINS) {
+                    lookup.setLockedUntil(Instant.now().plusSeconds(LOCKOUT_SECONDS));
                     lookup.setFailedLoginAttempts(0);
                     log.warn("Locked account userId={} for failed attempts", lookup.getId());
                     throw new ApiException(HttpStatus.LOCKED, "Account is locked after too many failed attempts");
                 }
             }
-            throw ex;
+            throw new BadCredentialsException(INVALID_LOGIN, ex);
         }
-        User user = lookup != null ? lookup : userRepository.findByEmailIgnoreCase(authName)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = lookup;
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
+        if (loginRateLimitService != null) {
+            loginRateLimitService.clear(key);
+        }
         if (!user.isEnabled()) {
             log.warn("Login blocked disabled account userId={}", user.getId());
             throw new ApiException(HttpStatus.FORBIDDEN, "Account is disabled");
@@ -137,8 +183,9 @@ public class AuthService {
                                 : "Organization account is suspended");
             }
         }
+        School school = null;
         if (user.getSchoolId() != null) {
-            School school = schoolRepository.findById(user.getSchoolId())
+            school = schoolRepository.findById(user.getSchoolId())
                     .orElseThrow(() -> new ResourceNotFoundException("School not found"));
             if (school.getStatus() == SchoolStatus.SUSPENDED || school.getStatus() == SchoolStatus.ARCHIVED) {
                 log.warn("Login blocked school status={} schoolId={} userId={}",
@@ -149,11 +196,19 @@ public class AuthService {
                                 : "School account is suspended");
             }
         }
-        user.setLastLoginAt(Instant.now());
-        log.info("Login succeeded userId={} role={} tenantId={} schoolId={}",
-                user.getId(), user.getRole(), user.getTenantId(), user.getSchoolId());
-        auditService.recordAuth(AuditAction.LOGIN, user, "User logged in");
-        return issueTokens(user);
+        if (twoFactorService.isRequired(school)) {
+            return twoFactorService.startChallenge(user);
+        }
+        return completeLogin(user);
+    }
+
+    @Transactional
+    public LoginResponse verifyTwoFactor(VerifyTwoFactorRequest request) {
+        User user = twoFactorService.verify(request);
+        if (!user.isEnabled()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Account is disabled");
+        }
+        return completeLogin(user);
     }
 
     @Transactional
@@ -191,7 +246,7 @@ public class AuthService {
             throw new ApiException(HttpStatus.FORBIDDEN, "Only the headmaster or platform admin can switch school");
         }
         School school;
-        if (user.getRole() == Role.HEADMASTER) {
+        if (user.getRole() == Role.HEADMASTER || user.getRole() == Role.SCHOOL_ADMIN) {
             school = tenantService.requireSchoolInTenant(user.getTenantId(), request.schoolId());
         } else {
             school = schoolRepository.findById(request.schoolId())
@@ -212,6 +267,15 @@ public class AuthService {
         refreshTokenRepository.deleteByUserId(userId);
         log.info("Switched active school userId={} schoolId={} campusId={}", userId, school.getId(), campus.getId());
         return issueTokens(user);
+    }
+
+    @Transactional
+    public void logout(RefreshTokenRequest request) {
+        if (request == null || request.refreshToken() == null || request.refreshToken().isBlank()) {
+            return;
+        }
+        String hash = TokenHash.sha256(request.refreshToken());
+        refreshTokenRepository.findByTokenHashAndRevokedFalse(hash).ifPresent(token -> token.setRevoked(true));
     }
 
     @Transactional
@@ -254,6 +318,264 @@ public class AuthService {
         auditService.recordAuth(AuditAction.PASSWORD_CHANGE, user, "Password changed");
     }
 
+    @Transactional
+    public UnlockAccountResponse unlock(Long userId, Long schoolId, UserPrincipal actor) {
+        if (actor == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Sign in required");
+        }
+        User user = requireUnlockTarget(userId, schoolId, actor);
+        if (user.getRole() == Role.SUPER_ADMIN && actor.getRole() != Role.SUPER_ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "This account cannot be unlocked here");
+        }
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        log.info("Unlocked login userId={} email={} by userId={} role={}",
+                user.getId(), user.getEmail(), actor.getId(), actor.getRole());
+        auditService.record(new AuditEventDraft()
+                .scope(actor.getRole() == Role.SUPER_ADMIN ? AuditScope.PLATFORM : AuditScope.TENANT)
+                .action(AuditAction.ACCOUNT_UNLOCKED)
+                .schoolId(user.getSchoolId())
+                .resourceType("User")
+                .resourceId(String.valueOf(user.getId()))
+                .summary("Unlocked login for " + user.getEmail())
+                .details("targetUserId=" + user.getId()
+                        + " targetRole=" + user.getRole()
+                        + " actorUserId=" + actor.getId()
+                        + " actorRole=" + actor.getRole())
+                .httpMethod("POST")
+                .httpPath("/api/v1/users/" + userId + "/unlock")
+                .statusCode(200));
+        return new UnlockAccountResponse(user.getId(), user.getName(), user.getEmail(), null);
+    }
+
+    @Transactional
+    public ResetTwoFactorResponse resetTwoFactor(Long userId, Long schoolId, UserPrincipal actor) {
+        if (actor == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Sign in required");
+        }
+        User user = requireUnlockTarget(userId, schoolId, actor);
+        if (user.getRole() == Role.SUPER_ADMIN && actor.getRole() != Role.SUPER_ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "This account cannot be reset here");
+        }
+        twoFactorService.reset(user);
+        log.info("Reset 2FA userId={} email={} by userId={} role={}",
+                user.getId(), user.getEmail(), actor.getId(), actor.getRole());
+        auditService.record(new AuditEventDraft()
+                .scope(actor.getRole() == Role.SUPER_ADMIN ? AuditScope.PLATFORM : AuditScope.TENANT)
+                .action(AuditAction.TWO_FACTOR_RESET)
+                .schoolId(user.getSchoolId())
+                .resourceType("User")
+                .resourceId(String.valueOf(user.getId()))
+                .summary("Reset ShuleHub 2FA for " + user.getEmail())
+                .details("targetUserId=" + user.getId()
+                        + " targetRole=" + user.getRole()
+                        + " actorUserId=" + actor.getId()
+                        + " actorRole=" + actor.getRole())
+                .httpMethod("POST")
+                .httpPath("/api/v1/users/" + userId + "/reset-2fa")
+                .statusCode(200));
+        return new ResetTwoFactorResponse(user.getId(), user.getName(), user.getEmail(), user.isTotpEnabled());
+    }
+
+    @Transactional
+    public ResetTwoFactorResponse resetOwnTwoFactor(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
+        twoFactorService.reset(user);
+        log.info("Reset own 2FA userId={}", userId);
+        auditService.recordAuth(AuditAction.TWO_FACTOR_RESET, user, "Reset own ShuleHub 2FA");
+        return new ResetTwoFactorResponse(user.getId(), user.getName(), user.getEmail(), user.isTotpEnabled());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<SchoolUserResponse> listSchoolUsers(
+            Long schoolId,
+            Role role,
+            UserPrincipal actor,
+            Pageable pageable
+    ) {
+        if (actor == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Sign in required");
+        }
+        Page<User> page;
+        if (actor.getRole() == Role.SUPER_ADMIN && schoolId == null) {
+            page = role == null ? userRepository.findAll(pageable) : userRepository.findByRole(role, pageable);
+        } else {
+            Long scopedSchoolId = requireManagedSchoolId(schoolId, actor);
+            page = role == null
+                    ? userRepository.findBySchoolIdAndRoleNot(scopedSchoolId, Role.SUPER_ADMIN, pageable)
+                    : userRepository.findBySchoolIdAndRole(scopedSchoolId, role, pageable);
+        }
+        Map<Long, String> schoolNames = schoolNames(page);
+        Map<Long, String> tenantNames = tenantNames(page);
+        return PageResponse.of(page.map(user -> toSchoolUser(user, schoolNames, tenantNames)));
+    }
+
+    @Transactional
+    public AdminResetPasswordResponse resetPassword(Long userId, Long schoolId, UserPrincipal actor,
+                                                    AdminResetPasswordRequest request) {
+        if (actor == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Sign in required");
+        }
+        User user = requireUnlockTarget(userId, schoolId, actor);
+        if (user.getRole() == Role.SUPER_ADMIN && actor.getRole() != Role.SUPER_ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "This account cannot be reset here");
+        }
+        String provided = request == null ? null : request.password();
+        boolean generate = provided == null || provided.isBlank();
+        if (generate && (user.getPhone() == null || user.getPhone().isBlank())) {
+            throw new BusinessException("Add a phone number to send a temporary password, or set a password.");
+        }
+        if (!generate) {
+            PasswordPolicy.requireValid(provided, user.getEmail(), user.getName());
+        }
+        String password = generate ? PasswordPolicy.generateTemporary() : provided;
+        user.setPassword(passwordEncoder.encode(password));
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        refreshTokenRepository.deleteByUserId(user.getId());
+        SmsSendResult sms = credentialSms.sendTemporaryPassword(user, password);
+        boolean smsSent = sms != null && sms.sent();
+        log.info("Admin reset password userId={} email={} by userId={} role={} smsSent={}",
+                user.getId(), user.getEmail(), actor.getId(), actor.getRole(), smsSent);
+        auditService.record(new AuditEventDraft()
+                .scope(actor.getRole() == Role.SUPER_ADMIN ? AuditScope.PLATFORM : AuditScope.TENANT)
+                .action(AuditAction.PASSWORD_RESET)
+                .schoolId(user.getSchoolId())
+                .resourceType("User")
+                .resourceId(String.valueOf(user.getId()))
+                .summary("Reset password for " + user.getEmail())
+                .details("targetUserId=" + user.getId()
+                        + " targetRole=" + user.getRole()
+                        + " actorUserId=" + actor.getId()
+                        + " actorRole=" + actor.getRole()
+                        + " smsSent=" + smsSent)
+                .httpMethod("POST")
+                .httpPath("/api/v1/users/" + userId + "/reset-password")
+                .statusCode(200));
+        return new AdminResetPasswordResponse(user.getId(), user.getName(), user.getEmail(), smsSent);
+    }
+
+    private SchoolUserResponse toSchoolUser(User user, Map<Long, String> schoolNames, Map<Long, String> tenantNames) {
+        Long schoolId = user.getSchoolId();
+        Long tenantId = user.getTenantId();
+        return new SchoolUserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getRole(),
+                user.isEnabled(),
+                user.activeLockedUntil(),
+                user.isTotpEnabled(),
+                user.getLastLoginAt(),
+                schoolId,
+                schoolId == null ? null : schoolNames.get(schoolId),
+                tenantId,
+                tenantId == null ? null : tenantNames.get(tenantId));
+    }
+
+    private Map<Long, String> schoolNames(Page<User> page) {
+        Set<Long> ids = new HashSet<>();
+        for (User user : page.getContent()) {
+            if (user.getSchoolId() != null) {
+                ids.add(user.getSchoolId());
+            }
+        }
+        Map<Long, String> names = new HashMap<>();
+        if (ids.isEmpty()) {
+            return names;
+        }
+        for (School school : schoolRepository.findAllById(ids)) {
+            names.put(school.getId(), school.getName());
+        }
+        return names;
+    }
+
+    private Map<Long, String> tenantNames(Page<User> page) {
+        Set<Long> ids = new HashSet<>();
+        for (User user : page.getContent()) {
+            if (user.getTenantId() != null) {
+                ids.add(user.getTenantId());
+            }
+        }
+        Map<Long, String> names = new HashMap<>();
+        if (ids.isEmpty()) {
+            return names;
+        }
+        for (Tenant tenant : tenantRepository.findAllById(ids)) {
+            names.put(tenant.getId(), tenant.getName());
+        }
+        return names;
+    }
+
+    private Long requireManagedSchoolId(Long schoolId, UserPrincipal actor) {
+        if (actor == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Sign in required");
+        }
+        Long scopedSchoolId = schoolId != null ? schoolId : actor.getSchoolId();
+        return switch (actor.getRole()) {
+            case SUPER_ADMIN -> {
+                if (scopedSchoolId == null) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "schoolId is required");
+                }
+                yield scopedSchoolId;
+            }
+            case HEADMASTER -> {
+                if (scopedSchoolId == null) {
+                    throw new ApiException(HttpStatus.FORBIDDEN, "Select a school first");
+                }
+                tenantService.requireSchoolInTenant(actor.getTenantId(), scopedSchoolId);
+                yield scopedSchoolId;
+            }
+            case ACADEMIC_MASTER -> {
+                if (actor.getSchoolId() == null || (scopedSchoolId != null && !scopedSchoolId.equals(actor.getSchoolId()))) {
+                    throw new ApiException(HttpStatus.FORBIDDEN, "You can only manage accounts at your school");
+                }
+                yield actor.getSchoolId();
+            }
+            default -> throw new ApiException(HttpStatus.FORBIDDEN, "Only a headmaster or school admin can manage school users");
+        };
+    }
+
+    private User requireUnlockTarget(Long userId, Long schoolId, UserPrincipal actor) {
+        Long scopedSchoolId = schoolId != null ? schoolId : actor.getSchoolId();
+        return switch (actor.getRole()) {
+            case SUPER_ADMIN -> {
+                if (scopedSchoolId != null) {
+                    yield userRepository.findByIdAndSchoolId(userId, scopedSchoolId)
+                            .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
+                }
+                yield userRepository.findById(userId)
+                        .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
+            }
+            case HEADMASTER -> {
+                if (scopedSchoolId == null) {
+                    throw new ApiException(HttpStatus.FORBIDDEN, "Select a school first");
+                }
+                tenantService.requireSchoolInTenant(actor.getTenantId(), scopedSchoolId);
+                yield userRepository.findByIdAndSchoolId(userId, scopedSchoolId)
+                        .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
+            }
+            case ACADEMIC_MASTER -> {
+                if (actor.getSchoolId() == null || (scopedSchoolId != null && !scopedSchoolId.equals(actor.getSchoolId()))) {
+                    throw new ApiException(HttpStatus.FORBIDDEN, "You can only unlock accounts at your school");
+                }
+                yield userRepository.findByIdAndSchoolId(userId, actor.getSchoolId())
+                        .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
+            }
+            default -> throw new ApiException(HttpStatus.FORBIDDEN, "Only a headmaster or school admin can unlock accounts");
+        };
+    }
+
+    private LoginResponse completeLogin(User user) {
+        user.setLastLoginAt(Instant.now());
+        log.info("Login succeeded userId={} role={} tenantId={} schoolId={}",
+                user.getId(), user.getRole(), user.getTenantId(), user.getSchoolId());
+        auditService.recordAuth(AuditAction.LOGIN, user, "User logged in");
+        return LoginResponse.authenticated(issueTokens(user));
+    }
+
     private AuthResponse issueTokens(User user) {
         String access = jwtService.generateAccessToken(user);
         String refreshValue = jwtService.generateRefreshTokenValue();
@@ -265,6 +587,10 @@ public class AuthService {
         refreshTokenRepository.save(refreshToken);
         return new AuthResponse(access, refreshValue, jwtService.accessTokenTtlSeconds(), "Bearer",
                 userMapper.toProfile(user));
+    }
+
+    private static boolean isPlatformAdmin(User user) {
+        return user != null && user.getRole() == Role.SUPER_ADMIN;
     }
 
     private User findByIdentifier(String raw) {

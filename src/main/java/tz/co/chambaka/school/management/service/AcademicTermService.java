@@ -8,6 +8,8 @@ import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.AcademicTerm;
 import tz.co.chambaka.school.management.model.AcademicYear;
 import tz.co.chambaka.school.management.repository.AcademicTermRepository;
+import tz.co.chambaka.school.management.repository.ExamRepository;
+import tz.co.chambaka.school.management.repository.ResultWeightConfigRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,10 +20,19 @@ public class AcademicTermService {
 
     private final AcademicTermRepository academicTermRepository;
     private final AcademicYearService academicYearService;
+    private final ExamRepository examRepository;
+    private final ResultWeightConfigRepository resultWeightConfigRepository;
 
-    public AcademicTermService(AcademicTermRepository academicTermRepository, AcademicYearService academicYearService) {
+    public AcademicTermService(
+            AcademicTermRepository academicTermRepository,
+            AcademicYearService academicYearService,
+            ExamRepository examRepository,
+            ResultWeightConfigRepository resultWeightConfigRepository
+    ) {
         this.academicTermRepository = academicTermRepository;
         this.academicYearService = academicYearService;
+        this.examRepository = examRepository;
+        this.resultWeightConfigRepository = resultWeightConfigRepository;
     }
 
     @Transactional(readOnly = true)
@@ -59,6 +70,18 @@ public class AcademicTermService {
     public AcademicTerm require(Long schoolId, Long id) {
         return academicTermRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> ResourceNotFoundException.of("AcademicTerm", id));
+    }
+
+    @Transactional
+    public void delete(Long schoolId, Long id) {
+        AcademicTerm term = require(schoolId, id);
+        if (examRepository.existsByAcademicTermId(id)) {
+            throw new BusinessException("Remove exams for this term first");
+        }
+        if (resultWeightConfigRepository.existsByAcademicTermId(id)) {
+            throw new BusinessException("Remove result weights for this term first");
+        }
+        academicTermRepository.delete(term);
     }
 
     private void markCurrent(Long schoolId, Long yearId, Long termId) {

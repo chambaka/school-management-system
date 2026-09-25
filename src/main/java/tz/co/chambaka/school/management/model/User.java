@@ -35,6 +35,15 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 150)
     private String name;
 
+    @Column(length = 80)
+    private String firstName;
+
+    @Column(length = 80)
+    private String middleName;
+
+    @Column(length = 80)
+    private String lastName;
+
     @Column(nullable = false, unique = true, length = 180)
     private String email;
 
@@ -62,7 +71,29 @@ public class User extends BaseEntity {
     @Builder.Default
     private int failedLoginAttempts = 0;
 
+    @Column(length = 64)
+    private String totpSecret;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean totpEnabled = false;
+
     private Instant lockedUntil;
 
     private Instant lastLoginAt;
+
+    public boolean isLoginLocked() {
+        return lockedUntil != null && lockedUntil.isAfter(Instant.now());
+    }
+
+    public Instant activeLockedUntil() {
+        return isLoginLocked() ? lockedUntil : null;
+    }
+
+    public String displayName() {
+        String joined = java.util.stream.Stream.of(firstName, middleName, lastName)
+                .filter(part -> part != null && !part.isBlank())
+                .collect(java.util.stream.Collectors.joining(" "));
+        return joined.isBlank() ? name : joined;
+    }
 }

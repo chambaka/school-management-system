@@ -114,6 +114,10 @@ public class ClassService {
                 .orElseThrow(() -> ResourceNotFoundException.of("SchoolClass", id));
     }
 
+    public List<SchoolClass> listEntities(Long schoolId, Long academicYearId) {
+        return schoolClassRepository.findBySchoolIdAndAcademicYearIdOrderByDisplayOrderAsc(schoolId, academicYearId);
+    }
+
     private SchoolClassResponse toResponse(SchoolClass schoolClass) {
         return new SchoolClassResponse(
                 schoolClass.getId(),

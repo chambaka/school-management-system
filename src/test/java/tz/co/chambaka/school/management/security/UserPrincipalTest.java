@@ -25,5 +25,13 @@ class UserPrincipalTest {
         assertThat(principal.isAccountNonLocked()).isTrue();
         assertThat(principal.isCredentialsNonExpired()).isTrue();
         assertThat(principal.getAuthorities()).extracting("authority").containsExactly("ROLE_TEACHER");
+        user.setFirstName("Asha");
+        user.setMiddleName("J");
+        user.setLastName("Mwamba");
+        assertThat(user.displayName()).isEqualTo("Asha J Mwamba");
+        user.setFirstName(" ");
+        user.setMiddleName(null);
+        user.setLastName(null);
+        assertThat(user.displayName()).isEqualTo(user.getName());
     }
 }

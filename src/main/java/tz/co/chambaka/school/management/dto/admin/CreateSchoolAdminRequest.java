@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 public record CreateSchoolAdminRequest(
         @NotBlank String name,
         @NotBlank @Email String email,
-        @NotBlank @Size(min = 10, max = 72) String password,
+        @Size(min = 10, max = 72) String password,
         String phone,
         Role role
 ) {

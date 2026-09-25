@@ -23,6 +23,7 @@ import tz.co.chambaka.school.management.dto.auth.RegisterSchoolRequest;
 import tz.co.chambaka.school.management.dto.auth.ResetPasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.VerifyResetCodeRequest;
 import tz.co.chambaka.school.management.dto.auth.VerifyResetCodeResponse;
+import tz.co.chambaka.school.management.dto.auth.VerifyTwoFactorRequest;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureRequest;
 import tz.co.chambaka.school.management.dto.finance.GenerateInvoicesRequest;
 import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
@@ -164,6 +165,8 @@ class ControllersTest {
     @Mock
     private tz.co.chambaka.school.management.audit.AuditActionSettingsService auditActionSettingsService;
     @Mock
+    private tz.co.chambaka.school.management.service.TwoFactorService twoFactorService;
+    @Mock
     private tz.co.chambaka.school.management.service.AcademicTermService academicTermService;
     @Mock
     private tz.co.chambaka.school.management.service.ResultConfigService resultConfigService;
@@ -192,12 +195,25 @@ class ControllersTest {
     void authAndBrandingAndSchool() {
         AuthController auth = new AuthController(authService, passwordResetService);
         auth.login(new LoginRequest("a@b.com", "pw"));
+        auth.verifyTwoFactor(new VerifyTwoFactorRequest("pending", "123456"));
+        verify(authService).verifyTwoFactor(org.mockito.ArgumentMatchers.any());
         auth.registerSchool(new RegisterSchoolRequest(null, "a@b.com", "HaloCampus1!", "A", null, null, null, null, "Org", null));
         auth.refresh(new RefreshTokenRequest("rt"));
         UserPrincipal admin = Fixtures.principal(Role.HEADMASTER);
         auth.switchSchool(admin, new tz.co.chambaka.school.management.dto.auth.SwitchSchoolRequest(1L, 20L));
         auth.me(admin);
         auth.changePassword(admin, new ChangePasswordRequest("old", "HaloCampus1!"));
+        UserController users = new UserController(authService);
+        users.unlock(admin, 4L, 1L);
+        verify(authService).unlock(4L, 1L, admin);
+        users.resetTwoFactor(admin, 4L, 1L);
+        verify(authService).resetTwoFactor(4L, 1L, admin);
+        users.resetPassword(admin, 4L, 1L, new tz.co.chambaka.school.management.dto.auth.AdminResetPasswordRequest(null));
+        verify(authService).resetPassword(eq(4L), eq(1L), eq(admin), any());
+        users.list(admin, 1L, null, org.springframework.data.domain.PageRequest.of(0, 20));
+        verify(authService).listSchoolUsers(eq(1L), org.mockito.ArgumentMatchers.isNull(), eq(admin), any());
+        auth.resetOwnTwoFactor(admin);
+        verify(authService).resetOwnTwoFactor(10L);
         when(passwordResetService.requestReset(org.mockito.ArgumentMatchers.any()))
                 .thenReturn(new ForgotPasswordResponse("ok", "a***@b.com", 1800, "123456"));
         when(passwordResetService.verifyCode(org.mockito.ArgumentMatchers.any()))
@@ -206,6 +222,8 @@ class ControllersTest {
         auth.forgotPassword(new ForgotPasswordRequest("a@b.com"));
         auth.verifyResetCode(new VerifyResetCodeRequest("a@b.com", "123456"));
         auth.resetPassword(new ResetPasswordRequest("sess", "HaloCampus1!"));
+        auth.logout(new RefreshTokenRequest("rt"));
+        verify(authService).logout(any());
         verify(authService).me(10L);
         verify(passwordResetService).resetPassword(org.mockito.ArgumentMatchers.any());
 
@@ -275,6 +293,16 @@ class ControllersTest {
                         AuditAction.LOGIN, true))));
 
         verify(auditActionSettingsService).replaceAll(any());
+
+        PlatformTwoFactorController twoFactor = new PlatformTwoFactorController(twoFactorService);
+        when(twoFactorService.settings()).thenReturn(
+                new tz.co.chambaka.school.management.dto.auth.TwoFactorSettingsResponse(
+                        "ShuleHub 2FA", "desc", List.of()));
+        when(twoFactorService.updateEnabled(1L, true)).thenReturn(
+                new tz.co.chambaka.school.management.dto.auth.SchoolTwoFactorResponse(1L, "Chambaka", "Org", true));
+        assertThat(twoFactor.get().schools()).isEmpty();
+        assertThat(twoFactor.update(1L, new tz.co.chambaka.school.management.dto.auth.UpdateTwoFactorSettingsRequest(true)).enabled())
+                .isTrue();
     }
 
     @Test
@@ -285,6 +313,7 @@ class ControllersTest {
         years.create(yearReq);
         years.update(1L, yearReq);
         years.setCurrent(1L);
+        years.delete(1L);
 
         ClassController classes = new ClassController(classService, tenantResolver);
         SchoolClassRequest classReq = new SchoolClassRequest(1L, "F1", "F1", 1);
@@ -347,7 +376,8 @@ class ControllersTest {
         schoolAdmins.get(1L, 5L, platform);
         schoolAdmins.create(1L, platform, new CreateSchoolAdminRequest("Asha", "asha@x.com", "HaloCampus1!", "07", Role.HEADMASTER));
         schoolAdmins.update(1L, 5L, platform, new UpdateSchoolAdminRequest("Asha", "08", true, null));
-        verify(schoolAdminService, times(4)).assertCanManage(1L, platform);
+        verify(schoolAdminService, times(2)).assertCanView(1L, platform);
+        verify(schoolAdminService, times(2)).assertCanManage(1L, platform);
         verify(schoolAdminService).create(eq(1L), any());
 
         StudentController students = new StudentController(studentService, parentService, gradeService, promotionService, tenantResolver);
@@ -383,6 +413,13 @@ class ControllersTest {
         when(studentService.requireByUser(10L)).thenReturn(other);
         assertThatThrownBy(() -> students.photo(Fixtures.principal(Role.STUDENT), 1L))
                 .isInstanceOf(AccessDeniedException.class);
+        students.enrolments(null, null, null);
+        students.studentEnrolments(1L);
+        students.previewPromote(new tz.co.chambaka.school.management.dto.student.PromoteStudentsRequest(
+                List.of(1L), tz.co.chambaka.school.management.model.enums.PromotionAction.PROMOTE, 1L, 1L, 1L, null));
+        verify(promotionService).history(1L, null, null, null);
+        verify(promotionService).history(1L, 1L, null, null);
+        verify(promotionService).preview(eq(1L), any());
 
         ParentController parents = new ParentController(parentService, tenantResolver);
         when(parentService.requireByUser(10L)).thenReturn(Fixtures.parent());
@@ -427,7 +464,7 @@ class ControllersTest {
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
         attendance.markStudents(Fixtures.principal(Role.TEACHER), new MarkStudentAttendanceRequest(1L, LocalDate.now(), List.of()));
         attendance.markTeachers(Fixtures.principal(Role.HEADMASTER), new MarkTeacherAttendanceRequest(LocalDate.now(), List.of()));
-        attendance.dailyStudents(1L, LocalDate.now());
+        attendance.dailyStudents(1L, LocalDate.now(), null);
         attendance.dailyTeachers(LocalDate.now());
         attendance.studentSummary(1L, LocalDate.now(), LocalDate.now());
         attendance.mySummary(Fixtures.principal(Role.STUDENT), LocalDate.now(), LocalDate.now());
@@ -441,7 +478,7 @@ class ControllersTest {
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
         when(financeService.outstandingBalance(eq(1L), eq(1L), any())).thenReturn(BigDecimal.TEN);
         invoices.list(PageRequest.of(0, 10));
-        invoices.generate(new GenerateInvoicesRequest(1L, 1L, List.of(1L), null));
+        invoices.generate(new GenerateInvoicesRequest(1L, 1L, List.of(1L), 1, null));
         invoices.get(Fixtures.principal(Role.HEADMASTER), 1L);
         invoices.byStudent(Fixtures.principal(Role.PARENT), 1L);
         assertThat(invoices.balance(Fixtures.principal(Role.PARENT), 1L)).containsEntry("outstanding", BigDecimal.TEN);
@@ -498,6 +535,7 @@ class ControllersTest {
         terms.list(null);
         terms.list(1L);
         terms.create(termRequest);
+        terms.delete(1L);
 
         ResultConfigController resultConfig = new ResultConfigController(resultConfigService, tenantResolver);
         var weights = new tz.co.chambaka.school.management.dto.academic.ResultWeightRequest(
@@ -517,6 +555,8 @@ class ControllersTest {
         assignments.create(teacher, assignment);
         assignments.attach(1L, file);
         assignments.marks(1L, 1L, BigDecimal.TEN);
+        assignments.submit(teacher, 1L, "done", file);
+        assignments.submissions(1L);
 
         LessonLogController lessons = new LessonLogController(lessonLogService, tenantResolver);
         var lesson = new tz.co.chambaka.school.management.dto.academic.LessonLogRequest(
@@ -540,6 +580,21 @@ class ControllersTest {
         assertThat(reports.reportCardPdf(headmaster, 1L, 1L).getHeaders().getContentType().toString())
                 .isEqualTo("application/pdf");
         assertThat(reports.reportCardCsv(headmaster, 1L, 1L).getBody()).containsExactly(2);
+        when(reportExportService.enrolmentHistoryCsv(any(), any(), any(), any())).thenReturn(new byte[]{3});
+        when(reportExportService.enrolmentHistoryPdf(any(), any(), any(), any())).thenReturn(new byte[]{4});
+        assertThat(reports.enrolmentHistoryCsv(null, null, null).getBody()).containsExactly(3);
+        assertThat(reports.enrolmentHistoryPdf(1L, 1L, tz.co.chambaka.school.management.model.enums.PromotionAction.REPEAT)
+                .getHeaders().getContentType().toString()).isEqualTo("application/pdf");
+        when(reportExportService.reportCardXlsx(any(), any(), any(), any())).thenReturn(new byte[]{5});
+        when(reportExportService.defaulters(any(), any())).thenReturn(new byte[]{6});
+        when(reportExportService.collections(any(), any(), any(), any())).thenReturn(new byte[]{7});
+        when(reportExportService.meritList(any(), any(), any(), any())).thenReturn(new byte[]{8});
+        when(reportExportService.attendanceSummary(any(), any(), any(), any())).thenReturn(new byte[]{9});
+        assertThat(reports.reportCardXlsx(headmaster, 1L, 1L).getBody()).containsExactly(5);
+        assertThat(reports.defaulters("csv").getBody()).containsExactly(6);
+        assertThat(reports.collections(null, null, "pdf").getBody()).containsExactly(7);
+        assertThat(reports.meritList(headmaster, 1L, "xlsx").getBody()).containsExactly(8);
+        assertThat(reports.attendance(java.time.LocalDate.now(), java.time.LocalDate.now(), "csv").getBody()).containsExactly(9);
 
         NotificationController notifications = new NotificationController(alertService, tenantResolver);
         notifications.inbox(headmaster);
@@ -552,6 +607,7 @@ class ControllersTest {
         exams.submit(1L);
         exams.verify(1L);
         exams.approve(1L);
+        exams.reject(1L, "Fix marks");
         exams.generateSchedule(1L);
         exams.lockSchedule(1L, true);
         exams.seats(1L);

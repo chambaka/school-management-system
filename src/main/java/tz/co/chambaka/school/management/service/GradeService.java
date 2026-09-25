@@ -5,6 +5,7 @@ import tz.co.chambaka.school.management.dto.academic.BulkGradeRequest;
 import tz.co.chambaka.school.management.dto.academic.GradeGridResponse;
 import tz.co.chambaka.school.management.dto.academic.GradeRequest;
 import tz.co.chambaka.school.management.dto.academic.GradeResponse;
+import tz.co.chambaka.school.management.dto.academic.MeritRowResponse;
 import tz.co.chambaka.school.management.dto.academic.ReportCardResponse;
 import tz.co.chambaka.school.management.dto.academic.TermResultResponse;
 import tz.co.chambaka.school.management.exception.BusinessException;
@@ -228,6 +229,38 @@ public class GradeService {
                 terminal,
                 letterGrade(schoolId, terminal)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<MeritRowResponse> meritList(Long schoolId, Long examId, Role role) {
+        Exam exam = examService.require(schoolId, examId);
+        examService.assertVisibleTo(exam, role);
+        if (exam.getSchoolClass() == null) {
+            return List.of();
+        }
+        List<Student> classmates = studentRepository.findBySchoolIdAndSchoolClassId(schoolId, exam.getSchoolClass().getId());
+        record Score(Student student, BigDecimal total, BigDecimal max) {}
+        List<Score> scores = classmates.stream().map(student -> {
+            var grades = gradeRepository.findByExamIdAndStudentId(exam.getId(), student.getId());
+            BigDecimal total = grades.stream().map(Grade::getMarksObtained).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal max = grades.stream().map(g -> g.getExamSubject().getMaxMarks()).reduce(BigDecimal.ZERO, BigDecimal::add);
+            return new Score(student, total, max);
+        }).sorted((a, b) -> b.total.compareTo(a.total)).toList();
+        List<MeritRowResponse> rows = new ArrayList<>();
+        int position = 1;
+        for (Score score : scores) {
+            BigDecimal percent = toPercent(score.total, score.max);
+            rows.add(new MeritRowResponse(
+                    position++,
+                    score.student.getId(),
+                    score.student.getUser().getName(),
+                    score.student.getAdmissionNo(),
+                    score.total,
+                    percent,
+                    letterGrade(schoolId, percent)
+            ));
+        }
+        return rows;
     }
 
     private Integer classPosition(Long schoolId, Exam exam, Long studentId) {

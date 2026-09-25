@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.model;
 
+import tz.co.chambaka.school.management.curriculum.CurriculumTopic;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -35,6 +36,10 @@ public class LessonLog extends TenantEntity {
 
     @Column(nullable = false)
     private LocalDate lessonDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "curriculum_topic_id")
+    private CurriculumTopic curriculumTopic;
 
     @Column(nullable = false, length = 250)
     private String topic;

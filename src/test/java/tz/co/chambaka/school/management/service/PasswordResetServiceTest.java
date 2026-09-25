@@ -16,6 +16,8 @@ import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.PasswordResetTokenRepository;
 import tz.co.chambaka.school.management.repository.RefreshTokenRepository;
 import tz.co.chambaka.school.management.repository.UserRepository;
+import tz.co.chambaka.school.management.sms.CredentialSmsService;
+import tz.co.chambaka.school.management.sms.SmsSendResult;
 import tz.co.chambaka.school.management.support.Fixtures;
 import tz.co.chambaka.school.management.util.TokenHash;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,22 +54,26 @@ class PasswordResetServiceTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private AuditService auditService;
+    @Mock
+    private CredentialSmsService credentialSms;
 
     @Test
     void requestResetHidesUnknownAndDisabledAccounts() {
         when(userRepository.findByEmailIgnoreCase("missing@example.com")).thenReturn(Optional.empty());
         ForgotPasswordResponse missing = service(true).requestReset(new ForgotPasswordRequest("missing@example.com"));
-        assertThat(missing.maskedEmail()).isEqualTo("m***@example.com");
+        assertThat(missing.maskedPhone()).isEqualTo("m***@example.com");
         assertThat(missing.debugCode()).isNull();
         assertThat(missing.expiresInSeconds()).isEqualTo(1800);
         verify(resetTokenRepository, never()).save(any());
+        verify(credentialSms, never()).sendResetCode(any(), any(), anyInt());
 
         User disabled = Fixtures.user(2L, Role.HEADMASTER);
         disabled.setEnabled(false);
         when(userRepository.findByEmailIgnoreCase("headmaster@example.com")).thenReturn(Optional.of(disabled));
         ForgotPasswordResponse hidden = service(false).requestReset(new ForgotPasswordRequest("headmaster@example.com"));
         assertThat(hidden.debugCode()).isNull();
-        assertThat(hidden.message()).contains("If that account exists");
+        assertThat(hidden.message()).contains("SMS");
+        verify(credentialSms, never()).sendResetCode(any(), any(), anyInt());
     }
 
     @Test
@@ -77,6 +85,7 @@ class PasswordResetServiceTest {
         when(resetTokenRepository.findByUserAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(any(), any()))
                 .thenReturn(List.of(previous));
         when(resetTokenRepository.save(any(PasswordResetToken.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(credentialSms.sendResetCode(any(), any(), anyInt())).thenReturn(SmsSendResult.ok("queued"));
 
         ForgotPasswordResponse response = service(Duration.ofMinutes(15), true)
                 .requestReset(new ForgotPasswordRequest("headmaster@example.com"));
@@ -84,10 +93,12 @@ class PasswordResetServiceTest {
         assertThat(previous.isConsumed()).isTrue();
         assertThat(response.debugCode()).matches("\\d{6}");
         assertThat(response.expiresInSeconds()).isEqualTo(900);
+        assertThat(response.maskedPhone()).isEqualTo("+255****000");
         ArgumentCaptor<PasswordResetToken> captor = ArgumentCaptor.forClass(PasswordResetToken.class);
         verify(resetTokenRepository).save(captor.capture());
         assertThat(captor.getValue().getCodeHash()).isEqualTo(TokenHash.sha256(response.debugCode()));
         verify(auditService).recordAuth(AuditAction.PASSWORD_RESET_REQUESTED, user, "Password reset code issued");
+        verify(credentialSms).sendResetCode(eq(user), eq(response.debugCode()), eq(900));
     }
 
     @Test
@@ -97,6 +108,7 @@ class PasswordResetServiceTest {
         when(resetTokenRepository.findByUserAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(any(), any()))
                 .thenReturn(List.of());
         when(resetTokenRepository.save(any(PasswordResetToken.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(credentialSms.sendResetCode(any(), any(), anyInt())).thenReturn(SmsSendResult.ok("queued"));
 
         ForgotPasswordResponse hidden = service(null, false)
                 .requestReset(new ForgotPasswordRequest("headmaster@example.com"));
@@ -112,10 +124,27 @@ class PasswordResetServiceTest {
         when(userRepository.findByEmailIgnoreCase("ghost@example.com")).thenReturn(Optional.empty());
         ForgotPasswordResponse fallback = new PasswordResetService(
                 userRepository, resetTokenRepository, refreshTokenRepository,
-                passwordEncoder, auditService, noResetConfig)
+                passwordEncoder, auditService, noResetConfig, credentialSms)
                 .requestReset(new ForgotPasswordRequest("ghost@example.com"));
         assertThat(fallback.expiresInSeconds()).isEqualTo(1800);
         assertThat(fallback.debugCode()).isNull();
+    }
+
+    @Test
+    void requestResetLooksUpPhoneAndSendsSms() {
+        User user = Fixtures.user(2L, Role.HEADMASTER);
+        user.setPhone("255753493500");
+        when(userRepository.findFirstByPhone("255753493500")).thenReturn(Optional.of(user));
+        when(resetTokenRepository.findByUserAndConsumedFalseAndExpiresAtAfterOrderByCreatedAtDesc(any(), any()))
+                .thenReturn(List.of());
+        when(resetTokenRepository.save(any(PasswordResetToken.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(credentialSms.sendResetCode(any(), any(), anyInt())).thenReturn(SmsSendResult.ok("queued"));
+
+        ForgotPasswordResponse response = service(true).requestReset(new ForgotPasswordRequest("0753493500"));
+
+        assertThat(response.maskedPhone()).isEqualTo("+255****500");
+        assertThat(response.debugCode()).matches("\\d{6}");
+        verify(credentialSms).sendResetCode(eq(user), eq(response.debugCode()), eq(1800));
     }
 
     @Test
@@ -235,6 +264,9 @@ class PasswordResetServiceTest {
         assertThat(PasswordResetService.maskEmail("@x.com")).isEqualTo("***");
         assertThat(PasswordResetService.maskEmail("no-at")).isEqualTo("***");
         assertThat(PasswordResetService.maskEmail("x@")).isEqualTo("x***@");
+        assertThat(PasswordResetService.maskDestination("0753493500")).isEqualTo("+255****500");
+        assertThat(PasswordResetService.maskDestination("a@b.com")).isEqualTo("a***@b.com");
+        assertThat(PasswordResetService.maskDestination(null)).isEqualTo("***");
     }
 
     private PasswordResetService service(boolean debug) {
@@ -253,7 +285,8 @@ class PasswordResetServiceTest {
                 refreshTokenRepository,
                 passwordEncoder,
                 auditService,
-                properties);
+                properties,
+                credentialSms);
     }
 
     private static PasswordResetToken pendingToken(User user, String code) {

@@ -67,9 +67,10 @@ public class AttendanceController {
     @PreAuthorize(Access.ATTENDANCE_VIEW)
     public List<StudentAttendanceResponse> dailyStudents(
             @RequestParam Long sectionId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Long timetableSlotId
     ) {
-        return attendanceService.dailyStudents(tenantResolver.requireSchoolId(), sectionId, date);
+        return attendanceService.dailyStudents(tenantResolver.requireSchoolId(), sectionId, date, timetableSlotId);
     }
 
     @GetMapping("/teachers/daily")

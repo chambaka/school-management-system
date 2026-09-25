@@ -2,7 +2,7 @@ package tz.co.chambaka.school.management.dto.auth;
 
 public record ForgotPasswordResponse(
         String message,
-        String maskedEmail,
+        String maskedPhone,
         int expiresInSeconds,
         String debugCode
 ) {

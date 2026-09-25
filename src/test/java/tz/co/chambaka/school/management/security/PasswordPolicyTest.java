@@ -64,5 +64,8 @@ class PasswordPolicyTest {
                 .isEqualTo("Good");
         assertThat(PasswordPolicy.evaluate("Abcdefgh1!", "a@b.com", "Jo").strengthLabel())
                 .isEqualTo("Strong");
+        String generated = PasswordPolicy.generateTemporary();
+        assertThat(generated).hasSize(12);
+        assertThat(PasswordPolicy.evaluate(generated, "", "").valid()).isTrue();
     }
 }

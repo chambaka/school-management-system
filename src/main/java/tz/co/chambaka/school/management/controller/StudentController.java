@@ -5,8 +5,12 @@ import tz.co.chambaka.school.management.dto.common.PageResponse;
 import tz.co.chambaka.school.management.dto.parent.LinkParentRequest;
 import tz.co.chambaka.school.management.dto.parent.StudentParentResponse;
 import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
+import tz.co.chambaka.school.management.dto.student.EnrolmentHistoryResponse;
+import tz.co.chambaka.school.management.dto.student.PromoteStudentsRequest;
+import tz.co.chambaka.school.management.dto.student.PromotionPreviewResponse;
 import tz.co.chambaka.school.management.dto.student.StudentResponse;
 import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
+import tz.co.chambaka.school.management.model.enums.PromotionAction;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
@@ -136,8 +140,32 @@ public class StudentController {
 
     @PostMapping("/promote")
     @PreAuthorize(Access.PEOPLE_MANAGE)
-    public List<StudentResponse> promote(@Valid @RequestBody tz.co.chambaka.school.management.dto.student.PromoteStudentsRequest request) {
+    public List<StudentResponse> promote(@Valid @RequestBody PromoteStudentsRequest request) {
         return promotionService.promote(tenantResolver.requireSchoolId(), request);
+    }
+
+    @PostMapping("/promotions/preview")
+    @PreAuthorize(Access.PEOPLE_MANAGE)
+    public List<PromotionPreviewResponse> previewPromote(
+            @Valid @RequestBody PromoteStudentsRequest request
+    ) {
+        return promotionService.preview(tenantResolver.requireSchoolId(), request);
+    }
+
+    @GetMapping("/enrolments")
+    @PreAuthorize(Access.STUDENT_DIRECTORY)
+    public List<EnrolmentHistoryResponse> enrolments(
+            @RequestParam(required = false) Long studentId,
+            @RequestParam(required = false) Long academicYearId,
+            @RequestParam(required = false) PromotionAction action
+    ) {
+        return promotionService.history(tenantResolver.requireSchoolId(), studentId, academicYearId, action);
+    }
+
+    @GetMapping("/{id}/enrolments")
+    @PreAuthorize(Access.STUDENT_DIRECTORY)
+    public List<EnrolmentHistoryResponse> studentEnrolments(@PathVariable Long id) {
+        return promotionService.history(tenantResolver.requireSchoolId(), id, null, null);
     }
 
     @GetMapping("/{id}/parents")

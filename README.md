@@ -268,18 +268,20 @@ Full method-level docs live in Swagger. Typical flow:
 
 ### Forgot password
 
-Three public steps, matching the ShuleHub reset screens. The API never says whether the email exists.
+Three public steps, matching the ShuleHub reset screens. The code is sent by **SMS** to the phone on the account. The API never says whether the identifier exists.
 
-1. `POST /api/v1/auth/forgot-password` `{ "email": "yuki.t@example.com" }` — generic message, masked email, 30-minute expiry. In `dev`, the JSON also includes `debugCode`.
-2. `POST /api/v1/auth/forgot-password/verify` `{ "email": "...", "code": "123456" }` — returns `resetToken`.
+1. `POST /api/v1/auth/forgot-password` `{ "identifier": "0753493500" }` — email, phone, or username. Generic message, masked phone, 30-minute expiry. In `dev`, the JSON also includes `debugCode`. `{ "email": "..." }` is still accepted.
+2. `POST /api/v1/auth/forgot-password/verify` `{ "identifier": "...", "code": "123456" }` — returns `resetToken`.
 3. `POST /api/v1/auth/reset-password` `{ "resetToken": "...", "newPassword": "HaloCampus1!" }` — revokes refresh tokens.
+
+Creating a student, teacher, parent, or school officer without a password generates a temporary password and texts it to their phone.
 
 `GET /api/v1/auth/password-rules` returns the Nexus meter rules (10+ characters, upper, lower, digit, special `!@#$%^&*`, not the email/name, not a common password). The same policy is enforced on register, change-password, and reset.
 
 ```bash
 curl -X POST http://localhost:8989/api/v1/auth/forgot-password \
   -H 'Content-Type: application/json' \
-  -d '{"email":"yuki.t@example.com"}'
+  -d '{"identifier":"0753493500"}'
 ```
 
 ---

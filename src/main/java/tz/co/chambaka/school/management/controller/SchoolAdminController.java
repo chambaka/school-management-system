@@ -35,24 +35,24 @@ public class SchoolAdminController {
     }
 
     @GetMapping
-    @PreAuthorize(Access.ORG_SCHOOLS)
+    @PreAuthorize(Access.STAFF_OFFICERS)
     public PageResponse<SchoolAdminResponse> list(
             @RequestParam Long schoolId,
             @CurrentUser UserPrincipal principal,
             Pageable pageable
     ) {
-        schoolAdminService.assertCanManage(schoolId, principal);
+        schoolAdminService.assertCanView(schoolId, principal);
         return schoolAdminService.list(schoolId, pageable);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize(Access.ORG_SCHOOLS)
+    @PreAuthorize(Access.STAFF_OFFICERS)
     public SchoolAdminResponse get(
             @RequestParam Long schoolId,
             @PathVariable Long id,
             @CurrentUser UserPrincipal principal
     ) {
-        schoolAdminService.assertCanManage(schoolId, principal);
+        schoolAdminService.assertCanView(schoolId, principal);
         return schoolAdminService.get(schoolId, id);
     }
 

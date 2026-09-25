@@ -2,18 +2,24 @@ package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.common.PageResponse;
 import tz.co.chambaka.school.management.dto.parent.StudentParentResponse;
+import tz.co.chambaka.school.management.dto.student.AdmitParentRequest;
 import tz.co.chambaka.school.management.dto.student.CreateStudentRequest;
 import tz.co.chambaka.school.management.dto.student.StudentResponse;
 import tz.co.chambaka.school.management.dto.student.UpdateStudentRequest;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.AcademicYear;
+import tz.co.chambaka.school.management.model.Parent;
 import tz.co.chambaka.school.management.model.SchoolClass;
 import tz.co.chambaka.school.management.model.Section;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.StudentParent;
 import tz.co.chambaka.school.management.model.User;
+import tz.co.chambaka.school.management.model.enums.ParentStatus;
+import tz.co.chambaka.school.management.model.enums.RelationshipType;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.model.enums.StudentStatus;
+import tz.co.chambaka.school.management.repository.ParentRepository;
 import tz.co.chambaka.school.management.repository.StudentParentRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.sms.PhoneNumbers;
@@ -34,6 +40,7 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final StudentParentRepository studentParentRepository;
+    private final ParentRepository parentRepository;
     private final UserAccountService userAccountService;
     private final AcademicYearService academicYearService;
     private final ClassService classService;
@@ -43,6 +50,7 @@ public class StudentService {
     public StudentService(
             StudentRepository studentRepository,
             StudentParentRepository studentParentRepository,
+            ParentRepository parentRepository,
             UserAccountService userAccountService,
             AcademicYearService academicYearService,
             ClassService classService,
@@ -51,6 +59,7 @@ public class StudentService {
     ) {
         this.studentRepository = studentRepository;
         this.studentParentRepository = studentParentRepository;
+        this.parentRepository = parentRepository;
         this.userAccountService = userAccountService;
         this.academicYearService = academicYearService;
         this.classService = classService;
@@ -72,11 +81,16 @@ public class StudentService {
 
     @Transactional
     public StudentResponse create(Long schoolId, CreateStudentRequest request) {
+        if (request.parent() != null && request.parent().provided() && !request.parent().complete()) {
+            throw new BusinessException("Parent name and email are required");
+        }
         User user = userAccountService.create(
                 schoolId, request.name(), request.email(), request.password(), Role.STUDENT, request.phone());
+        applyNames(user, request.firstName(), request.middleName(), request.lastName(), request.name());
         Student student = new Student();
         student.setSchoolId(schoolId);
         student.setUser(user);
+        student.setNationality(request.nationality());
         student.setAdmissionNo(nextAdmissionNo(schoolId));
         student.setRollNumber(request.rollNumber());
         student.setDateOfBirth(request.dateOfBirth());
@@ -89,6 +103,9 @@ public class StudentService {
         student.setStatus(StudentStatus.ACTIVE);
         applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId());
         Student saved = studentRepository.save(student);
+        if (request.parent() != null && request.parent().provided()) {
+            linkNewParent(schoolId, saved, request.parent());
+        }
         log.info("Created student id={} schoolId={} admissionNo={}", saved.getId(), schoolId, saved.getAdmissionNo());
         return toResponse(saved);
     }
@@ -99,6 +116,10 @@ public class StudentService {
         User user = student.getUser();
         if (request.name() != null) {
             user.setName(request.name());
+        }
+        applyNames(user, request.firstName(), request.middleName(), request.lastName(), request.name());
+        if (request.nationality() != null) {
+            student.setNationality(request.nationality());
         }
         if (request.phone() != null) {
             user.setPhone(PhoneNumbers.persist(request.phone()));
@@ -201,6 +222,45 @@ public class StudentService {
         return admissionNo;
     }
 
+    private static void applyNames(User user, String first, String middle, String last, String fallback) {
+        if (first != null) {
+            user.setFirstName(first);
+        }
+        if (middle != null) {
+            user.setMiddleName(middle);
+        }
+        if (last != null) {
+            user.setLastName(last);
+        }
+        String display = user.displayName();
+        if (display != null && !display.isBlank()) {
+            user.setName(display);
+        } else if (fallback != null && !fallback.isBlank()) {
+            user.setName(fallback);
+        }
+    }
+
+    private void linkNewParent(Long schoolId, Student student, AdmitParentRequest request) {
+        User user = userAccountService.create(
+                schoolId, request.name(), request.email(), request.password(), Role.PARENT, request.phone());
+        Parent parent = new Parent();
+        parent.setSchoolId(schoolId);
+        parent.setUser(user);
+        parent.setOccupation(request.occupation());
+        parent.setAddress(request.address());
+        parent.setStatus(ParentStatus.ACTIVE);
+        Parent saved = parentRepository.save(parent);
+        StudentParent link = new StudentParent();
+        link.setSchoolId(schoolId);
+        link.setStudent(student);
+        link.setParent(saved);
+        link.setRelationship(request.relationship() == null ? RelationshipType.GUARDIAN : request.relationship());
+        link.setPrimaryContact(true);
+        link.setEmergencyContact(true);
+        link.setInvoiceRecipient(true);
+        studentParentRepository.save(link);
+    }
+
     private void applyPlacement(Long schoolId, Student student, Long yearId, Long classId, Long sectionId) {
         if (yearId != null) {
             student.setAcademicYear(academicYearService.require(schoolId, yearId));
@@ -221,7 +281,11 @@ public class StudentService {
         return new StudentResponse(
                 student.getId(),
                 user.getId(),
-                user.getName(),
+                user.displayName(),
+                user.getFirstName(),
+                user.getMiddleName(),
+                user.getLastName(),
+                student.getNationality(),
                 user.getEmail(),
                 user.getPhone(),
                 student.getAdmissionNo(),
@@ -241,7 +305,9 @@ public class StudentService {
                 user.isEnabled(),
                 statusOf(student),
                 user.getAvatarUrl(),
-                studentParentRepository.findByStudentId(student.getId()).stream().map(this::toLink).toList()
+                studentParentRepository.findByStudentId(student.getId()).stream().map(this::toLink).toList(),
+                user.activeLockedUntil(),
+                user.isTotpEnabled()
         );
     }
 

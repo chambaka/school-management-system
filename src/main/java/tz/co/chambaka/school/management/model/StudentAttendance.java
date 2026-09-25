@@ -28,6 +28,10 @@ public class StudentAttendance extends TenantEntity {
     @JoinColumn(name = "section_id")
     private Section section;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "timetable_slot_id")
+    private TimetableSlot timetableSlot;
+
     @Column(nullable = false)
     private LocalDate attendanceDate;
 

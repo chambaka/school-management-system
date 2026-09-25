@@ -33,6 +33,7 @@ public class RoleRenameAligner implements ApplicationRunner {
     }
 
     static void align(JdbcTemplate jdbc) {
+        widenRoleColumnIfEnum(jdbc, "users", "role");
         remapIfPresent(jdbc, "users", "role");
         widenRoleColumnIfEnum(jdbc, "student_communications", "author_role");
         remapIfPresent(jdbc, "student_communications", "author_role");

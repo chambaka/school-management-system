@@ -47,8 +47,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(
                             "/api/v1/auth/login",
+                            "/api/v1/auth/login/2fa",
                             "/api/v1/auth/register-school",
                             "/api/v1/auth/refresh",
+                            "/api/v1/auth/logout",
                             "/api/v1/auth/forgot-password",
                             "/api/v1/auth/forgot-password/verify",
                             "/api/v1/auth/reset-password",
@@ -60,6 +62,12 @@ public class SecurityConfig {
                             "/actuator/health"
                     ).permitAll();
                     if (smsProperties.singleTenant()) {
+                        auth.requestMatchers(
+                                "/api/v1/platform/two-factor",
+                                "/api/v1/platform/two-factor/**",
+                                "/api/v1/platform/audit-settings",
+                                "/api/v1/platform/audit-settings/**"
+                        ).hasRole("SUPER_ADMIN");
                         auth.requestMatchers("/api/v1/platform/**").denyAll();
                     } else {
                         auth.requestMatchers("/api/v1/platform/**").hasRole("SUPER_ADMIN");

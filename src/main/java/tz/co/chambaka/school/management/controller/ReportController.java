@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.model.enums.PromotionAction;
 import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
@@ -56,6 +57,101 @@ public class ReportController {
     ) {
         byte[] body = reportExportService.reportCardCsv(tenantResolver.requireSchoolId(), studentId, examId, principal.getRole());
         return file("report-card.csv", "text/csv", body);
+    }
+
+    @GetMapping("/enrolment-history.csv")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public ResponseEntity<byte[]> enrolmentHistoryCsv(
+            @RequestParam(required = false) Long studentId,
+            @RequestParam(required = false) Long academicYearId,
+            @RequestParam(required = false) PromotionAction action
+    ) {
+        byte[] body = reportExportService.enrolmentHistoryCsv(
+                tenantResolver.requireSchoolId(), studentId, academicYearId, action);
+        return file("enrolment-history.csv", "text/csv", body);
+    }
+
+    @GetMapping("/report-card.xlsx")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public ResponseEntity<byte[]> reportCardXlsx(
+            @CurrentUser UserPrincipal principal,
+            @RequestParam Long studentId,
+            @RequestParam Long examId
+    ) {
+        byte[] body = reportExportService.reportCardXlsx(tenantResolver.requireSchoolId(), studentId, examId, principal.getRole());
+        return file("report-card.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", body);
+    }
+
+    @GetMapping("/fees/defaulters")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public ResponseEntity<byte[]> defaulters(@RequestParam(defaultValue = "csv") String format) {
+        return file("defaulters." + extension(format), media(format),
+                reportExportService.defaulters(tenantResolver.requireSchoolId(), format));
+    }
+
+    @GetMapping("/finance/collections")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public ResponseEntity<byte[]> collections(
+            @RequestParam(required = false) java.time.Instant from,
+            @RequestParam(required = false) java.time.Instant to,
+            @RequestParam(defaultValue = "csv") String format
+    ) {
+        return file("collections." + extension(format), media(format),
+                reportExportService.collections(tenantResolver.requireSchoolId(), from, to, format));
+    }
+
+    @GetMapping("/merit-list")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public ResponseEntity<byte[]> meritList(
+            @CurrentUser UserPrincipal principal,
+            @RequestParam Long examId,
+            @RequestParam(defaultValue = "csv") String format
+    ) {
+        return file("merit-list." + extension(format), media(format),
+                reportExportService.meritList(tenantResolver.requireSchoolId(), examId, principal.getRole(), format));
+    }
+
+    @GetMapping("/attendance")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public ResponseEntity<byte[]> attendance(
+            @RequestParam java.time.LocalDate start,
+            @RequestParam java.time.LocalDate end,
+            @RequestParam(defaultValue = "csv") String format
+    ) {
+        return file("attendance." + extension(format), media(format),
+                reportExportService.attendanceSummary(tenantResolver.requireSchoolId(), start, end, format));
+    }
+
+    @GetMapping("/enrolment-history.pdf")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public ResponseEntity<byte[]> enrolmentHistoryPdf(
+            @RequestParam(required = false) Long studentId,
+            @RequestParam(required = false) Long academicYearId,
+            @RequestParam(required = false) PromotionAction action
+    ) {
+        byte[] body = reportExportService.enrolmentHistoryPdf(
+                tenantResolver.requireSchoolId(), studentId, academicYearId, action);
+        return file("enrolment-history.pdf", "application/pdf", body);
+    }
+
+    private static String extension(String format) {
+        if ("xlsx".equalsIgnoreCase(format)) {
+            return "xlsx";
+        }
+        if ("pdf".equalsIgnoreCase(format)) {
+            return "pdf";
+        }
+        return "csv";
+    }
+
+    private static String media(String format) {
+        if ("xlsx".equalsIgnoreCase(format)) {
+            return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        }
+        if ("pdf".equalsIgnoreCase(format)) {
+            return "application/pdf";
+        }
+        return "text/csv";
     }
 
     private static ResponseEntity<byte[]> file(String name, String type, byte[] body) {

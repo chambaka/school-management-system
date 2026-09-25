@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.security;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -56,6 +57,30 @@ public final class PasswordPolicy {
                 (int) Math.round(met * 100.0 / rules.size()), strength, strengthLabel);
     }
 
+    public static String generateTemporary() {
+        SecureRandom random = new SecureRandom();
+        String upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        String lower = "abcdefghijkmnopqrstuvwxyz";
+        String digits = "23456789";
+        String all = upper + lower + digits + SPECIAL_CHARS;
+        for (int attempt = 0; attempt < 20; attempt++) {
+            char[] chars = new char[12];
+            chars[0] = pick(random, upper);
+            chars[1] = pick(random, lower);
+            chars[2] = pick(random, digits);
+            chars[3] = pick(random, SPECIAL_CHARS);
+            for (int i = 4; i < chars.length; i++) {
+                chars[i] = pick(random, all);
+            }
+            shuffle(random, chars);
+            String password = new String(chars);
+            if (evaluate(password, "", "").valid()) {
+                return password;
+            }
+        }
+        throw new IllegalStateException("Could not generate a temporary password");
+    }
+
     public static void requireValid(String password, String email, String name) {
         Evaluation evaluation = evaluate(password, email, name);
         if (!evaluation.valid()) {
@@ -77,6 +102,19 @@ public final class PasswordPolicy {
 
     private static RuleResult rule(String id, String label, boolean met) {
         return new RuleResult(id, label, met);
+    }
+
+    private static char pick(SecureRandom random, String alphabet) {
+        return alphabet.charAt(random.nextInt(alphabet.length()));
+    }
+
+    private static void shuffle(SecureRandom random, char[] chars) {
+        for (int i = chars.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char tmp = chars[i];
+            chars[i] = chars[j];
+            chars[j] = tmp;
+        }
     }
 
     private static boolean isCommon(String password) {

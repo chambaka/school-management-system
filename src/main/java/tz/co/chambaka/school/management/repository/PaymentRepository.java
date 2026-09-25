@@ -3,6 +3,7 @@ package tz.co.chambaka.school.management.repository;
 import tz.co.chambaka.school.management.model.Payment;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,4 +16,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByIdAndSchoolId(Long id, Long schoolId);
 
     long countBySchoolId(Long schoolId);
+
+    List<Payment> findBySchoolIdAndPaidAtBetween(Long schoolId, Instant start, Instant end);
 }

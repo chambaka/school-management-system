@@ -183,7 +183,9 @@ public class ParentService {
                 parent.getAddress(),
                 user.isEnabled(),
                 statusOf(parent),
-                studentParentRepository.findByParentId(parent.getId()).stream().map(this::toLink).toList()
+                studentParentRepository.findByParentId(parent.getId()).stream().map(this::toLink).toList(),
+                user.activeLockedUntil(),
+                user.isTotpEnabled()
         );
     }
 

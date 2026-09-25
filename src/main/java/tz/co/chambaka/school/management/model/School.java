@@ -85,4 +85,7 @@ public class School extends BaseEntity {
 
     @Column(nullable = false)
     private boolean examsEnabled = true;
+
+    @Column(nullable = false)
+    private boolean twoFactorEnabled = false;
 }

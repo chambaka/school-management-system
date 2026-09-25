@@ -16,6 +16,9 @@ import tz.co.chambaka.school.management.repository.ClassroomRepository;
 import tz.co.chambaka.school.management.repository.TeacherSubjectRepository;
 import tz.co.chambaka.school.management.repository.TimetableLockRepository;
 import tz.co.chambaka.school.management.repository.TimetableSlotRepository;
+import tz.co.chambaka.school.management.solver.TeacherAvailability;
+import tz.co.chambaka.school.management.solver.TeacherAvailabilityRepository;
+import tz.co.chambaka.school.management.solver.TimetableConstraintEngine;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +38,7 @@ public class TimetableService {
     private final TeacherSubjectRepository teacherSubjectRepository;
     private final ClassroomRepository classroomRepository;
     private final BellPeriodService bellPeriodService;
+    private final TeacherAvailabilityRepository teacherAvailabilityRepository;
 
     public TimetableService(
             TimetableSlotRepository timetableSlotRepository,
@@ -45,7 +49,8 @@ public class TimetableService {
             TimetableLockRepository timetableLockRepository,
             TeacherSubjectRepository teacherSubjectRepository,
             ClassroomRepository classroomRepository,
-            BellPeriodService bellPeriodService
+            BellPeriodService bellPeriodService,
+            TeacherAvailabilityRepository teacherAvailabilityRepository
     ) {
         this.timetableSlotRepository = timetableSlotRepository;
         this.academicYearService = academicYearService;
@@ -56,6 +61,7 @@ public class TimetableService {
         this.teacherSubjectRepository = teacherSubjectRepository;
         this.classroomRepository = classroomRepository;
         this.bellPeriodService = bellPeriodService;
+        this.teacherAvailabilityRepository = teacherAvailabilityRepository;
     }
 
     @Transactional(readOnly = true)
@@ -123,10 +129,27 @@ public class TimetableService {
                 BellPeriod period = periods.get(cursor % Math.max(periods.size(), 1));
                 cursor++;
                 safety++;
-                String room = rooms.isEmpty() ? null : rooms.get(placed % rooms.size()).getName();
+                Classroom room = rooms.isEmpty() ? null : rooms.get(placed % rooms.size());
+                if (room != null && !TimetableConstraintEngine.roomFits(room, section)) {
+                    room = rooms.stream().filter(candidate -> TimetableConstraintEngine.roomFits(candidate, section))
+                            .findFirst().orElse(room);
+                }
+                List<TeacherAvailability> windows = teacherAvailabilityRepository == null
+                        ? List.of()
+                        : teacherAvailabilityRepository.findBySchoolIdAndTeacherId(schoolId, allocation.getTeacher().getId());
+                if (!TimetableConstraintEngine.teacherAvailable(windows, day, period.getStartTime(), period.getEndTime())) {
+                    continue;
+                }
+                boolean consecutive = created.stream()
+                        .filter(slot -> slot.dayOfWeek() == day && slot.subjectId().equals(allocation.getSubject().getId()))
+                        .anyMatch(slot -> slot.endTime().equals(period.getStartTime())
+                                || period.getEndTime().equals(slot.startTime()));
+                if (consecutive) {
+                    continue;
+                }
                 TimetableRequest request = new TimetableRequest(
                         academicYearId, sectionId, allocation.getSubject().getId(), allocation.getTeacher().getId(),
-                        day, period.getStartTime(), period.getEndTime(), room);
+                        day, period.getStartTime(), period.getEndTime(), room == null ? null : room.getName());
                 try {
                     assertNoClashes(schoolId, request, null);
                     TimetableSlot slot = new TimetableSlot();

@@ -17,6 +17,11 @@ class RoleTest {
         assertThat(Role.TEACHER.postsStudentMessages()).isTrue();
         assertThat(Role.ACCOUNTANT.sendsParentSms()).isFalse();
         assertThat(Role.HEADMASTER.switchesSchool()).isTrue();
-        assertThat(Role.schoolOfficers()).containsExactly(Role.HEADMASTER, Role.ACADEMIC_MASTER, Role.ACCOUNTANT);
+        assertThat(Role.SCHOOL_ADMIN.managesPeople()).isTrue();
+        assertThat(Role.SCHOOL_ADMIN.switchesSchool()).isTrue();
+        assertThat(Role.INVIGILATOR.invigilates()).isTrue();
+        assertThat(Role.STAFF.academicStaff()).isFalse();
+        assertThat(Role.schoolOfficers()).contains(
+                Role.HEADMASTER, Role.SCHOOL_ADMIN, Role.ACADEMIC_MASTER, Role.ACCOUNTANT, Role.STAFF, Role.INVIGILATOR);
     }
 }

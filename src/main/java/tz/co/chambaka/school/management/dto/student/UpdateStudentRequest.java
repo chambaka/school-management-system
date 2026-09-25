@@ -6,6 +6,10 @@ import java.time.LocalDate;
 
 public record UpdateStudentRequest(
         String name,
+        String firstName,
+        String middleName,
+        String lastName,
+        String nationality,
         String phone,
         String rollNumber,
         LocalDate dateOfBirth,
@@ -19,4 +23,12 @@ public record UpdateStudentRequest(
         Long sectionId,
         Boolean enabled
 ) {
+    public UpdateStudentRequest(
+            String name, String phone, String rollNumber, LocalDate dateOfBirth, Gender gender,
+            String bloodGroup, String address, String emergencyContact, String medicalNotes,
+            Long academicYearId, Long schoolClassId, Long sectionId, Boolean enabled
+    ) {
+        this(name, null, null, null, null, phone, rollNumber, dateOfBirth, gender, bloodGroup, address,
+                emergencyContact, medicalNotes, academicYearId, schoolClassId, sectionId, enabled);
+    }
 }

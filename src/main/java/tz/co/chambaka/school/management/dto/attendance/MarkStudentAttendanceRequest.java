@@ -11,8 +11,12 @@ import java.util.List;
 public record MarkStudentAttendanceRequest(
         @NotNull Long sectionId,
         @NotNull LocalDate date,
-        @NotEmpty @Valid List<StudentAttendanceItem> entries
+        @NotEmpty @Valid List<StudentAttendanceItem> entries,
+        Long timetableSlotId
 ) {
+    public MarkStudentAttendanceRequest(Long sectionId, LocalDate date, List<StudentAttendanceItem> entries) {
+        this(sectionId, date, entries, null);
+    }
     public record StudentAttendanceItem(
             @NotNull Long studentId,
             @NotNull AttendanceStatus status,

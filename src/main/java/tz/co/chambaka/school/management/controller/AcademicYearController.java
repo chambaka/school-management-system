@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,7 +35,7 @@ public class AcademicYearController {
     }
 
     @GetMapping
-    @PreAuthorize(Access.ACADEMIC_STAFF)
+    @PreAuthorize(Access.ACADEMIC_LOOKUP)
     public List<AcademicYearResponse> list() {
         return academicYearService.list(tenantResolver.requireSchoolId());
     }
@@ -56,5 +57,12 @@ public class AcademicYearController {
     @PreAuthorize(Access.PEOPLE_MANAGE)
     public void setCurrent(@PathVariable Long id) {
         academicYearService.setCurrent(tenantResolver.requireSchoolId(), id);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize(Access.PEOPLE_MANAGE)
+    public void delete(@PathVariable Long id) {
+        academicYearService.delete(tenantResolver.requireSchoolId(), id);
     }
 }

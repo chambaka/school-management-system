@@ -46,16 +46,26 @@ public class SchoolAdminService {
         this.tenantService = tenantService;
     }
 
+    public void assertCanView(Long schoolId, UserPrincipal principal) {
+        if (principal.getRole() == Role.ACADEMIC_MASTER) {
+            if (principal.getSchoolId() == null || !principal.getSchoolId().equals(schoolId)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "You can only view officers at your school");
+            }
+            return;
+        }
+        assertCanManage(schoolId, principal);
+    }
+
     public void assertCanManage(Long schoolId, UserPrincipal principal) {
         if (principal.getRole() == Role.SUPER_ADMIN) {
             schoolRepository.findById(schoolId).orElseThrow(() -> ResourceNotFoundException.of("School", schoolId));
             return;
         }
-        if (principal.getRole() == Role.HEADMASTER) {
+        if (principal.getRole() == Role.HEADMASTER || principal.getRole() == Role.SCHOOL_ADMIN) {
             tenantService.requireSchoolInTenant(principal.getTenantId(), schoolId);
             return;
         }
-        throw new ApiException(HttpStatus.FORBIDDEN, "Only the headmaster or platform admin can manage school officers");
+        throw new ApiException(HttpStatus.FORBIDDEN, "Only the headmaster, school admin, or platform admin can manage school officers");
     }
 
     @Transactional(readOnly = true)
@@ -70,7 +80,9 @@ public class SchoolAdminService {
 
     @Transactional
     public SchoolAdminResponse create(Long schoolId, CreateSchoolAdminRequest request) {
-        PasswordPolicy.requireValid(request.password(), request.email(), request.name());
+        if (request.password() != null && !request.password().isBlank()) {
+            PasswordPolicy.requireValid(request.password(), request.email(), request.name());
+        }
         User user = userAccountService.create(
                 schoolId, request.name(), request.email(), request.password(), officerRole(request.role()), request.phone());
         user.setCampusId(campusService.requirePrimary(schoolId).getId());
@@ -106,7 +118,7 @@ public class SchoolAdminService {
     private static Role officerRole(Role requested) {
         Role role = requested == null ? Role.HEADMASTER : requested;
         if (!Role.schoolOfficers().contains(role)) {
-            throw new BusinessException("Role must be HEADMASTER, ACADEMIC_MASTER, or ACCOUNTANT");
+            throw new BusinessException("Role must be a school officer role");
         }
         return role;
     }
@@ -118,6 +130,8 @@ public class SchoolAdminService {
                 user.getEmail(),
                 user.getPhone(),
                 user.isEnabled(),
-                user.getRole());
+                user.getRole(),
+                user.activeLockedUntil(),
+                user.isTotpEnabled());
     }
 }

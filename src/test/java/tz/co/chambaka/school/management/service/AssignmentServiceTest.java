@@ -26,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -104,6 +105,34 @@ class AssignmentServiceTest {
 
         when(assignmentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.attach(1L, 9L, file)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void studentSubmitsWorkAndListsSubmissions() {
+        Assignment assignment = assignment(1L, Fixtures.schoolClass());
+        when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(assignment));
+        when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
+        when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.empty());
+        when(submissionRepository.save(any(AssignmentSubmission.class))).thenAnswer(inv -> {
+            AssignmentSubmission saved = inv.getArgument(0);
+            saved.setId(3L);
+            return saved;
+        });
+        MockMultipartFile file = new MockMultipartFile("file", "essay.pdf", "application/pdf", new byte[]{2});
+        var submitted = service.submitWork(1L, 10L, 1L, "ready", file);
+        assertThat(submitted.attachmentName()).isEqualTo("essay.pdf");
+        verify(alertService).notifyParentsOfStudent(eq(1L), any(Student.class), eq("Assignment submitted"), any(), eq("ASSIGNMENT"), eq(false));
+
+        AssignmentSubmission existing = new AssignmentSubmission();
+        existing.setId(3L);
+        existing.setAssignment(assignment);
+        existing.setStudent(Fixtures.student());
+        existing.setNotes("ready");
+        existing.setSubmittedAt(Instant.now());
+        when(submissionRepository.findByAssignmentId(1L)).thenReturn(List.of(existing));
+        assertThat(service.submissions(1L, 1L)).hasSize(1);
+        when(assignmentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.submissions(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

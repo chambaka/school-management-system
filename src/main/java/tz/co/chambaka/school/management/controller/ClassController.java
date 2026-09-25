@@ -36,7 +36,7 @@ public class ClassController {
     }
 
     @GetMapping
-    @PreAuthorize(Access.ACADEMIC_STAFF)
+    @PreAuthorize(Access.ACADEMIC_LOOKUP)
     public List<SchoolClassResponse> list(@RequestParam(required = false) Long academicYearId) {
         return classService.list(tenantResolver.requireSchoolId(), academicYearId);
     }

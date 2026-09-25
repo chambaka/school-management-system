@@ -15,6 +15,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     Page<Student> findBySchoolId(Long schoolId, Pageable pageable);
 
+    List<Student> findBySchoolIdOrderByAdmissionNoAsc(Long schoolId);
+
     Page<Student> findBySchoolIdAndSchoolClassId(Long schoolId, Long schoolClassId, Pageable pageable);
 
     @Query("""
@@ -49,4 +51,6 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     long countBySchoolClassId(Long schoolClassId);
 
     long countBySectionId(Long sectionId);
+
+    long countByAcademicYearId(Long academicYearId);
 }

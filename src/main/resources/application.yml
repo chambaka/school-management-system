@@ -64,12 +64,21 @@ sms:
   messaging:
     enabled: ${NOTIFICATION_SERVICE_ENABLED:${SMS_MESSAGING_ENABLED:false}}
     base-url: ${NOTIFICATION_SERVICE_BASE_URL:http://localhost:7575}
-    api-key: ${NOTIFICATION_API_KEY:}
-    sender-id: ${NOTIFICATION_SMS_SENDER_NAME:${SMS_MESSAGING_SENDER:SHULEHUB}}
-    provider: ${NOTIFICATION_SMS_PROVIDER:}
+    api-key: ${NOTIFICATION_API_KEY:a7b0f8dc-9a8b-4f61-b6f5-2c4d9e8a1f73}
+    sender-id: ${NOTIFICATION_SMS_SENDER_NAME:${SMS_MESSAGING_SENDER:SOLEIL}} #SHULEHUB
+    provider: ${NOTIFICATION_SMS_PROVIDER:beem}
     path: ${NOTIFICATION_SERVICE_PATH:/f1/queueNotification}
   uploads:
     dir: ${SMS_UPLOADS_DIR:uploads}
+  login-rate-limit:
+    max-attempts: ${SMS_LOGIN_RATE_MAX:8}
+    window-seconds: ${SMS_LOGIN_RATE_WINDOW:300}
+  redis:
+    enabled: ${SMS_REDIS_ENABLED:false}
+    url: ${SMS_REDIS_URL:redis://localhost:6379}
+  push:
+    vapid-public: ${SMS_PUSH_VAPID_PUBLIC:}
+    vapid-private: ${SMS_PUSH_VAPID_PRIVATE:}
   tenancy:
     mode: ${SMS_TENANCY_MODE:multi}
     default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:ShuleHub}

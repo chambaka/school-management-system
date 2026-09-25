@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -67,8 +68,10 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void credentialsAndAuthAndDeniedAndGeneric() {
-        assertThat(handler.handleBadCredentials(new BadCredentialsException("bad"), request).getStatusCode())
-                .isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(handler.handleBadCredentials(new BadCredentialsException("bad"), request).getBody().message())
+                .isEqualTo("Login or password is incorrect");
+        assertThat(handler.handleBadCredentials(new UsernameNotFoundException("User not found"), request).getBody().message())
+                .isEqualTo("Login or password is incorrect");
         assertThat(handler.handleAuth(new InsufficientAuthenticationException("x"), request).getStatusCode())
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(handler.handleDenied(new AccessDeniedException("no"), request).getStatusCode())

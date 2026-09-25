@@ -15,4 +15,6 @@ public interface SchoolClassRepository extends JpaRepository<SchoolClass, Long> 
     Optional<SchoolClass> findByIdAndSchoolId(Long id, Long schoolId);
 
     boolean existsBySchoolIdAndAcademicYearIdAndCodeIgnoreCase(Long schoolId, Long academicYearId, String code);
+
+    long countByAcademicYearId(Long academicYearId);
 }

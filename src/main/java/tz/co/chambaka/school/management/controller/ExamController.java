@@ -69,6 +69,12 @@ public class ExamController {
         return examService.approve(tenantResolver.requireSchoolId(), id);
     }
 
+    @PostMapping("/{id}/reject")
+    @PreAuthorize(Access.EXAM_REJECT)
+    public ExamResponse reject(@PathVariable Long id, @RequestParam(required = false) String note) {
+        return examService.reject(tenantResolver.requireSchoolId(), id, note);
+    }
+
     @PostMapping("/{id}/publish")
     @PreAuthorize(Access.EXAM_APPROVE)
     public ExamResponse publish(@PathVariable Long id, @RequestParam boolean published) {
@@ -101,7 +107,7 @@ public class ExamController {
     }
 
     @GetMapping("/subjects/{examSubjectId}/seats")
-    @PreAuthorize(Access.GRADE_ENTER)
+    @PreAuthorize(Access.EXAM_INVIGILATE)
     public List<ExamSeatResponse> seats(@PathVariable Long examSubjectId) {
         return examService.seats(tenantResolver.requireSchoolId(), examSubjectId);
     }

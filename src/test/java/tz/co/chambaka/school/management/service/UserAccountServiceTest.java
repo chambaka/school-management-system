@@ -1,10 +1,12 @@
 package tz.co.chambaka.school.management.service;
 
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.UserRepository;
+import tz.co.chambaka.school.management.sms.CredentialSmsService;
 import tz.co.chambaka.school.management.support.Fixtures;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -40,6 +42,8 @@ class UserAccountServiceTest {
     private SchoolRepository schoolRepository;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private CredentialSmsService credentialSms;
     @InjectMocks
     private UserAccountService service;
 
@@ -57,6 +61,7 @@ class UserAccountServiceTest {
         assertThat(captor.getValue().getPhone()).isEqualTo("255753493500");
         assertThat(captor.getValue().getTenantId()).isEqualTo(Fixtures.TENANT_ID);
         assertThat(captor.getValue().getSchoolId()).isEqualTo(1L);
+        verify(credentialSms).sendTemporaryPassword(captor.getValue(), "pw");
     }
 
     @Test
@@ -76,6 +81,33 @@ class UserAccountServiceTest {
         when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(true);
         assertThatThrownBy(() -> service.create(1L, "N", "a@b.com", "pw", Role.STUDENT, null))
                 .isInstanceOf(DuplicateResourceException.class);
+    }
+
+    @Test
+    void createGeneratesTemporaryPasswordAndSmsWhenPasswordBlank() {
+        when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("hash");
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.create(1L, "N", "a@b.com", "  ", Role.TEACHER, "0753493500");
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
+        verify(userRepository).save(userCaptor.capture());
+        verify(credentialSms).sendTemporaryPassword(userCaptor.capture(), passwordCaptor.capture());
+        assertThat(passwordCaptor.getValue()).hasSize(12);
+        assertThat(userCaptor.getValue().getPhone()).isEqualTo("255753493500");
+    }
+
+    @Test
+    void createRequiresPhoneWhenPasswordBlank() {
+        when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(false);
+        assertThatThrownBy(() -> service.create(1L, "N", "a@b.com", null, Role.STUDENT, null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("phone number");
+        verify(userRepository, never()).save(any());
+        verify(credentialSms, never()).sendTemporaryPassword(any(), any());
     }
 
     @Test

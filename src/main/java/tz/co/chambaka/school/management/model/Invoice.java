@@ -52,6 +52,8 @@ public class Invoice extends TenantEntity {
 
     private LocalDate dueDate;
 
+    private Integer billingQuarter;
+
     @Column(nullable = false)
     private Instant issuedAt;
 

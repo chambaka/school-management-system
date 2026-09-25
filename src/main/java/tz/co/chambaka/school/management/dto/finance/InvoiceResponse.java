@@ -20,6 +20,9 @@ public record InvoiceResponse(
         InvoiceStatus status,
         LocalDate dueDate,
         Instant issuedAt,
+        Long academicYearId,
+        String academicYearName,
+        Integer billingQuarter,
         List<InvoiceItemResponse> items
 ) {
 }

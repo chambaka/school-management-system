@@ -23,6 +23,7 @@ import tz.co.chambaka.school.management.model.SchoolClass;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.AuditAction;
+import tz.co.chambaka.school.management.model.enums.FeeType;
 import tz.co.chambaka.school.management.model.enums.InvoiceStatus;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.model.enums.StudentStatus;
@@ -30,6 +31,7 @@ import tz.co.chambaka.school.management.repository.FeeStructureRepository;
 import tz.co.chambaka.school.management.repository.InvoiceRepository;
 import tz.co.chambaka.school.management.repository.PaymentRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
+import tz.co.chambaka.school.management.ledger.LedgerService;
 import tz.co.chambaka.school.management.repository.UserRepository;
 import tz.co.chambaka.school.management.security.UserPrincipal;
 import org.slf4j.Logger;
@@ -42,9 +44,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -62,6 +68,7 @@ public class FinanceService {
     private final StudentService studentService;
     private final ParentService parentService;
     private final AuditService auditService;
+    private final LedgerService ledgerService;
 
     public FinanceService(
             FeeStructureRepository feeStructureRepository,
@@ -73,7 +80,8 @@ public class FinanceService {
             ClassService classService,
             StudentService studentService,
             ParentService parentService,
-            AuditService auditService
+            AuditService auditService,
+            LedgerService ledgerService
     ) {
         this.feeStructureRepository = feeStructureRepository;
         this.invoiceRepository = invoiceRepository;
@@ -85,6 +93,7 @@ public class FinanceService {
         this.studentService = studentService;
         this.parentService = parentService;
         this.auditService = auditService;
+        this.ledgerService = ledgerService;
     }
 
     @Transactional(readOnly = true)
@@ -129,62 +138,136 @@ public class FinanceService {
     @Transactional
     public List<InvoiceResponse> generateInvoices(Long schoolId, GenerateInvoicesRequest request) {
         AcademicYear year = academicYearService.require(schoolId, request.academicYearId());
-        classService.require(schoolId, request.schoolClassId());
-        List<FeeStructure> fees = request.feeStructureIds().stream()
-                .map(id -> feeStructureRepository.findByIdAndSchoolId(id, schoolId)
-                        .orElseThrow(() -> ResourceNotFoundException.of("FeeStructure", id)))
-                .toList();
-        List<Student> students = studentRepository.findBySchoolIdAndSchoolClassId(schoolId, request.schoolClassId())
-                .stream()
-                .filter(student -> StudentService.statusOf(student) != StudentStatus.ARCHIVED)
-                .toList();
-        if (students.isEmpty()) {
-            throw new BusinessException("No students found in this class");
-        }
-        String feeNames = fees.stream().map(FeeStructure::getName).collect(Collectors.joining(","));
-        List<InvoiceResponse> created = new ArrayList<>();
-        for (Student student : students) {
-            Invoice invoice = new Invoice();
-            invoice.setSchoolId(schoolId);
-            invoice.setStudent(student);
-            invoice.setAcademicYear(year);
-            invoice.setInvoiceNumber(nextInvoiceNumber(schoolId));
-            invoice.setIssuedAt(Instant.now());
-            invoice.setDueDate(request.dueDate() != null ? request.dueDate() : LocalDate.now().plusDays(14));
-            invoice.setPaidAmount(BigDecimal.ZERO);
-            invoice.setDiscountAmount(BigDecimal.ZERO);
-            invoice.setStatus(InvoiceStatus.PENDING);
-            BigDecimal total = BigDecimal.ZERO;
-            for (FeeStructure fee : fees) {
-                InvoiceItem item = new InvoiceItem();
-                item.setSchoolId(schoolId);
-                item.setInvoice(invoice);
-                item.setFeeStructure(fee);
-                item.setDescription(fee.getName());
-                item.setAmount(fee.getAmount());
-                invoice.getItems().add(item);
-                total = total.add(fee.getAmount());
+        if (request.feeStructureIds() != null) {
+            for (Long feeId : request.feeStructureIds()) {
+                feeStructureRepository.findByIdAndSchoolId(feeId, schoolId)
+                        .orElseThrow(() -> ResourceNotFoundException.of("FeeStructure", feeId));
             }
-            invoice.setTotalAmount(total);
-            Invoice saved = invoiceRepository.save(invoice);
-            created.add(toInvoice(saved));
-            audit(schoolId, AuditAction.INVOICE_GENERATED, "Invoice", saved.getId(),
-                    "Generated invoice " + saved.getInvoiceNumber() + " for student " + student.getId()
-                            + " total=" + saved.getTotalAmount(),
-                    "invoiceNumber=" + saved.getInvoiceNumber()
-                            + " studentId=" + student.getId()
-                            + " admissionNo=" + student.getAdmissionNo()
-                            + " studentName=" + student.getUser().getName()
-                            + " total=" + saved.getTotalAmount()
-                            + " dueDate=" + saved.getDueDate()
-                            + " academicYearId=" + year.getId()
-                            + " classId=" + request.schoolClassId()
-                            + " feeIds=" + request.feeStructureIds()
-                            + " feeNames=" + feeNames);
         }
-        log.info("Generated {} invoices schoolId={} classId={} yearId={}",
-                created.size(), schoolId, request.schoolClassId(), request.academicYearId());
+        int quarter = request.quarter() != null ? request.quarter() : currentQuarter();
+        LocalDate dueDate = request.dueDate() != null ? request.dueDate() : quarterDueDate(year, quarter);
+        List<SchoolClass> classes = request.schoolClassId() == null
+                ? classService.listEntities(schoolId, year.getId())
+                : List.of(classService.require(schoolId, request.schoolClassId()));
+        if (classes.isEmpty()) {
+            throw new BusinessException("No classes found for this academic year");
+        }
+        List<FeeStructure> yearFees = feeStructureRepository.findBySchoolIdAndAcademicYearId(schoolId, year.getId());
+        List<InvoiceResponse> created = new ArrayList<>();
+        int skipped = 0;
+        int studentCount = 0;
+        for (SchoolClass schoolClass : classes) {
+            List<FeeStructure> fees = feesForClass(yearFees, schoolClass.getId(), request.feeStructureIds());
+            if (fees.isEmpty()) {
+                continue;
+            }
+            List<Student> students = studentRepository.findBySchoolIdAndSchoolClassId(schoolId, schoolClass.getId())
+                    .stream()
+                    .filter(student -> StudentService.statusOf(student) != StudentStatus.ARCHIVED)
+                    .toList();
+            studentCount += students.size();
+            String feeNames = fees.stream().map(FeeStructure::getName).collect(Collectors.joining(","));
+            for (Student student : students) {
+                if (invoiceRepository.existsBySchoolIdAndStudentIdAndAcademicYearIdAndBillingQuarterAndStatusNot(
+                        schoolId, student.getId(), year.getId(), quarter, InvoiceStatus.CANCELLED)) {
+                    skipped++;
+                    continue;
+                }
+                Invoice invoice = new Invoice();
+                invoice.setSchoolId(schoolId);
+                invoice.setStudent(student);
+                invoice.setAcademicYear(year);
+                invoice.setInvoiceNumber(nextInvoiceNumber(schoolId));
+                invoice.setIssuedAt(Instant.now());
+                invoice.setDueDate(dueDate);
+                invoice.setBillingQuarter(quarter);
+                invoice.setPaidAmount(BigDecimal.ZERO);
+                invoice.setDiscountAmount(BigDecimal.ZERO);
+                invoice.setStatus(InvoiceStatus.PENDING);
+                BigDecimal total = BigDecimal.ZERO;
+                for (FeeStructure fee : fees) {
+                    InvoiceItem item = new InvoiceItem();
+                    item.setSchoolId(schoolId);
+                    item.setInvoice(invoice);
+                    item.setFeeStructure(fee);
+                    item.setDescription(fee.getName() + " (Q" + quarter + ")");
+                    item.setAmount(fee.getAmount());
+                    invoice.getItems().add(item);
+                    total = total.add(fee.getAmount());
+                }
+                invoice.setTotalAmount(total);
+                Invoice saved = invoiceRepository.save(invoice);
+                ledgerService.debitInvoice(saved);
+                created.add(toInvoice(saved));
+                audit(schoolId, AuditAction.INVOICE_GENERATED, "Invoice", saved.getId(),
+                        "Generated invoice " + saved.getInvoiceNumber() + " for student " + student.getId()
+                                + " total=" + saved.getTotalAmount(),
+                        "invoiceNumber=" + saved.getInvoiceNumber()
+                                + " studentId=" + student.getId()
+                                + " admissionNo=" + student.getAdmissionNo()
+                                + " studentName=" + student.getUser().getName()
+                                + " total=" + saved.getTotalAmount()
+                                + " dueDate=" + saved.getDueDate()
+                                + " quarter=" + quarter
+                                + " academicYearId=" + year.getId()
+                                + " classId=" + schoolClass.getId()
+                                + " feeIds=" + fees.stream().map(FeeStructure::getId).toList()
+                                + " feeNames=" + feeNames);
+            }
+        }
+        if (created.isEmpty()) {
+            if (skipped > 0) {
+                throw new BusinessException("Quarterly invoices already exist for the selected class and quarter");
+            }
+            if (studentCount == 0) {
+                throw new BusinessException("No students found in this class");
+            }
+            throw new BusinessException("No tuition or transport fees apply to students in this class");
+        }
+        log.info("Generated {} invoices schoolId={} classId={} yearId={} quarter={} skipped={}",
+                created.size(), schoolId, request.schoolClassId(), request.academicYearId(), quarter, skipped);
         return created;
+    }
+
+    private List<FeeStructure> feesForClass(List<FeeStructure> yearFees, Long classId, List<Long> selectedIds) {
+        List<FeeStructure> pool = yearFees.stream()
+                .filter(fee -> appliesToClass(fee, classId))
+                .filter(fee -> selectedIds == null || selectedIds.isEmpty() || selectedIds.contains(fee.getId()))
+                .toList();
+        if (selectedIds != null && !selectedIds.isEmpty()) {
+            return preferClassFees(pool, classId);
+        }
+        List<FeeStructure> billed = pool.stream()
+                .filter(fee -> fee.getFeeType() == FeeType.TUITION || fee.getFeeType() == FeeType.TRANSPORT)
+                .toList();
+        return preferClassFees(billed.isEmpty() ? pool : billed, classId);
+    }
+
+    private static boolean appliesToClass(FeeStructure fee, Long classId) {
+        Long feeClassId = fee.getSchoolClass() == null ? null : fee.getSchoolClass().getId();
+        return feeClassId == null || Objects.equals(feeClassId, classId);
+    }
+
+    private static List<FeeStructure> preferClassFees(List<FeeStructure> fees, Long classId) {
+        Map<FeeType, FeeStructure> byType = new LinkedHashMap<>();
+        for (FeeStructure fee : fees) {
+            Long feeClassId = fee.getSchoolClass() == null ? null : fee.getSchoolClass().getId();
+            FeeStructure existing = byType.get(fee.getFeeType());
+            if (existing == null || (Objects.equals(feeClassId, classId)
+                    && (existing.getSchoolClass() == null || !Objects.equals(existing.getSchoolClass().getId(), classId)))) {
+                byType.put(fee.getFeeType(), fee);
+            }
+        }
+        return List.copyOf(byType.values());
+    }
+
+    private static int currentQuarter() {
+        return (LocalDate.now().getMonthValue() - 1) / 3 + 1;
+    }
+
+    private static LocalDate quarterDueDate(AcademicYear year, int quarter) {
+        int calendarYear = year.getStartDate() != null ? year.getStartDate().getYear() : LocalDate.now().getYear();
+        return LocalDate.of(calendarYear, quarter * 3, 1).with(TemporalAdjusters.lastDayOfMonth());
     }
 
     @Transactional(readOnly = true)
@@ -270,6 +353,7 @@ public class FinanceService {
         payment.setPaidAt(Instant.now());
         payment.setRecordedBy(recorder);
         payment = paymentRepository.save(payment);
+        ledgerService.creditPayment(payment);
 
         invoice.setPaidAmount(invoice.getPaidAmount().add(request.amount()));
         if (invoice.getBalance().compareTo(BigDecimal.ZERO) <= 0) {
@@ -343,6 +427,7 @@ public class FinanceService {
         }
         invoice.setDiscountAmount((invoice.getDiscountAmount() == null ? BigDecimal.ZERO : invoice.getDiscountAmount())
                 .add(request.amount()));
+        ledgerService.creditDiscount(invoice, request.amount());
         if (invoice.getBalance().compareTo(BigDecimal.ZERO) <= 0) {
             invoice.setStatus(InvoiceStatus.PAID);
         }
@@ -461,6 +546,7 @@ public class FinanceService {
     }
 
     private InvoiceResponse toInvoice(Invoice invoice) {
+        var year = invoice.getAcademicYear();
         return new InvoiceResponse(
                 invoice.getId(),
                 invoice.getStudent().getId(),
@@ -474,6 +560,9 @@ public class FinanceService {
                 invoice.getStatus(),
                 invoice.getDueDate(),
                 invoice.getIssuedAt(),
+                year != null ? year.getId() : null,
+                year != null ? year.getName() : null,
+                invoice.getBillingQuarter(),
                 invoice.getItems().stream()
                         .map(item -> new InvoiceItemResponse(item.getId(), item.getDescription(), item.getAmount()))
                         .toList()

@@ -4,6 +4,7 @@ public enum ExamApprovalStatus {
     DRAFT,
     ENTERED,
     VERIFIED,
+    REJECTED,
     APPROVED,
     PUBLISHED
 }

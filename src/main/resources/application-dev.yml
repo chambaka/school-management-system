@@ -14,9 +14,9 @@ sms:
   messaging:
     enabled: true
     base-url: ${NOTIFICATION_SERVICE_BASE_URL:http://localhost:7575}
-    api-key: ${NOTIFICATION_API_KEY:}
-    sender-id: SHULEHUB
-    provider: ${NOTIFICATION_SMS_PROVIDER:log-sms}
+    api-key: ${NOTIFICATION_API_KEY:a7b0f8dc-9a8b-4f61-b6f5-2c4d9e8a1f73}
+    sender-id: SOLEIL
+    provider: ${NOTIFICATION_SMS_PROVIDER:beem}
 
 logging:
   level:

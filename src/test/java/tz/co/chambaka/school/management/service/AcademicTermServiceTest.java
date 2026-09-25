@@ -11,6 +11,8 @@ import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.AcademicTerm;
 import tz.co.chambaka.school.management.repository.AcademicTermRepository;
+import tz.co.chambaka.school.management.repository.ExamRepository;
+import tz.co.chambaka.school.management.repository.ResultWeightConfigRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
 
 import java.time.LocalDate;
@@ -20,6 +22,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +30,8 @@ class AcademicTermServiceTest {
 
     @Mock AcademicTermRepository repository;
     @Mock AcademicYearService academicYearService;
+    @Mock ExamRepository examRepository;
+    @Mock ResultWeightConfigRepository resultWeightConfigRepository;
     @InjectMocks AcademicTermService service;
 
     @Test
@@ -74,6 +79,33 @@ class AcademicTermServiceTest {
 
         when(repository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.require(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void deleteRemovesUnusedTerm() {
+        AcademicTerm term = term(1L, "Term One", true);
+        when(repository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(term));
+        when(examRepository.existsByAcademicTermId(1L)).thenReturn(false);
+        when(resultWeightConfigRepository.existsByAcademicTermId(1L)).thenReturn(false);
+
+        service.delete(1L, 1L);
+
+        verify(repository).delete(term);
+    }
+
+    @Test
+    void deleteBlockedWhenTermIsInUse() {
+        AcademicTerm term = term(1L, "Term One", true);
+        when(repository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(term));
+
+        when(examRepository.existsByAcademicTermId(1L)).thenReturn(true);
+        assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("exams");
+
+        when(examRepository.existsByAcademicTermId(1L)).thenReturn(false);
+        when(resultWeightConfigRepository.existsByAcademicTermId(1L)).thenReturn(true);
+        assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("weights");
     }
 
     private AcademicTerm term(Long id, String name, boolean current) {

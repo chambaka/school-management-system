@@ -62,4 +62,6 @@ public interface TeacherSubjectRepository extends JpaRepository<TeacherSubject, 
     void deleteBySectionId(Long sectionId);
 
     void deleteBySubjectId(Long subjectId);
+
+    boolean existsByAcademicYearId(Long academicYearId);
 }

@@ -1,11 +1,14 @@
 package tz.co.chambaka.school.management.service;
 
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.model.School;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.UserRepository;
+import tz.co.chambaka.school.management.security.PasswordPolicy;
+import tz.co.chambaka.school.management.sms.CredentialSmsService;
 import tz.co.chambaka.school.management.sms.PhoneNumbers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,23 +47,32 @@ public class UserAccountService {
     private final PasswordEncoder passwordEncoder;
     private final SchoolRepository schoolRepository;
     private final EntityManager entityManager;
+    private final CredentialSmsService credentialSms;
 
     public UserAccountService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             SchoolRepository schoolRepository,
-            EntityManager entityManager
+            EntityManager entityManager,
+            CredentialSmsService credentialSms
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.schoolRepository = schoolRepository;
         this.entityManager = entityManager;
+        this.credentialSms = credentialSms;
     }
 
     public User create(Long schoolId, String name, String email, String rawPassword, Role role, String phone) {
         if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new DuplicateResourceException("Email is already registered");
         }
+        String persistedPhone = PhoneNumbers.persist(phone);
+        boolean generate = rawPassword == null || rawPassword.isBlank();
+        if (generate && persistedPhone == null) {
+            throw new BusinessException("Add a phone number to send a temporary password, or set a password.");
+        }
+        String password = generate ? PasswordPolicy.generateTemporary() : rawPassword;
         Long tenantId = schoolId == null ? null : schoolRepository.findById(schoolId)
                 .map(School::getTenantId)
                 .orElse(null);
@@ -70,14 +82,15 @@ public class UserAccountService {
                 .name(name)
                 .email(email.toLowerCase())
                 .username(uniqueUsername(email))
-                .password(passwordEncoder.encode(rawPassword))
+                .password(passwordEncoder.encode(password))
                 .role(role)
-                .phone(PhoneNumbers.persist(phone))
+                .phone(persistedPhone)
                 .enabled(true)
                 .build();
         User saved = userRepository.save(user);
-        log.info("Created user id={} email={} role={} tenantId={} schoolId={}",
-                saved.getId(), saved.getEmail(), role, tenantId, schoolId);
+        log.info("Created user id={} email={} role={} tenantId={} schoolId={} phone={} tempPasswordGenerated={}",
+                saved.getId(), saved.getEmail(), role, tenantId, schoolId, persistedPhone, generate);
+        credentialSms.sendTemporaryPassword(saved, password);
         return saved;
     }
 

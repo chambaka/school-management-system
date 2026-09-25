@@ -26,6 +26,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByRole(Role role);
 
+    Page<User> findByRole(Role role, Pageable pageable);
+
     List<User> findByRole(Role role);
 
     List<User> findByTenantId(Long tenantId);
@@ -37,6 +39,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findBySchoolIdAndRole(Long schoolId, Role role, Pageable pageable);
 
     Page<User> findBySchoolIdAndRoleIn(Long schoolId, Collection<Role> roles, Pageable pageable);
+
+    Page<User> findBySchoolIdAndRoleNot(Long schoolId, Role role, Pageable pageable);
 
     Optional<User> findByIdAndSchoolIdAndRole(Long id, Long schoolId, Role role);
 

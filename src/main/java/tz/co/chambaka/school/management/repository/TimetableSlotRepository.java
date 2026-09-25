@@ -28,4 +28,6 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
     List<TimetableSlot> findBySchoolIdAndRoomIgnoreCase(Long schoolId, String room);
 
     boolean existsBySchoolIdAndRoomIgnoreCase(Long schoolId, String room);
+
+    boolean existsByAcademicYearId(Long academicYearId);
 }

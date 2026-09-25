@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.dto.parent;
 
 import tz.co.chambaka.school.management.model.enums.ParentStatus;
 
+import java.time.Instant;
 import java.util.List;
 
 public record ParentResponse(
@@ -14,6 +15,8 @@ public record ParentResponse(
         String address,
         boolean enabled,
         ParentStatus status,
-        List<StudentParentResponse> children
+        List<StudentParentResponse> children,
+        Instant lockedUntil,
+        boolean totpEnabled
 ) {
 }

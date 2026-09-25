@@ -17,4 +17,8 @@ public interface ResultWeightConfigRepository extends JpaRepository<ResultWeight
 
     Optional<ResultWeightConfig> findFirstBySchoolIdAndAcademicYearIdAndAcademicTermIsNullAndSubjectIsNull(
             Long schoolId, Long academicYearId);
+
+    boolean existsByAcademicYearId(Long academicYearId);
+
+    boolean existsByAcademicTermId(Long academicTermId);
 }

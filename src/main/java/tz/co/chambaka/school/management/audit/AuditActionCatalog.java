@@ -28,6 +28,9 @@ public final class AuditActionCatalog {
             case DELETE -> new Meta(action, GROUP_HTTP, "Delete", "DELETE requests that remove records");
             case LOGIN -> new Meta(action, GROUP_AUTH, "Login", "Successful sign-in");
             case LOGIN_FAILED -> new Meta(action, GROUP_AUTH, "Login failed", "Rejected credentials");
+            case ACCOUNT_UNLOCKED -> new Meta(action, GROUP_AUTH, "Account unlocked", "Login lockout cleared by an admin");
+            case TWO_FACTOR_TOGGLED -> new Meta(action, GROUP_AUTH, "ShuleHub 2FA toggled", "Platform admin turned Google Authenticator on or off");
+            case TWO_FACTOR_RESET -> new Meta(action, GROUP_AUTH, "ShuleHub 2FA reset", "Authenticator enrollment cleared so the user sets up a new key");
             case TOKEN_REFRESH -> new Meta(action, GROUP_AUTH, "Token refresh", "Refresh token rotated");
             case PASSWORD_CHANGE -> new Meta(action, GROUP_AUTH, "Password change", "Signed-in password change");
             case PASSWORD_RESET_REQUESTED -> new Meta(action, GROUP_AUTH, "Password reset requested", "Reset code issued");

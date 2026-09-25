@@ -15,4 +15,6 @@ public interface AcademicTermRepository extends JpaRepository<AcademicTerm, Long
     Optional<AcademicTerm> findByIdAndSchoolId(Long id, Long schoolId);
 
     boolean existsBySchoolIdAndAcademicYearIdAndNameIgnoreCase(Long schoolId, Long academicYearId, String name);
+
+    long countByAcademicYearId(Long academicYearId);
 }
