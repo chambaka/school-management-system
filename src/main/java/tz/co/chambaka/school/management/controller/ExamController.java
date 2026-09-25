@@ -77,7 +77,7 @@ public class ExamController {
     }
 
     @PostMapping("/{id}/publish")
-    @PreAuthorize(Access.EXAM_APPROVE)
+    @PreAuthorize(Access.EXAM_MANAGE)
     public ExamResponse publish(@PathVariable Long id, @RequestParam boolean published) {
         return examService.publish(tenantResolver.requireSchoolId(), id, published);
     }

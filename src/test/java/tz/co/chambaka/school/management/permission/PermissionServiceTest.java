@@ -39,6 +39,8 @@ class PermissionServiceTest {
         assertThat(service.codesFor(Role.STAFF)).isEmpty();
         assertThat(PermissionCatalog.roles()).contains(Role.SCHOOL_ADMIN, Role.INVIGILATOR);
         assertThat(PermissionCatalog.forRole(Role.SCHOOL_ADMIN)).contains(PermissionCatalog.PEOPLE_MANAGE);
+        assertThat(PermissionCatalog.forRole(Role.ACADEMIC_MASTER)).contains(
+                PermissionCatalog.EXAM_APPROVE, PermissionCatalog.TIMETABLE_MANAGE);
         assertThat(PermissionCatalog.forRole(Role.INVIGILATOR)).contains(PermissionCatalog.EXAM_INVIGILATE);
         assertThat(PermissionCatalog.forRole(Role.SUPER_ADMIN)).hasSize(PermissionCatalog.definitions().size());
         var ctor = PermissionCatalog.class.getDeclaredConstructor();

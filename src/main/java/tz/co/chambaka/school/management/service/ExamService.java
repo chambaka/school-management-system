@@ -14,6 +14,7 @@ import tz.co.chambaka.school.management.model.ExamSeat;
 import tz.co.chambaka.school.management.model.ExamSubject;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.Teacher;
+import tz.co.chambaka.school.management.model.TeacherSubject;
 import tz.co.chambaka.school.management.model.enums.AssessmentComponent;
 import tz.co.chambaka.school.management.model.enums.ExamApprovalStatus;
 import tz.co.chambaka.school.management.model.enums.ExamType;
@@ -26,6 +27,7 @@ import tz.co.chambaka.school.management.repository.ExamSubjectRepository;
 import tz.co.chambaka.school.management.repository.GradeRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
+import tz.co.chambaka.school.management.repository.TeacherSubjectRepository;
 import tz.co.chambaka.school.management.solver.ExamConflictEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +38,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class ExamService {
@@ -56,6 +62,7 @@ public class ExamService {
     private final StudentRepository studentRepository;
     private final AlertService alertService;
     private final GradeRepository gradeRepository;
+    private final TeacherSubjectRepository teacherSubjectRepository;
 
     public ExamService(
             ExamRepository examRepository,
@@ -70,7 +77,8 @@ public class ExamService {
             TeacherRepository teacherRepository,
             StudentRepository studentRepository,
             AlertService alertService,
-            GradeRepository gradeRepository
+            GradeRepository gradeRepository,
+            TeacherSubjectRepository teacherSubjectRepository
     ) {
         this.examRepository = examRepository;
         this.examSubjectRepository = examSubjectRepository;
@@ -85,6 +93,7 @@ public class ExamService {
         this.studentRepository = studentRepository;
         this.alertService = alertService;
         this.gradeRepository = gradeRepository;
+        this.teacherSubjectRepository = teacherSubjectRepository;
     }
 
     @Transactional(readOnly = true)
@@ -105,7 +114,7 @@ public class ExamService {
                     ? examRepository.findBySchoolIdOrderByStartDateDesc(schoolId)
                     : examRepository.findBySchoolIdAndAcademicYearIdOrderByStartDateDesc(schoolId, academicYearId);
         }
-        return exams.stream().map(this::toExam).toList();
+        return enrich(schoolId, exams);
     }
 
     @Transactional
@@ -174,7 +183,7 @@ public class ExamService {
     public ExamResponse approve(Long schoolId, Long id) {
         Exam exam = require(schoolId, id);
         if (exam.getApprovalStatus() != ExamApprovalStatus.VERIFIED) {
-            throw new BusinessException("Headmaster can only approve verified results");
+            throw new BusinessException("Only verified results can be approved");
         }
         exam.setApprovalStatus(ExamApprovalStatus.APPROVED);
         exam.setApprovedAt(Instant.now());
@@ -186,7 +195,7 @@ public class ExamService {
         Exam exam = require(schoolId, id);
         if (published) {
             if (exam.getApprovalStatus() != ExamApprovalStatus.APPROVED && exam.getApprovalStatus() != ExamApprovalStatus.PUBLISHED) {
-                throw new BusinessException("Results must be approved by the Headmaster before publication");
+                throw new BusinessException("Results must be approved before publication");
             }
             exam.setApprovalStatus(ExamApprovalStatus.PUBLISHED);
             exam.setPublished(true);
@@ -377,10 +386,53 @@ public class ExamService {
         };
     }
 
+    private List<ExamResponse> enrich(Long schoolId, List<Exam> exams) {
+        if (exams.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = exams.stream().map(Exam::getId).toList();
+        Map<Long, List<ExamSubject>> papersByExam = examSubjectRepository.findByExamIdIn(ids).stream()
+                .collect(Collectors.groupingBy(paper -> paper.getExam().getId()));
+        List<TeacherSubject> allocations = teacherSubjectRepository.findBySchoolId(schoolId);
+        return exams.stream()
+                .map(exam -> toExam(exam, papersByExam.getOrDefault(exam.getId(), List.of()), allocations))
+                .toList();
+    }
+
     private ExamResponse toExam(Exam exam) {
+        return toExam(exam, List.of(), List.of());
+    }
+
+    private ExamResponse toExam(
+            Exam exam,
+            List<ExamSubject> papers,
+            List<TeacherSubject> allocations
+    ) {
+        List<String> subjects = papers.stream()
+                .map(paper -> paper.getSubject().getName())
+                .distinct()
+                .toList();
+        LinkedHashSet<Long> subjectIds = papers.stream()
+                .map(paper -> paper.getSubject().getId())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        LinkedHashSet<String> teachers = allocations.stream()
+                .filter(allocation -> allocation.getAcademicYear().getId().equals(exam.getAcademicYear().getId())
+                        && allocation.getSchoolClass().getId().equals(exam.getSchoolClass().getId())
+                        && (subjectIds.isEmpty() || subjectIds.contains(allocation.getSubject().getId())))
+                .map(allocation -> allocation.getTeacher().getUser().getName())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (teachers.isEmpty()) {
+            papers.stream()
+                    .map(ExamSubject::getInvigilator)
+                    .filter(Objects::nonNull)
+                    .map(teacher -> teacher.getUser().getName())
+                    .forEach(teachers::add);
+        }
         return new ExamResponse(
                 exam.getId(),
                 exam.getAcademicYear().getId(),
+                exam.getAcademicYear().getName(),
+                exam.getAcademicYear().isCurrentYear(),
                 exam.getAcademicTerm() != null ? exam.getAcademicTerm().getId() : null,
                 exam.getAcademicTerm() != null ? exam.getAcademicTerm().getName() : null,
                 exam.getSchoolClass().getId(),
@@ -393,7 +445,9 @@ public class ExamService {
                 exam.getEndDate(),
                 exam.isPublished(),
                 exam.isScheduleLocked(),
-                exam.getRejectionNote()
+                exam.getRejectionNote(),
+                subjects,
+                List.copyOf(teachers)
         );
     }
 

@@ -8,6 +8,7 @@ import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Exam;
 import tz.co.chambaka.school.management.model.ExamSeat;
 import tz.co.chambaka.school.management.model.ExamSubject;
+import tz.co.chambaka.school.management.model.TeacherSubject;
 import tz.co.chambaka.school.management.model.enums.ExamApprovalStatus;
 import tz.co.chambaka.school.management.model.enums.ExamType;
 import tz.co.chambaka.school.management.model.enums.Role;
@@ -19,6 +20,7 @@ import tz.co.chambaka.school.management.repository.ExamSubjectRepository;
 import tz.co.chambaka.school.management.repository.GradeRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
+import tz.co.chambaka.school.management.repository.TeacherSubjectRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,8 +68,36 @@ class ExamServiceTest {
     private AlertService alertService;
     @Mock
     private GradeRepository gradeRepository;
+    @Mock
+    private TeacherSubjectRepository teacherSubjectRepository;
     @InjectMocks
     private ExamService service;
+
+    @Test
+    void listShowsYearTermSubjectsTeachersAndClass() {
+        Exam exam = Fixtures.exam();
+        exam.setAcademicTerm(new tz.co.chambaka.school.management.model.AcademicTerm());
+        exam.getAcademicTerm().setId(1L);
+        exam.getAcademicTerm().setName("Term 1");
+        ExamSubject paper = Fixtures.examSubject();
+        TeacherSubject allocation = new TeacherSubject();
+        allocation.setAcademicYear(exam.getAcademicYear());
+        allocation.setSchoolClass(exam.getSchoolClass());
+        allocation.setSubject(Fixtures.subject());
+        allocation.setTeacher(Fixtures.teacher());
+        when(examRepository.findBySchoolIdOrderByStartDateDesc(1L)).thenReturn(List.of(exam));
+        when(examSubjectRepository.findByExamIdIn(List.of(1L))).thenReturn(List.of(paper));
+        when(teacherSubjectRepository.findBySchoolId(1L)).thenReturn(List.of(allocation));
+
+        var row = service.list(1L, null).getFirst();
+        assertThat(row.academicYearName()).isEqualTo(exam.getAcademicYear().getName());
+        assertThat(row.academicTermName()).isEqualTo("Term 1");
+        assertThat(row.schoolClassName()).isEqualTo(exam.getSchoolClass().getName());
+        assertThat(row.subjects()).contains("Mathematics");
+        assertThat(row.teachers()).contains(Fixtures.teacher().getUser().getName());
+        assertThat(row.startDate()).isEqualTo(exam.getStartDate());
+        assertThat(row.endDate()).isEqualTo(exam.getEndDate());
+    }
 
     @Test
     void listCreatePublishAddSubject() {
