@@ -137,9 +137,11 @@ class ExamServiceTest {
             saved.setId(1L);
             return saved;
         });
+        when(teacherService.require(1L, 1L)).thenReturn(Fixtures.teacher());
         ExamSubjectRequest paper = new ExamSubjectRequest(1L, new BigDecimal("100"), new BigDecimal("40"),
-                LocalDate.of(2026, 6, 2));
+                LocalDate.of(2026, 6, 2), null, null, null, 1L);
         assertThat(service.addSubject(1L, 1L, paper).subjectName()).isEqualTo("Mathematics");
+        assertThat(service.addSubject(1L, 1L, paper).invigilatorName()).isEqualTo(Fixtures.teacher().getUser().getName());
 
         when(examSubjectRepository.findByExamId(1L)).thenReturn(List.of(Fixtures.examSubject()));
         assertThat(service.listSubjects(1L, 1L)).hasSize(1);
@@ -159,6 +161,11 @@ class ExamServiceTest {
         assertThatThrownBy(() -> service.addSubject(1L, 1L,
                 new ExamSubjectRequest(2L, new BigDecimal("40"), new BigDecimal("50"), null)))
                 .isInstanceOf(BusinessException.class);
+        when(examSubjectRepository.existsByExamIdAndSubjectId(1L, 3L)).thenReturn(false);
+        assertThatThrownBy(() -> service.addSubject(1L, 1L,
+                new ExamSubjectRequest(3L, new BigDecimal("100"), new BigDecimal("40"), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("invigilator");
         when(examRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.require(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
     }
@@ -302,15 +309,19 @@ class ExamServiceTest {
                 1L, new BigDecimal("80"), new BigDecimal("30"), LocalDate.of(2026, 3, 3),
                 java.time.LocalTime.of(8, 0), java.time.LocalTime.of(10, 0), "Hall A", 1L);
         assertThat(service.updateSubject(1L, 1L, 1L, update).maxMarks()).isEqualByComparingTo("80");
-        assertThat(service.updateSubject(1L, 1L, 1L, new ExamSubjectRequest(
-                1L, new BigDecimal("80"), new BigDecimal("30"), null)).invigilatorId()).isNull();
+        assertThat(service.updateSubject(1L, 1L, 1L, update).invigilatorName()).isEqualTo(Fixtures.teacher().getUser().getName());
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, new ExamSubjectRequest(
+                1L, new BigDecimal("80"), new BigDecimal("30"), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("invigilator");
 
         tz.co.chambaka.school.management.model.Subject english = Fixtures.subject();
         english.setId(2L);
         english.setName("English");
         when(subjectService.require(1L, 2L)).thenReturn(english);
         when(examSubjectRepository.existsByExamIdAndSubjectId(1L, 2L)).thenReturn(false);
-        ExamSubjectRequest renamed = new ExamSubjectRequest(2L, new BigDecimal("80"), new BigDecimal("30"), null);
+        ExamSubjectRequest renamed = new ExamSubjectRequest(
+                2L, new BigDecimal("80"), new BigDecimal("30"), null, null, null, null, 1L);
         assertThat(service.updateSubject(1L, 1L, 1L, renamed).subjectName()).isEqualTo("English");
 
         service.deleteSubject(1L, 1L, 1L);
@@ -328,7 +339,8 @@ class ExamServiceTest {
         assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, req)).isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Pass marks");
 
-        ExamSubjectRequest ok = new ExamSubjectRequest(2L, new BigDecimal("80"), new BigDecimal("30"), null);
+        ExamSubjectRequest ok = new ExamSubjectRequest(
+                2L, new BigDecimal("80"), new BigDecimal("30"), null, null, null, null, 1L);
         when(gradeRepository.existsByExamSubjectId(1L)).thenReturn(true);
         assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok)).isInstanceOf(BusinessException.class)
                 .hasMessageContaining("marks");

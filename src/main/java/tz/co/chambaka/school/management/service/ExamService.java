@@ -264,6 +264,7 @@ public class ExamService {
         if (request.passMarks().compareTo(request.maxMarks()) > 0) {
             throw new BusinessException("Pass marks cannot exceed max marks");
         }
+        requireInvigilator(request);
         ExamSubject examSubject = new ExamSubject();
         examSubject.setSchoolId(schoolId);
         examSubject.setExam(exam);
@@ -274,9 +275,7 @@ public class ExamService {
         examSubject.setStartTime(request.startTime());
         examSubject.setEndTime(request.endTime());
         examSubject.setVenue(request.venue());
-        if (request.invigilatorId() != null) {
-            examSubject.setInvigilator(teacherService.require(schoolId, request.invigilatorId()));
-        }
+        examSubject.setInvigilator(teacherService.require(schoolId, request.invigilatorId()));
         return toExamSubject(examSubjectRepository.save(examSubject));
     }
 
@@ -441,10 +440,13 @@ public class ExamService {
         paper.setStartTime(request.startTime());
         paper.setEndTime(request.endTime());
         paper.setVenue(request.venue());
-        if (request.invigilatorId() != null) {
-            paper.setInvigilator(teacherService.require(schoolId, request.invigilatorId()));
-        } else {
-            paper.setInvigilator(null);
+        requireInvigilator(request);
+        paper.setInvigilator(teacherService.require(schoolId, request.invigilatorId()));
+    }
+
+    private void requireInvigilator(ExamSubjectRequest request) {
+        if (request.invigilatorId() == null) {
+            throw new BusinessException("Choose an invigilator for this paper");
         }
     }
 

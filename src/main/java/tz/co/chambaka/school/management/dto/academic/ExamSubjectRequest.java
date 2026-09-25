@@ -15,7 +15,7 @@ public record ExamSubjectRequest(
         LocalTime startTime,
         LocalTime endTime,
         String venue,
-        Long invigilatorId
+        @NotNull Long invigilatorId
 ) {
     public ExamSubjectRequest(Long subjectId, BigDecimal maxMarks, BigDecimal passMarks, LocalDate examDate) {
         this(subjectId, maxMarks, passMarks, examDate, null, null, null, null);
