@@ -57,7 +57,11 @@ class NewModulesControllersTest {
         CurriculumController curriculum = new CurriculumController(curriculumService, tenantResolver);
         curriculum.list(null);
         curriculum.create(new CurriculumTopicRequest(1L, 1L, "Topic", "Obj", 1));
+        curriculum.update(2L, new CurriculumTopicRequest(1L, 1L, "Topic", "Obj", 1));
+        curriculum.delete(2L);
         verify(curriculumService).create(eq(1L), any());
+        verify(curriculumService).update(eq(1L), eq(2L), any());
+        verify(curriculumService).delete(1L, 2L);
 
         LedgerController ledger = new LedgerController(ledgerService, tenantResolver);
         ledger.student(1L);

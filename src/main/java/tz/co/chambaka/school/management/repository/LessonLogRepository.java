@@ -14,4 +14,6 @@ public interface LessonLogRepository extends JpaRepository<LessonLog, Long> {
     List<LessonLog> findBySchoolIdAndTeacherIdOrderByLessonDateDesc(Long schoolId, Long teacherId);
 
     Optional<LessonLog> findByIdAndSchoolId(Long id, Long schoolId);
+
+    boolean existsByCurriculumTopicId(Long curriculumTopicId);
 }

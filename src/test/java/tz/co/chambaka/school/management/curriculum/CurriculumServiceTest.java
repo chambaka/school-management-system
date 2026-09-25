@@ -1,6 +1,8 @@
 package tz.co.chambaka.school.management.curriculum;
 
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
+import tz.co.chambaka.school.management.repository.LessonLogRepository;
 import tz.co.chambaka.school.management.service.ClassService;
 import tz.co.chambaka.school.management.service.SubjectService;
 import tz.co.chambaka.school.management.support.Fixtures;
@@ -16,6 +18,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,6 +27,7 @@ class CurriculumServiceTest {
     @Mock CurriculumTopicRepository topicRepository;
     @Mock SubjectService subjectService;
     @Mock ClassService classService;
+    @Mock LessonLogRepository lessonLogRepository;
     @InjectMocks CurriculumService service;
 
     @Test
@@ -53,5 +57,27 @@ class CurriculumServiceTest {
         assertThat(service.require(1L, 1L).getTitle()).isEqualTo("Algebra");
         when(topicRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.require(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void updateAndDelete() {
+        CurriculumTopic topic = new CurriculumTopic();
+        topic.setId(1L);
+        topic.setSubject(Fixtures.subject());
+        topic.setTitle("Algebra");
+        when(topicRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(topic));
+        when(subjectService.require(1L, 1L)).thenReturn(Fixtures.subject());
+
+        assertThat(service.update(1L, 1L, new CurriculumTopicRequest(1L, null, "Geometry", "Draw shapes", 2)).title())
+                .isEqualTo("Geometry");
+        assertThat(topic.getObjectives()).isEqualTo("Draw shapes");
+        assertThat(topic.getSchoolClass()).isNull();
+
+        when(lessonLogRepository.existsByCurriculumTopicId(1L)).thenReturn(false);
+        service.delete(1L, 1L);
+        verify(topicRepository).delete(topic);
+
+        when(lessonLogRepository.existsByCurriculumTopicId(1L)).thenReturn(true);
+        assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class);
     }
 }
