@@ -133,6 +133,11 @@ class StudentServiceTest {
         assertThat(student.getSection()).isNull();
         assertThat(cleared.schoolClassId()).isNull();
         assertThat(student.getAcademicYear()).isNotNull();
+
+        StudentResponse noYear = service.update(1L, 1L, new UpdateStudentRequest(
+                null, null, null, null, null, null, null, null, null, null, null, null, null));
+        assertThat(student.getAcademicYear()).isNull();
+        assertThat(noYear.academicYearId()).isNull();
     }
 
     @Test

@@ -264,6 +264,8 @@ public class StudentService {
     private void applyPlacement(Long schoolId, Student student, Long yearId, Long classId, Long sectionId, boolean replaceMissing) {
         if (yearId != null) {
             student.setAcademicYear(academicYearService.require(schoolId, yearId));
+        } else if (replaceMissing) {
+            student.setAcademicYear(null);
         }
         if (classId != null) {
             student.setSchoolClass(classService.require(schoolId, classId));

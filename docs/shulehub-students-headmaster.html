@@ -137,7 +137,7 @@
 
   <h2>Who this is for</h2>
   <p>This page is the school register. As Headmaster you can do every action on it. School admin and Academic master can do the same. Teachers and accountants can open the list but cannot admit, suspend, or promote.</p>
-  <div class="note">Set up <strong>Academic years</strong> and <strong>Classes</strong> (with sections) under Academics before you admit students. A student can be admitted or edited with <strong>No class</strong>. Promotion needs a target year and class when you move them.</div>
+  <div class="note">Set up <strong>Academic years</strong> and <strong>Classes</strong> (with sections) under Academics before you admit students. A student can be admitted or edited with <strong>No year</strong> and <strong>No class</strong>. Promotion needs a target year and class when you move them.</div>
 
   <h2>Open the page</h2>
   <div class="steps">
@@ -167,7 +167,7 @@
     <div class="step"><span class="n">1</span> Click <strong>Admit student</strong>.</div>
     <div class="step"><span class="n">2</span> Enter <strong>First name</strong>, <strong>Last name</strong>, and email. Middle name and nationality are optional.</div>
     <div class="step"><span class="n">3</span> Enter a phone number (Tanzania format). If you leave password blank, ShuleHub creates a temporary password and tries to SMS it to that phone.</div>
-    <div class="step"><span class="n">4</span> Choose year if you have one. Class can stay <strong>No class</strong> until you place them. If you pick a class, you can also pick a section or leave <strong>No section</strong>. Add gender, roll number, date of birth, blood group, admission date, address, emergency contact, and medical notes as needed.</div>
+    <div class="step"><span class="n">4</span> Year can stay <strong>No year</strong>. Class can stay <strong>No class</strong> until you place them. If you pick a class, you can also pick a section or leave <strong>No section</strong>. Add gender, roll number, date of birth, blood group, admission date, address, emergency contact, and medical notes as needed.</div>
     <div class="step"><span class="n">5</span> Optional: upload a photo (JPEG, PNG, or WebP, max 2 MB).</div>
     <div class="step"><span class="n">6</span> Optional: tick <strong>Create parent now</strong> (see below).</div>
     <div class="step"><span class="n">7</span> Click <strong>Save student</strong> and confirm. The admission number is assigned automatically. If you ticked Create parent now, the parent account and the link are created in the same save.</div>
@@ -189,11 +189,11 @@
   <ol>
     <li>Click the gold pen icon on the row.</li>
     <li>Change names, phone, photo, notes, year, class, or section.</li>
-    <li>To take them out of a class, choose <strong>No class</strong> (section clears). To keep the class and drop only the stream, choose <strong>No section</strong>.</li>
+    <li>To take them out of a year, choose <strong>No year</strong>. To take them out of a class, choose <strong>No class</strong> (section clears). To keep the class and drop only the stream, choose <strong>No section</strong>.</li>
     <li>Click <strong>Save changes</strong> and confirm.</li>
   </ol>
   <p>Admission number stays on the form header so you can see who you are editing. Email cannot be changed here.</p>
-  <div class="note">Saving <strong>No class</strong> really removes the class. The list then shows — instead of a class name. Place them again with Edit, or with Promote on that row.</div>
+  <div class="note">Saving <strong>No year</strong> or <strong>No class</strong> really clears that placement. The list shows — instead of a class name. Place them again with Edit, or with Promote on that row.</div>
 
   <h2>Link a parent later</h2>
   <p>If you did not create a parent at admit, or the parent already exists:</p>
@@ -268,7 +268,7 @@
       <tr><td>New admission with guardian</td><td>Admit student → fill → Create parent now → Save student</td></tr>
       <tr><td>New admission only</td><td>Admit student → fill → Save student</td></tr>
       <tr><td>Wrong class</td><td>Pen → change class/section → Save changes</td></tr>
-      <tr><td>Student with no class yet</td><td>Pen → No class → Save changes (or leave No class at admit)</td></tr>
+      <tr><td>Student with no year or class yet</td><td>Pen → No year / No class → Save changes (or leave them empty at admit)</td></tr>
       <tr><td>Attach an existing guardian</td><td>Students → Link on the row</td></tr>
       <tr><td>Forgot password</td><td>Reset password on the row</td></tr>
       <tr><td>Cannot sign in (locked)</td><td>Unlock</td></tr>
@@ -290,7 +290,7 @@
       <tr><td>Photo rejected</td><td>Use JPEG/PNG/WebP under 2 MB.</td></tr>
       <tr><td>“No SMS was sent”</td><td>Student still saved or password still reset. Check the phone number, or tell them the password in person.</td></tr>
       <tr><td>Parent list empty when linking</td><td>Add the parent on the Parents page first. Archived parents do not appear.</td></tr>
-      <tr><td>Class still there after I chose No class</td><td>Restart the API if it was already running, then Save changes again. The list should show — for class.</td></tr>
+      <tr><td>Year or class still there after I chose No year / No class</td><td>Restart the API if it was already running, then Save changes again.</td></tr>
       <tr><td>Promote form not on the page</td><td>That is expected. Click <strong>Promote</strong> on the student’s row.</td></tr>
     </tbody>
   </table>
