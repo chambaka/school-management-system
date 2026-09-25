@@ -52,6 +52,14 @@ public class Student extends TenantEntity {
     @Column(length = 1000)
     private String medicalNotes;
 
+    @Column(length = 120)
+    private String insuranceProvider;
+
+    @Column(length = 60)
+    private String insuranceMembershipNo;
+
+    private LocalDate insuranceExpiry;
+
     @Column(length = 80)
     private String nationality;
 

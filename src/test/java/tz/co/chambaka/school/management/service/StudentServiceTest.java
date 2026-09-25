@@ -186,14 +186,14 @@ class StudentServiceTest {
         when(studentParentRepository.findByStudentId(2L)).thenReturn(List.of());
         CreateStudentRequest create = new CreateStudentRequest(
                 "Juma", null, null, null, null, "j@x.com", "pw", "07", null, null, Gender.MALE, null,
-                null, AddressText.SAMPLE, null, null, null, null, null,
+                null, AddressText.SAMPLE, null, null, null, null, null, null, null, null,
                 new AdmitParentRequest("Mama Juma", "m@x.com", null, "0753", "Trader", AddressText.SAMPLE, RelationshipType.MOTHER));
         assertThat(service.create(1L, create).id()).isEqualTo(2L);
         verify(parentRepository).save(any(Parent.class));
         verify(studentParentRepository).save(any(StudentParent.class));
         assertThatThrownBy(() -> service.create(1L, new CreateStudentRequest(
                 "A", null, null, null, null, "a@x.com", "pw", "07", null, null, null, null,
-                null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 new AdmitParentRequest("Only name", null, null, null, null, null, null))))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Parent name and email");

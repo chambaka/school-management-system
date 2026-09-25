@@ -24,6 +24,9 @@ public record CreateStudentRequest(
         String address,
         String emergencyContact,
         String medicalNotes,
+        String insuranceProvider,
+        String insuranceMembershipNo,
+        LocalDate insuranceExpiry,
         Long academicYearId,
         Long schoolClassId,
         Long sectionId,
@@ -38,7 +41,7 @@ public record CreateStudentRequest(
     ) {
         this(name, firstName, middleName, lastName, nationality, email, password, phone, rollNumber, dateOfBirth,
                 gender, bloodGroup, admissionDate, address, emergencyContact, medicalNotes,
-                academicYearId, schoolClassId, sectionId, null);
+                null, null, null, academicYearId, schoolClassId, sectionId, null);
     }
 
     public CreateStudentRequest(
@@ -48,6 +51,7 @@ public record CreateStudentRequest(
             Long academicYearId, Long schoolClassId, Long sectionId
     ) {
         this(name, null, null, null, null, email, password, phone, rollNumber, dateOfBirth, gender, bloodGroup,
-                admissionDate, address, emergencyContact, medicalNotes, academicYearId, schoolClassId, sectionId, null);
+                admissionDate, address, emergencyContact, medicalNotes, null, null, null,
+                academicYearId, schoolClassId, sectionId, null);
     }
 }

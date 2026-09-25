@@ -18,6 +18,9 @@ public record UpdateStudentRequest(
         String address,
         String emergencyContact,
         String medicalNotes,
+        String insuranceProvider,
+        String insuranceMembershipNo,
+        LocalDate insuranceExpiry,
         Long academicYearId,
         Long schoolClassId,
         Long sectionId,
@@ -29,6 +32,6 @@ public record UpdateStudentRequest(
             Long academicYearId, Long schoolClassId, Long sectionId, Boolean enabled
     ) {
         this(name, null, null, null, null, phone, rollNumber, dateOfBirth, gender, bloodGroup, address,
-                emergencyContact, medicalNotes, academicYearId, schoolClassId, sectionId, enabled);
+                emergencyContact, medicalNotes, null, null, null, academicYearId, schoolClassId, sectionId, enabled);
     }
 }

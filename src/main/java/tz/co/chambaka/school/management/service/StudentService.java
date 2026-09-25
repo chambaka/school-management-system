@@ -104,6 +104,9 @@ public class StudentService {
         student.setAddress(request.address());
         student.setEmergencyContact(request.emergencyContact());
         student.setMedicalNotes(request.medicalNotes());
+        student.setInsuranceProvider(request.insuranceProvider());
+        student.setInsuranceMembershipNo(request.insuranceMembershipNo());
+        student.setInsuranceExpiry(request.insuranceExpiry());
         student.setStatus(StudentStatus.ACTIVE);
         applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId(), false);
         Student saved = studentRepository.save(student);
@@ -152,6 +155,15 @@ public class StudentService {
         }
         if (request.medicalNotes() != null) {
             student.setMedicalNotes(request.medicalNotes());
+        }
+        if (request.insuranceProvider() != null) {
+            student.setInsuranceProvider(request.insuranceProvider());
+        }
+        if (request.insuranceMembershipNo() != null) {
+            student.setInsuranceMembershipNo(request.insuranceMembershipNo());
+        }
+        if (request.insuranceExpiry() != null) {
+            student.setInsuranceExpiry(request.insuranceExpiry());
         }
         applyPlacement(schoolId, student, request.academicYearId(), request.schoolClassId(), request.sectionId(), true);
         return toResponse(student);
@@ -309,6 +321,9 @@ public class StudentService {
                 student.getAddress(),
                 student.getEmergencyContact(),
                 student.getMedicalNotes(),
+                student.getInsuranceProvider(),
+                student.getInsuranceMembershipNo(),
+                student.getInsuranceExpiry(),
                 year != null ? year.getId() : null,
                 schoolClass != null ? schoolClass.getId() : null,
                 schoolClass != null ? schoolClass.getName() : null,
