@@ -16,6 +16,8 @@ class AccessTest {
         assertThat(Access.EXAM_APPROVE).contains("HEADMASTER").contains("ACADEMIC_MASTER");
         assertThat(Access.TERM_RESULT).contains("STUDENT").contains("PARENT").contains("TEACHER");
         assertThat(Access.PEOPLE_MANAGE).contains("HEADMASTER").contains("SCHOOL_ADMIN");
+        assertThat(Access.BUILDING_MANAGE).contains("HEADMASTER").contains("SCHOOL_ADMIN");
+        assertThat(Access.BUILDING_MANAGE).doesNotContain("ACADEMIC_MASTER");
         assertThat(Access.EXAM_INVIGILATE).contains("INVIGILATOR");
         assertThat(Access.ACCOUNT_UNLOCK).contains("HEADMASTER").contains("ACADEMIC_MASTER");
         Constructor<Access> ctor = Access.class.getDeclaredConstructor();

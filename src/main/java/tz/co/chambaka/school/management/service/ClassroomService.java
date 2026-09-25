@@ -6,8 +6,10 @@ import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.mapper.AcademicMapper;
+import tz.co.chambaka.school.management.model.Building;
 import tz.co.chambaka.school.management.model.Classroom;
 import tz.co.chambaka.school.management.model.TimetableSlot;
+import tz.co.chambaka.school.management.repository.BuildingRepository;
 import tz.co.chambaka.school.management.repository.ClassroomRepository;
 import tz.co.chambaka.school.management.repository.TimetableSlotRepository;
 import org.springframework.stereotype.Service;
@@ -20,15 +22,18 @@ public class ClassroomService {
 
     private final ClassroomRepository classroomRepository;
     private final TimetableSlotRepository timetableSlotRepository;
+    private final BuildingRepository buildingRepository;
     private final AcademicMapper academicMapper;
 
     public ClassroomService(
             ClassroomRepository classroomRepository,
             TimetableSlotRepository timetableSlotRepository,
+            BuildingRepository buildingRepository,
             AcademicMapper academicMapper
     ) {
         this.classroomRepository = classroomRepository;
         this.timetableSlotRepository = timetableSlotRepository;
+        this.buildingRepository = buildingRepository;
         this.academicMapper = academicMapper;
     }
 
@@ -50,7 +55,7 @@ public class ClassroomService {
         }
         Classroom classroom = new Classroom();
         classroom.setSchoolId(schoolId);
-        apply(classroom, name, code, request);
+        apply(schoolId, classroom, name, code, request);
         return academicMapper.toClassroom(classroomRepository.save(classroom));
     }
 
@@ -69,7 +74,7 @@ public class ClassroomService {
             throw new DuplicateResourceException("Classroom code already exists");
         }
         String previousName = classroom.getName();
-        apply(classroom, name, code, request);
+        apply(schoolId, classroom, name, code, request);
         if (!previousName.equals(name)) {
             for (TimetableSlot slot : timetableSlotRepository.findBySchoolIdAndRoomIgnoreCase(schoolId, previousName)) {
                 slot.setRoom(name);
@@ -92,12 +97,26 @@ public class ClassroomService {
                 .orElseThrow(() -> ResourceNotFoundException.of("Classroom", id));
     }
 
-    private static void apply(Classroom classroom, String name, String code, ClassroomRequest request) {
+    private void apply(Long schoolId, Classroom classroom, String name, String code, ClassroomRequest request) {
         classroom.setName(name);
         classroom.setCode(code);
         classroom.setCapacity(request.capacity());
-        classroom.setBuilding(blankToNull(request.building()));
+        Building site = resolveSite(schoolId, request);
+        classroom.setSite(site);
+        classroom.setBuilding(site != null ? site.getName() : blankToNull(request.building()));
         classroom.setNotes(blankToNull(request.notes()));
+    }
+
+    private Building resolveSite(Long schoolId, ClassroomRequest request) {
+        if (request.buildingId() != null) {
+            return buildingRepository.findByIdAndSchoolId(request.buildingId(), schoolId)
+                    .orElseThrow(() -> ResourceNotFoundException.of("Building", request.buildingId()));
+        }
+        String name = blankToNull(request.building());
+        if (name == null) {
+            return null;
+        }
+        return buildingRepository.findBySchoolIdAndNameIgnoreCase(schoolId, name).orElse(null);
     }
 
     private static String blankToNull(String value) {

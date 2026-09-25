@@ -41,6 +41,7 @@ public final class Access {
     public static final String STAFF_OFFICERS = "hasAnyRole('SUPER_ADMIN','HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER')";
     public static final String ACCOUNT_UNLOCK = "hasAnyRole('SUPER_ADMIN','HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER')";
     public static final String CURRICULUM = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER','TEACHER')";
+    public static final String BUILDING_MANAGE = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN')";
     public static final String PERMISSIONS = "isAuthenticated()";
 
     private Access() {

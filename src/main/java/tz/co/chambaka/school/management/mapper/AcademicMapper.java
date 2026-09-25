@@ -9,6 +9,7 @@ import tz.co.chambaka.school.management.model.Classroom;
 import tz.co.chambaka.school.management.model.Department;
 import tz.co.chambaka.school.management.model.Subject;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface AcademicMapper {
@@ -19,5 +20,7 @@ public interface AcademicMapper {
 
     DepartmentResponse toDepartment(Department department);
 
+    @Mapping(target = "buildingId", source = "site.id")
+    @Mapping(target = "building", expression = "java(classroom.getSite() != null ? classroom.getSite().getName() : classroom.getBuilding())")
     ClassroomResponse toClassroom(Classroom classroom);
 }

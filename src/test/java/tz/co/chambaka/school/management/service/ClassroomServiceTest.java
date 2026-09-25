@@ -8,6 +8,7 @@ import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.mapper.AcademicMapper;
 import tz.co.chambaka.school.management.model.Classroom;
 import tz.co.chambaka.school.management.model.TimetableSlot;
+import tz.co.chambaka.school.management.repository.BuildingRepository;
 import tz.co.chambaka.school.management.repository.ClassroomRepository;
 import tz.co.chambaka.school.management.repository.TimetableSlotRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
@@ -34,6 +35,8 @@ class ClassroomServiceTest {
     private ClassroomRepository classroomRepository;
     @Mock
     private TimetableSlotRepository timetableSlotRepository;
+    @Mock
+    private BuildingRepository buildingRepository;
     @Mock
     private AcademicMapper academicMapper;
     @InjectMocks

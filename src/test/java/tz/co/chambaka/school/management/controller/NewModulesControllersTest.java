@@ -1,6 +1,8 @@
 package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.curriculum.CurriculumController;
+import tz.co.chambaka.school.management.dto.academic.BuildingRequest;
+import tz.co.chambaka.school.management.service.BuildingService;
 import tz.co.chambaka.school.management.curriculum.CurriculumService;
 import tz.co.chambaka.school.management.curriculum.CurriculumTopicRequest;
 import tz.co.chambaka.school.management.ledger.LedgerController;
@@ -45,6 +47,7 @@ class NewModulesControllersTest {
     @Mock NotificationSettingsService settingsService;
     @Mock PushService pushService;
     @Mock TeacherAvailabilityService availabilityService;
+    @Mock BuildingService buildingService;
 
     @BeforeEach
     void school() {
@@ -54,6 +57,15 @@ class NewModulesControllersTest {
     @Test
     void wiresNewModuleEndpoints() {
         var head = Fixtures.principal(tz.co.chambaka.school.management.model.enums.Role.HEADMASTER);
+        BuildingController buildings = new BuildingController(buildingService, tenantResolver);
+        buildings.list();
+        buildings.create(new BuildingRequest("Block A", null));
+        buildings.update(3L, new BuildingRequest("Block B", "Science"));
+        buildings.delete(3L);
+        verify(buildingService).create(eq(1L), any());
+        verify(buildingService).update(eq(1L), eq(3L), any());
+        verify(buildingService).delete(1L, 3L);
+
         CurriculumController curriculum = new CurriculumController(curriculumService, tenantResolver);
         curriculum.list(null);
         curriculum.create(new CurriculumTopicRequest(1L, 1L, "Topic", "Obj", 1));

@@ -15,4 +15,8 @@ public interface ClassroomRepository extends JpaRepository<Classroom, Long> {
     boolean existsBySchoolIdAndNameIgnoreCase(Long schoolId, String name);
 
     boolean existsBySchoolIdAndCodeIgnoreCase(Long schoolId, String code);
+
+    List<Classroom> findBySiteId(Long siteId);
+
+    boolean existsBySiteId(Long siteId);
 }

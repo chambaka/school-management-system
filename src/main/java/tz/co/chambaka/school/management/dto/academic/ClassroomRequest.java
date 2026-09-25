@@ -9,6 +9,10 @@ public record ClassroomRequest(
         @Size(max = 30) String code,
         @Min(1) Integer capacity,
         @Size(max = 100) String building,
-        @Size(max = 500) String notes
+        @Size(max = 500) String notes,
+        Long buildingId
 ) {
+    public ClassroomRequest(String name, String code, Integer capacity, String building, String notes) {
+        this(name, code, capacity, building, notes, null);
+    }
 }
