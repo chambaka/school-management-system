@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub Teachers menu — Headmaster guide</title>
+  <style>
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10pt;
+      line-height: 1.4;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 20px 22px 18px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    header.cover h1 {
+      margin: 0 0 6px;
+      font-size: 20pt;
+      letter-spacing: 0.02em;
+    }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 3px; color: #c9d4e3; font-size: 10.5pt; }
+    header.cover .tagline {
+      margin-top: 10px;
+      color: #F5C451;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    h2 {
+      margin: 16px 0 8px;
+      font-size: 13pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 10px 0 4px;
+      font-size: 11pt;
+      color: #06101F;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8px; }
+    ol, ul { margin: 0 0 10px; padding-left: 18px; }
+    li { margin: 2px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10px; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 5px 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 8.5pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      font-size: 9.5pt;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+    .step {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 8px 10px;
+      page-break-inside: avoid;
+    }
+    .step .n {
+      display: inline-block;
+      width: 20px; height: 20px; line-height: 20px;
+      text-align: center;
+      background: #06101F;
+      color: #F5C451;
+      border-radius: 50%;
+      font-size: 9pt;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    .step strong { color: #06101F; }
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .card {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 9px 11px;
+      page-break-inside: avoid;
+    }
+    .card h3 { margin: 0 0 4px; }
+    .chip {
+      display: inline-block;
+      background: #06101F;
+      color: #F5C451;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 99px;
+      margin-right: 4px;
+    }
+    .muted { color: #3d4d5e; font-size: 9.5pt; }
+    footer {
+      margin-top: 12px;
+      font-size: 8.5pt;
+      color: #5b6b7c;
+    }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">Teachers menu</span></h1>
+    <p>Headmaster guide · How to run the teaching staff list</p>
+    <p>Sign in as Headmaster → left menu → <strong>Teachers</strong></p>
+    <p class="tagline">List · Add teacher · Photo · Keep login safe</p>
+  </header>
+
+  <h2>Who this is for</h2>
+  <p>This page is the teaching staff directory. As Headmaster you can add, edit, deactivate, and help teachers sign in. School admin and Academic master can do the same.</p>
+  <div class="note">Use <strong>Teachers</strong> only for class teachers. Non-teaching staff (office, support, invigilators) are added from <strong>Schools → Officers</strong>, not here.</div>
+
+  <h2>Open the page</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Sign in with your Headmaster email or phone.</div>
+    <div class="step"><span class="n">2</span> If you have more than one school, pick the school first (Schools → Open school).</div>
+    <div class="step"><span class="n">3</span> Click <strong>Teachers</strong> in the left menu. Title: “Teachers”. Subtitle: “Staff directory”.</div>
+  </div>
+
+  <h2>What you see</h2>
+  <table>
+    <thead>
+      <tr><th>Part of the screen</th><th>What it is for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Show archived</td><td>Tick to see deactivated teachers so you can restore them.</td></tr>
+      <tr><td>Add teacher</td><td>Gold button with a plus. Opens the Add teacher form on top of the list.</td></tr>
+      <tr><td>Table</td><td>Employee ID, name, photo, email, department, status.</td></tr>
+      <tr><td>Sort</td><td>Click Name, Email, or Status to sort the list.</td></tr>
+      <tr><td>Row buttons</td><td>Edit (pen), unlock, reset 2FA, reset password, deactivate, restore.</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Status chips: Active or Archived, plus extras <span class="chip">Locked</span> (five failed logins) and <span class="chip">2FA</span> (authenticator enrolled).</p>
+
+  <h2>Add a teacher</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Click the gold <strong>Add teacher</strong> button. The form opens over the list.</div>
+    <div class="step"><span class="n">2</span> Enter <strong>Name</strong>, <strong>Employee ID</strong>, and <strong>Email</strong>. Employee ID must be unique at this school.</div>
+    <div class="step"><span class="n">3</span> Enter a phone number (Tanzania format). If you leave password blank, ShuleHub creates a temporary password and tries to SMS it to that phone.</div>
+    <div class="step"><span class="n">4</span> Optional: choose Department, and add qualification and specialization.</div>
+    <div class="step"><span class="n">5</span> Optional: upload a photo (JPEG, PNG, or WebP, max 2 MB).</div>
+    <div class="step"><span class="n">6</span> Click <strong>Save teacher</strong> and confirm. The form closes. They appear in the list and on Users with role Teacher.</div>
+  </div>
+  <div class="note">Save stays disabled until there is a phone, or a password that meets the strength bar. Close, Cancel, Escape, or a click outside the form closes it without saving. Email cannot be changed after save — edit the rest of the record instead. Employee ID stays on the edit header and is not changed later.</div>
+
+  <h2>Edit a teacher</h2>
+  <ol>
+    <li>Click the pen icon on the row. The same form opens, titled Edit and their name.</li>
+    <li>Change name, phone, department, qualification, specialization, or photo.</li>
+    <li>Click <strong>Save changes</strong> and confirm.</li>
+  </ol>
+  <p>Email stays locked. Employee ID is shown under the title so you can see who you are editing.</p>
+
+  <h2>Photo</h2>
+  <ul>
+    <li>On Add teacher, choose a file before you save. It uploads after the teacher is created.</li>
+    <li>On Edit, Change photo uploads at once. Remove photo needs confirm.</li>
+    <li>Use JPEG, PNG, or WebP, 2 MB or smaller.</li>
+  </ul>
+
+  <h2 class="page-break">Keep a teacher login safe</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>Unlock</h3>
+      <p>Shows when the row has a Locked chip (five failed logins). Confirm Unlock so they can sign in again at once.</p>
+    </div>
+    <div class="card">
+      <h3>Reset password</h3>
+      <p>Creates a temporary password. If they have a phone, ShuleHub sends it by SMS. Confirm before you click.</p>
+    </div>
+    <div class="card">
+      <h3>Reset 2FA</h3>
+      <p>Shows only if they enrolled Google Authenticator. After reset they set up 2FA again at next sign-in.</p>
+    </div>
+    <div class="card">
+      <h3>Deactivate</h3>
+      <p>Archives the teacher. They leave the normal list. Data stays. Tick Show archived to find them, then Restore.</p>
+    </div>
+  </div>
+  <p class="muted">You can also Unlock, Reset password, and Reset 2FA on the <strong>Users</strong> page. Teachers is the place to add and edit the record.</p>
+
+  <h2>Departments</h2>
+  <p>The Department list comes from Academics. If it is empty, the school still has default departments in most cases. You can leave Department as None and set it later.</p>
+
+  <h2>Typical day</h2>
+  <table>
+    <thead>
+      <tr><th>Job</th><th>Clicks</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>New class teacher</td><td>Teachers → Add teacher → fill → Save teacher</td></tr>
+      <tr><td>Wrong department or phone</td><td>Pen → change → Save changes</td></tr>
+      <tr><td>Forgot password</td><td>Reset password on the row</td></tr>
+      <tr><td>Cannot sign in (locked)</td><td>Unlock</td></tr>
+      <tr><td>Lost authenticator phone</td><td>Reset 2FA (row must show 2FA)</td></tr>
+      <tr><td>Left teaching</td><td>Deactivate. Tick Show archived → Restore if they return</td></tr>
+      <tr><td>Office / support staff (not a teacher)</td><td>Schools → Officers → Add officer → Role Staff</td></tr>
+    </tbody>
+  </table>
+
+  <h2>If something fails</h2>
+  <table>
+    <thead>
+      <tr><th>What you see</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Cannot save a new teacher</td><td>Need name, employee ID, email, and a phone or a password that meets the strength bar.</td></tr>
+      <tr><td>Employee ID already exists</td><td>Use another ID. IDs cannot repeat at the same school.</td></tr>
+      <tr><td>Email is already registered</td><td>That email is in use. Use another email.</td></tr>
+      <tr><td>Photo rejected / saved but photo failed</td><td>Teacher is still created. Open Edit and upload JPEG/PNG/WebP under 2 MB.</td></tr>
+      <tr><td>“No SMS was sent”</td><td>Teacher still saved or password still reset. Check the phone, or tell them the password in person.</td></tr>
+      <tr><td>Department list empty</td><td>Leave None, or add departments under Academics, then edit the teacher.</td></tr>
+      <tr><td>Add teacher missing</td><td>Only Headmaster, School admin, and Academic master see the button.</td></tr>
+      <tr><td>Need a non-teaching login</td><td>Do not use Teachers. Schools → Officers → Role Staff (or Invigilator).</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    ShuleHub · Headmaster · Teachers menu · Confirm dialogs appear before save, deactivate, reset password, and reset 2FA · SMS needs a configured notification key
+  </footer>
+</body>
+</html>

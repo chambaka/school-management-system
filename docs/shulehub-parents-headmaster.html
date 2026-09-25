@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub Parents menu — Headmaster guide</title>
+  <style>
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10pt;
+      line-height: 1.4;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 20px 22px 18px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    header.cover h1 {
+      margin: 0 0 6px;
+      font-size: 20pt;
+      letter-spacing: 0.02em;
+    }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 3px; color: #c9d4e3; font-size: 10.5pt; }
+    header.cover .tagline {
+      margin-top: 10px;
+      color: #F5C451;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    h2 {
+      margin: 16px 0 8px;
+      font-size: 13pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 10px 0 4px;
+      font-size: 11pt;
+      color: #06101F;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8px; }
+    ol, ul { margin: 0 0 10px; padding-left: 18px; }
+    li { margin: 2px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10px; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 5px 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 8.5pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      font-size: 9.5pt;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+    .step {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 8px 10px;
+      page-break-inside: avoid;
+    }
+    .step .n {
+      display: inline-block;
+      width: 20px; height: 20px; line-height: 20px;
+      text-align: center;
+      background: #06101F;
+      color: #F5C451;
+      border-radius: 50%;
+      font-size: 9pt;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    .step strong { color: #06101F; }
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .card {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 9px 11px;
+      page-break-inside: avoid;
+    }
+    .card h3 { margin: 0 0 4px; }
+    .chip {
+      display: inline-block;
+      background: #06101F;
+      color: #F5C451;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 99px;
+      margin-right: 4px;
+    }
+    .muted { color: #3d4d5e; font-size: 9.5pt; }
+    footer {
+      margin-top: 12px;
+      font-size: 8.5pt;
+      color: #5b6b7c;
+    }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">Parents menu</span></h1>
+    <p>Headmaster guide · How to run guardians and student links</p>
+    <p>Sign in as Headmaster → left menu → <strong>Parents</strong></p>
+    <p class="tagline">Add parent · Link student · Message · Keep login safe</p>
+  </header>
+
+  <h2>Who this is for</h2>
+  <p>This page is the guardian directory. As Headmaster you can add parents, link them to students, send a message, and help them sign in. School admin and Academic master can do the same.</p>
+  <div class="note">A parent login is not useful until they are linked to a student. You can also create a parent during <strong>Students → Admit student → Create parent now</strong>. Use this Parents page when the guardian already exists, or when you need to link, message, or fix a login.</div>
+
+  <h2>Open the page</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Sign in with your Headmaster email or phone.</div>
+    <div class="step"><span class="n">2</span> If you have more than one school, pick the school first (Schools → Open school).</div>
+    <div class="step"><span class="n">3</span> Click <strong>Parents</strong> in the left menu. Title: “Parents”. Subtitle: “Guardians and links”.</div>
+  </div>
+
+  <h2>What you see</h2>
+  <table>
+    <thead>
+      <tr><th>Part of the screen</th><th>What it is for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Show archived</td><td>Tick to see deactivated parents so you can restore them.</td></tr>
+      <tr><td>Link student</td><td>Opens a small form on the list to attach an existing parent to a student who has no parent yet.</td></tr>
+      <tr><td>Add parent</td><td>Gold button with a plus. Opens the Add parent form. The parent list is hidden while the form is open.</td></tr>
+      <tr><td>Table</td><td>Name, email, linked students, phone, status.</td></tr>
+      <tr><td>Sort</td><td>Click Name, Email, or Status to sort the list.</td></tr>
+      <tr><td>Row buttons</td><td>Edit (pen), message, unlock, reset 2FA, reset password, deactivate, restore.</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Status chips: Active or Archived, plus extras <span class="chip">Locked</span> (five failed logins) and <span class="chip">2FA</span> (authenticator enrolled).</p>
+
+  <h2>Add a parent</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Click the gold <strong>Add parent</strong> button. The form opens over the page. The parent list is not shown.</div>
+    <div class="step"><span class="n">2</span> Enter <strong>Name</strong> and <strong>Email</strong>.</div>
+    <div class="step"><span class="n">3</span> Enter a phone number (Tanzania format). If you leave password blank, ShuleHub creates a temporary password and tries to SMS it to that phone.</div>
+    <div class="step"><span class="n">4</span> Optional: occupation and address.</div>
+    <div class="step"><span class="n">5</span> Click <strong>Save parent</strong> and confirm. The form closes. They appear in the list and on Users with role Parent.</div>
+  </div>
+  <div class="note">Save stays disabled until there is a phone, or a password that meets the strength bar. Close, Cancel, Escape, or a click outside closes the form without saving. Email cannot be changed after save. Adding a parent does not link a student — do that next, or use Create parent now on Admit student.</div>
+
+  <h2>Edit a parent</h2>
+  <ol>
+    <li>Click the pen icon on the row. The same form opens. The parent list is hidden.</li>
+    <li>Linked student names show under the title, or “No students linked”.</li>
+    <li>Change name, phone, occupation, or address. Click <strong>Save changes</strong> and confirm.</li>
+  </ol>
+  <p>Email stays locked. Cancel or Close returns you to the list.</p>
+
+  <h2>Link a parent to a student</h2>
+  <p>Use this when the parent already exists and the student has no parent yet.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Either click <strong>Link student</strong> at the top, or on a row click <strong>Link</strong> / <strong>Add student</strong>.</div>
+    <div class="step"><span class="n">2</span> Choose the student (only students with no parent appear), the parent, and the relationship: Father, Mother, Guardian, or Other.</div>
+    <div class="step"><span class="n">3</span> Click <strong>Link</strong> and confirm.</div>
+  </div>
+  <p>To remove a link, click <strong>Unlink</strong> on that student under the parent and confirm. The parent account is not deleted. The student can then be linked again.</p>
+  <div class="note">If the student list says “Every live student already has a parent,” link from the Students page instead, or unlink first. A new guardian at admission is faster with Students → Admit student → Create parent now.</div>
+
+  <h2>Message a parent</h2>
+  <ol>
+    <li>Click the message icon on the row.</li>
+    <li>Messages opens on their linked student’s thread.</li>
+    <li>Click <strong>Write comment</strong>, type the note, optionally tick SMS, then <strong>Post comment</strong>.</li>
+  </ol>
+  <p>If they have no student linked, you will see “Link a student first.” SMS is only an alert that a comment exists — they read and reply in the app.</p>
+
+  <h2 class="page-break">Keep a parent login safe</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>Unlock</h3>
+      <p>Shows when the row has a Locked chip (five failed logins). Confirm Unlock so they can sign in again at once.</p>
+    </div>
+    <div class="card">
+      <h3>Reset password</h3>
+      <p>Creates a temporary password. If they have a phone, ShuleHub sends it by SMS. Confirm before you click.</p>
+    </div>
+    <div class="card">
+      <h3>Reset 2FA</h3>
+      <p>Shows only if they enrolled Google Authenticator. After reset they set up 2FA again at next sign-in.</p>
+    </div>
+    <div class="card">
+      <h3>Deactivate</h3>
+      <p>Archives the parent. They leave the normal list. Data stays. Confirm says Deactivate, not Delete.</p>
+    </div>
+  </div>
+  <p>Tick <strong>Show archived</strong> to find them. Click <strong>Restore</strong>. They return to the live list at once — you do not refresh. You can also Unlock, Reset password, and Reset 2FA on the Users page.</p>
+
+  <h2>Typical day</h2>
+  <table>
+    <thead>
+      <tr><th>Job</th><th>Clicks</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>New guardian with a new student</td><td>Students → Admit student → Create parent now → Save student</td></tr>
+      <tr><td>Guardian already in the school</td><td>Parents → Link student → choose student and parent → Link</td></tr>
+      <tr><td>Guardian first, student later</td><td>Parents → Add parent → later Link</td></tr>
+      <tr><td>Wrong phone</td><td>Pen → change phone → Save changes</td></tr>
+      <tr><td>Note to a family</td><td>Message icon → Write comment → Post comment</td></tr>
+      <tr><td>Forgot password</td><td>Reset password on the row</td></tr>
+      <tr><td>Cannot sign in (locked)</td><td>Unlock</td></tr>
+      <tr><td>Left the school</td><td>Deactivate. Show archived → Restore if they return</td></tr>
+    </tbody>
+  </table>
+
+  <h2>If something fails</h2>
+  <table>
+    <thead>
+      <tr><th>What you see</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Cannot save a new parent</td><td>Need name, email, and a phone or a password that meets the strength bar.</td></tr>
+      <tr><td>Email is already registered</td><td>That email is in use. Use another email, or Link the existing parent.</td></tr>
+      <tr><td>Student list empty when linking</td><td>Every live student already has a parent, or no students yet. Admit or unlink first.</td></tr>
+      <tr><td>“Link a student first” on Messages</td><td>Link this parent to a student, then click Message again.</td></tr>
+      <tr><td>“No SMS was sent”</td><td>Parent still saved or password still reset. Check the phone, or tell them the password in person. SMS needs the school’s text service to be turned on.</td></tr>
+      <tr><td>Add parent missing</td><td>Only Headmaster, School admin, and Academic master see this page’s tools.</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    ShuleHub · Headmaster · Parents menu · Confirm dialogs appear before save, unlink, deactivate, reset password, and reset 2FA · SMS needs a configured notification service
+  </footer>
+</body>
+</html>

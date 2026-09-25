@@ -1,0 +1,82 @@
+package tz.co.chambaka.school.management.controller;
+
+import tz.co.chambaka.school.management.dto.admin.SchoolUserResponse;
+import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordRequest;
+import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordResponse;
+import tz.co.chambaka.school.management.dto.auth.ResetTwoFactorResponse;
+import tz.co.chambaka.school.management.dto.auth.UnlockAccountResponse;
+import tz.co.chambaka.school.management.dto.common.PageResponse;
+import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.security.Access;
+import tz.co.chambaka.school.management.security.CurrentUser;
+import tz.co.chambaka.school.management.security.UserPrincipal;
+import tz.co.chambaka.school.management.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/users")
+@Tag(name = "Users")
+public class UserController {
+
+    private final AuthService authService;
+
+    public UserController(AuthService authService) {
+        this.authService = authService;
+    }
+
+    @GetMapping
+    @PreAuthorize(Access.ACCOUNT_UNLOCK)
+    @Operation(summary = "List login accounts. School officers see their school; platform admin sees the whole platform.")
+    public PageResponse<SchoolUserResponse> list(
+            @CurrentUser UserPrincipal principal,
+            @RequestParam(required = false) Long schoolId,
+            @RequestParam(required = false) Role role,
+            Pageable pageable
+    ) {
+        return authService.listSchoolUsers(schoolId, role, principal, pageable);
+    }
+
+    @PostMapping("/{id}/unlock")
+    @PreAuthorize(Access.ACCOUNT_UNLOCK)
+    public UnlockAccountResponse unlock(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam(required = false) Long schoolId
+    ) {
+        return authService.unlock(id, schoolId, principal);
+    }
+
+    @PostMapping("/{id}/reset-2fa")
+    @PreAuthorize(Access.ACCOUNT_UNLOCK)
+    @Operation(summary = "Clear Google Authenticator for a user. Headmaster, school admin, or platform admin.")
+    public ResetTwoFactorResponse resetTwoFactor(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam(required = false) Long schoolId
+    ) {
+        return authService.resetTwoFactor(id, schoolId, principal);
+    }
+
+    @PostMapping("/{id}/reset-password")
+    @PreAuthorize(Access.ACCOUNT_UNLOCK)
+    @Operation(summary = "Set a new password (or SMS a temporary one). Headmaster, school admin, or platform admin.")
+    public AdminResetPasswordResponse resetPassword(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam(required = false) Long schoolId,
+            @RequestBody(required = false) @Valid AdminResetPasswordRequest request
+    ) {
+        return authService.resetPassword(id, schoolId, principal, request);
+    }
+}

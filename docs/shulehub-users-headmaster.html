@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub Users menu — Headmaster guide</title>
+  <style>
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10pt;
+      line-height: 1.4;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 20px 22px 18px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    header.cover h1 {
+      margin: 0 0 6px;
+      font-size: 20pt;
+      letter-spacing: 0.02em;
+    }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 3px; color: #c9d4e3; font-size: 10.5pt; }
+    header.cover .tagline {
+      margin-top: 10px;
+      color: #F5C451;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    h2 {
+      margin: 16px 0 8px;
+      font-size: 13pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 10px 0 4px;
+      font-size: 11pt;
+      color: #06101F;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8px; }
+    ol, ul { margin: 0 0 10px; padding-left: 18px; }
+    li { margin: 2px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10px; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 5px 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 8.5pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      font-size: 9.5pt;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+    .step {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 8px 10px;
+      page-break-inside: avoid;
+    }
+    .step .n {
+      display: inline-block;
+      width: 20px; height: 20px; line-height: 20px;
+      text-align: center;
+      background: #06101F;
+      color: #F5C451;
+      border-radius: 50%;
+      font-size: 9pt;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    .step strong { color: #06101F; }
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .card {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 9px 11px;
+      page-break-inside: avoid;
+    }
+    .card h3 { margin: 0 0 4px; }
+    .chip {
+      display: inline-block;
+      background: #06101F;
+      color: #F5C451;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 99px;
+      margin-right: 4px;
+    }
+    .muted { color: #3d4d5e; font-size: 9.5pt; }
+    footer {
+      margin-top: 12px;
+      font-size: 8.5pt;
+      color: #5b6b7c;
+    }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">Users menu</span></h1>
+    <p>Headmaster guide · How to help people sign in</p>
+    <p>Sign in as Headmaster → left menu → <strong>Users</strong></p>
+    <p class="tagline">Add staff on Schools · Find login · Unlock · Reset password · Reset 2FA</p>
+  </header>
+
+  <h2>Who this is for</h2>
+  <p>This page is the school login list. Use it when someone cannot sign in. As Headmaster you can unlock accounts, reset passwords, and clear Google Authenticator. School admin and Academic master can do the same.</p>
+  <div class="note">You do <strong>not</strong> create people here. Add staff and other officers from <strong>Schools → Officers</strong> (see below). Add a teacher on <strong>Teachers</strong>, a parent on <strong>Parents</strong> or during student admit, and a student on <strong>Students</strong>. They then appear on Users.</div>
+
+  <h2>Open the page</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Sign in with your Headmaster email or phone.</div>
+    <div class="step"><span class="n">2</span> If you have more than one school, pick the school first (Schools).</div>
+    <div class="step"><span class="n">3</span> Click <strong>Users</strong> in the left menu. Title: “Users”. Subtitle: “Every login at this school.”</div>
+  </div>
+
+  <h2>What you see</h2>
+  <table>
+    <thead>
+      <tr><th>Part of the screen</th><th>What it is for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Role filter</td><td>Show one role only (Headmaster, Teacher, Parent, Student, and the others), or All roles.</td></tr>
+      <tr><td>Table</td><td>Name, phone under the name, email, role, status, and action buttons.</td></tr>
+      <tr><td>Sort</td><td>Click Name, Email, Role, or Status to sort the list.</td></tr>
+      <tr><td>Row buttons</td><td>Unlock (if locked), Reset 2FA (if enrolled), Reset password (always).</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Status: Active or Disabled. Extra chips: <span class="chip">Locked</span> (five failed logins) and <span class="chip">2FA</span> (Google Authenticator enrolled).</p>
+
+  <h2>Find a person</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Open <strong>Users</strong>.</div>
+    <div class="step"><span class="n">2</span> Use the <strong>Role</strong> list if you know their job (for example Teacher or Parent).</div>
+    <div class="step"><span class="n">3</span> Scan Name or Email. Phone is under the name — “No phone” means a password reset cannot SMS them.</div>
+  </div>
+  <p>The list shows everyone at this school: officers, teachers, staff, parents, and students. Platform admin accounts do not appear here.</p>
+
+  <h2>Roles you will see</h2>
+  <table>
+    <thead>
+      <tr><th>Role on the row</th><th>Who they are</th><th>Where you add them</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Headmaster</td><td>School leader. Same Users tools as you.</td><td>Schools → Officers → Role Headmaster</td></tr>
+      <tr><td>School admin</td><td>Office login for day-to-day admin.</td><td>Schools → Officers → Role School admin</td></tr>
+      <tr><td>Academic master</td><td>Academics and results.</td><td>Schools → Officers → Role Academic master</td></tr>
+      <tr><td>Accountant</td><td>Fees and invoices.</td><td>Schools → Officers → Role Accountant</td></tr>
+      <tr><td>Staff</td><td>Non-teaching school staff (not a teacher).</td><td>Schools → Officers → Role Staff</td></tr>
+      <tr><td>Invigilator</td><td>Exam duty login.</td><td>Schools → Officers → Role Invigilator</td></tr>
+      <tr><td>Teacher</td><td>Class teacher login.</td><td>Teachers</td></tr>
+      <tr><td>Parent</td><td>Guardian login.</td><td>Parents, or Create parent now on Students</td></tr>
+      <tr><td>Student</td><td>Learner login.</td><td>Students</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Add staff</h2>
+  <p>Staff is a school officer, not a teacher. Add them from <strong>Schools</strong>, not from Users.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Left menu → <strong>Schools</strong>.</div>
+    <div class="step"><span class="n">2</span> On the school card, click <strong>Officers</strong>. Title: “School officers”.</div>
+    <div class="step"><span class="n">3</span> Click <strong>Add officer</strong>.</div>
+    <div class="step"><span class="n">4</span> Enter <strong>Name</strong> and <strong>Email</strong>.</div>
+    <div class="step"><span class="n">5</span> Set <strong>Role</strong> to <strong>Staff</strong>.</div>
+    <div class="step"><span class="n">6</span> Enter a phone, or set a password. If the password is blank, ShuleHub creates a temporary one and tries to SMS it.</div>
+    <div class="step"><span class="n">7</span> Click <strong>Save officer</strong> and confirm. They then appear on Users with role Staff.</div>
+  </div>
+  <div class="note">Teachers are different: add those on <strong>Teachers</strong>, not Officers. The same Officers form also adds Headmaster, School admin, Academic master, Accountant, and Invigilator — only the Role changes.</div>
+
+  <h2>Unlock a locked login</h2>
+  <p>After five wrong passwords, ShuleHub locks the account for 15 minutes. The row shows a Locked chip. Unlock now if they need to get in before that time ends.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Find the row with the <strong>Locked</strong> chip.</div>
+    <div class="step"><span class="n">2</span> Click <strong>Unlock</strong>.</div>
+    <div class="step"><span class="n">3</span> Confirm. They can sign in again at once. Failed-attempt count is cleared.</div>
+  </div>
+  <div class="note">Unlock does not change their password. If they forgot it, use Reset password as well.</div>
+
+  <h2>Reset a password</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Find the person. Check they have a phone under the name.</div>
+    <div class="step"><span class="n">2</span> Click <strong>Reset password</strong>.</div>
+    <div class="step"><span class="n">3</span> Confirm. ShuleHub creates a temporary password. If they have a phone, it tries to SMS it.</div>
+  </div>
+  <p>A successful reset also unlocks them and signs them out of other devices. Tell them to change the temporary password after they sign in.</p>
+  <div class="note">If the row says “No phone”, Reset password fails. Open their page (Students, Teachers, Parents, or Schools → Officers), add a phone, then come back to Users — or tell them a new password in person after you add the phone and reset again.</div>
+
+  <h2>Reset 2FA (Google Authenticator)</h2>
+  <p>Shows only if the row has a 2FA chip. Use this when they lost their phone or cannot open the authenticator app.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Click <strong>Reset 2FA</strong>.</div>
+    <div class="step"><span class="n">2</span> Confirm. Their authenticator is cleared.</div>
+    <div class="step"><span class="n">3</span> They sign in with email/phone and password, then set up Google Authenticator again if the school still requires 2FA.</div>
+  </div>
+
+  <h2 class="page-break">Active and Disabled</h2>
+  <table>
+    <thead>
+      <tr><th>Status</th><th>Meaning</th><th>What you do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Active</td><td>They can sign in (unless Locked).</td><td>Unlock / reset as needed.</td></tr>
+      <tr><td>Disabled</td><td>The account was turned off (for example a student was deactivated).</td><td>Restore them on their own page (Students, Teachers, Parents, or Schools → Officers). Users does not restore.</td></tr>
+      <tr><td>Locked</td><td>Too many failed logins.</td><td>Unlock on this page.</td></tr>
+      <tr><td>2FA</td><td>Authenticator is enrolled.</td><td>Reset 2FA if they cannot complete the code.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Typical day</h2>
+  <table>
+    <thead>
+      <tr><th>Job</th><th>Clicks</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Teacher forgot password</td><td>Users → Role Teacher → Reset password</td></tr>
+      <tr><td>Parent locked out</td><td>Users → Role Parent → Unlock (and Reset password if they forgot it)</td></tr>
+      <tr><td>Lost authenticator phone</td><td>Users → find 2FA chip → Reset 2FA</td></tr>
+      <tr><td>Add non-teaching staff</td><td>Schools → Officers → Add officer → Role Staff → Save officer</td></tr>
+      <tr><td>New teacher cannot see Users</td><td>Add them on Teachers first, then they appear here</td></tr>
+      <tr><td>Student login problem</td><td>Users → Role Student → Unlock or Reset password</td></tr>
+    </tbody>
+  </table>
+
+  <h2>If something fails</h2>
+  <table>
+    <thead>
+      <tr><th>What you see</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>No users found</td><td>Clear the Role filter, or add people first (Schools → Officers, Teachers, Parents, Students).</td></tr>
+      <tr><td>Cannot add Staff on Users</td><td>Correct. Schools → Officers → Add officer → Role Staff.</td></tr>
+      <tr><td>Unlock button missing</td><td>They are not locked. Wait, or use Reset password if they forgot the password.</td></tr>
+      <tr><td>Reset 2FA missing</td><td>They have not enrolled authenticator. The 2FA chip must show first.</td></tr>
+      <tr><td>Password reset error about phone</td><td>Add a phone on their record, then reset again.</td></tr>
+      <tr><td>“No SMS was sent” / Password reset without SMS</td><td>The password was still reset. Tell them a new password in person, or check the phone number.</td></tr>
+      <tr><td>Disabled and cannot sign in</td><td>Restore them on Students, Teachers, Parents, or Schools → Officers — not on Users.</td></tr>
+      <tr><td>Cannot find a platform admin</td><td>Correct. Headmaster only sees this school’s logins.</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    ShuleHub · Headmaster · Users menu · Confirm dialogs appear before unlock, reset password, and reset 2FA · SMS needs a configured notification key
+  </footer>
+</body>
+</html>
