@@ -466,6 +466,7 @@ class ControllersTest {
         GradeController grades = new GradeController(gradeService, tenantResolver);
         grades.byExam(1L);
         grades.record(Fixtures.principal(Role.TEACHER), new GradeRequest(1L, 1L, 1L, BigDecimal.TEN, null));
+        grades.delete(1L, 1L, 1L);
 
         AttendanceController attendance = new AttendanceController(attendanceService, studentService, tenantResolver);
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());

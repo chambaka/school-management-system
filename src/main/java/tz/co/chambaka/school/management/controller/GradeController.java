@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -87,5 +88,16 @@ public class GradeController {
     @PreAuthorize(Access.GRADE_ENTER)
     public GradeResponse record(@CurrentUser UserPrincipal principal, @Valid @RequestBody GradeRequest request) {
         return gradeService.record(tenantResolver.requireSchoolId(), request, principal.getId());
+    }
+
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize(Access.GRADE_ENTER)
+    public void delete(
+            @RequestParam Long examId,
+            @RequestParam Long studentId,
+            @RequestParam Long subjectId
+    ) {
+        gradeService.delete(tenantResolver.requireSchoolId(), examId, studentId, subjectId);
     }
 }

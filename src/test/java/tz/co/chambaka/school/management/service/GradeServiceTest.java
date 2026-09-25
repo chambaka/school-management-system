@@ -124,6 +124,18 @@ class GradeServiceTest {
     }
 
     @Test
+    void deleteRemovesSavedMarks() {
+        when(examService.require(1L, 1L)).thenReturn(Fixtures.exam());
+        when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
+        Grade existing = grade(new BigDecimal("40"));
+        when(gradeRepository.findByExamIdAndStudentIdAndSubjectId(1L, 1L, 1L)).thenReturn(Optional.of(existing));
+        service.delete(1L, 1L, 1L, 1L);
+        org.mockito.Mockito.verify(gradeRepository).delete(existing);
+        when(gradeRepository.findByExamIdAndStudentIdAndSubjectId(1L, 1L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.delete(1L, 1L, 1L, 1L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
     void gridRanksActiveStudentsAndComputesAverage() {
         Exam exam = Fixtures.exam();
         when(examService.require(1L, 1L)).thenReturn(exam);

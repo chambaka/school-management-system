@@ -113,6 +113,18 @@ public class GradeService {
         return saved;
     }
 
+    @Transactional
+    public void delete(Long schoolId, Long examId, Long studentId, Long subjectId) {
+        Exam exam = examService.require(schoolId, examId);
+        examService.assertMarksEditable(exam);
+        studentService.require(schoolId, studentId);
+        Grade grade = gradeRepository
+                .findByExamIdAndStudentIdAndSubjectId(examId, studentId, subjectId)
+                .orElseThrow(() -> new ResourceNotFoundException("No marks for this student on this paper"));
+        gradeRepository.delete(grade);
+        log.info("Deleted grade id={} examId={} studentId={} subjectId={}", grade.getId(), examId, studentId, subjectId);
+    }
+
     @Transactional(readOnly = true)
     public List<GradeResponse> byExam(Long schoolId, Long examId) {
         examService.require(schoolId, examId);
