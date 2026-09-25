@@ -112,9 +112,11 @@ public class AcademicYearService {
     }
 
     @Transactional
-    public void setCurrent(Long schoolId, Long id) {
-        require(schoolId, id);
+    public AcademicYearResponse setCurrent(Long schoolId, Long id) {
+        AcademicYear year = require(schoolId, id);
         markCurrent(schoolId, id);
+        year.setCurrentYear(true);
+        return academicMapper.toYear(year);
     }
 
     @Transactional
@@ -183,8 +185,9 @@ public class AcademicYearService {
     }
 
     private void markCurrent(Long schoolId, Long id) {
-        academicYearRepository.findBySchoolIdOrderByStartDateDesc(schoolId).forEach(year ->
-                year.setCurrentYear(year.getId().equals(id)));
+        List<AcademicYear> years = academicYearRepository.findBySchoolIdOrderByStartDateDesc(schoolId);
+        years.forEach(year -> year.setCurrentYear(year.getId().equals(id)));
+        academicYearRepository.saveAll(years);
     }
 
     private void validateDates(AcademicYearRequest request) {

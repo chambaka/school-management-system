@@ -55,8 +55,8 @@ public class AcademicYearController {
 
     @PostMapping("/{id}/current")
     @PreAuthorize(Access.PEOPLE_MANAGE)
-    public void setCurrent(@PathVariable Long id) {
-        academicYearService.setCurrent(tenantResolver.requireSchoolId(), id);
+    public AcademicYearResponse setCurrent(@PathVariable Long id) {
+        return academicYearService.setCurrent(tenantResolver.requireSchoolId(), id);
     }
 
     @DeleteMapping("/{id}")

@@ -131,6 +131,24 @@ class AcademicYearServiceTest {
     }
 
     @Test
+    void setCurrentPersistsOnlyTheChosenYear() {
+        AcademicYear current = Fixtures.year();
+        AcademicYear other = Fixtures.year();
+        other.setId(2L);
+        other.setName("2027/2028");
+        other.setCurrentYear(false);
+        when(academicYearRepository.findByIdAndSchoolId(2L, 1L)).thenReturn(Optional.of(other));
+        when(academicYearRepository.findBySchoolIdOrderByStartDateDesc(1L)).thenReturn(List.of(other, current));
+        when(academicMapper.toYear(other)).thenReturn(
+                new AcademicYearResponse(2L, "2027/2028", other.getStartDate(), other.getEndDate(), true));
+
+        assertThat(service.setCurrent(1L, 2L).currentYear()).isTrue();
+        assertThat(current.isCurrentYear()).isFalse();
+        assertThat(other.isCurrentYear()).isTrue();
+        verify(academicYearRepository).saveAll(List.of(other, current));
+    }
+
+    @Test
     void deleteRemovesUnusedYear() {
         AcademicYear year = Fixtures.year();
         when(academicYearRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(year));
