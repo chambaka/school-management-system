@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -93,6 +94,23 @@ public class ExamController {
     @PreAuthorize(Access.GRADE_ENTER)
     public ExamSubjectResponse addSubject(@PathVariable Long id, @Valid @RequestBody ExamSubjectRequest request) {
         return examService.addSubject(tenantResolver.requireSchoolId(), id, request);
+    }
+
+    @PutMapping("/{id}/subjects/{paperId}")
+    @PreAuthorize(Access.GRADE_ENTER)
+    public ExamSubjectResponse updateSubject(
+            @PathVariable Long id,
+            @PathVariable Long paperId,
+            @Valid @RequestBody ExamSubjectRequest request
+    ) {
+        return examService.updateSubject(tenantResolver.requireSchoolId(), id, paperId, request);
+    }
+
+    @DeleteMapping("/{id}/subjects/{paperId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize(Access.GRADE_ENTER)
+    public void deleteSubject(@PathVariable Long id, @PathVariable Long paperId) {
+        examService.deleteSubject(tenantResolver.requireSchoolId(), id, paperId);
     }
 
     @PostMapping("/{id}/schedule")

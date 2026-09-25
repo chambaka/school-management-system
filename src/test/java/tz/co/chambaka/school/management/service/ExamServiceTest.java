@@ -276,4 +276,70 @@ class ExamServiceTest {
         assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class)
                 .hasMessageContaining("marks");
     }
+
+    @Test
+    void updateAndDeletePaper() {
+        Exam exam = Fixtures.exam();
+        ExamSubject paper = Fixtures.examSubject();
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        when(examSubjectRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(paper));
+        when(examSubjectRepository.save(paper)).thenReturn(paper);
+        when(gradeRepository.existsByExamSubjectId(1L)).thenReturn(false);
+        when(teacherService.require(1L, 1L)).thenReturn(Fixtures.teacher());
+        ExamSubjectRequest update = new ExamSubjectRequest(
+                1L, new BigDecimal("80"), new BigDecimal("30"), LocalDate.of(2026, 3, 3),
+                java.time.LocalTime.of(8, 0), java.time.LocalTime.of(10, 0), "Hall A", 1L);
+        assertThat(service.updateSubject(1L, 1L, 1L, update).maxMarks()).isEqualByComparingTo("80");
+        assertThat(service.updateSubject(1L, 1L, 1L, new ExamSubjectRequest(
+                1L, new BigDecimal("80"), new BigDecimal("30"), null)).invigilatorId()).isNull();
+
+        tz.co.chambaka.school.management.model.Subject english = Fixtures.subject();
+        english.setId(2L);
+        english.setName("English");
+        when(subjectService.require(1L, 2L)).thenReturn(english);
+        when(examSubjectRepository.existsByExamIdAndSubjectId(1L, 2L)).thenReturn(false);
+        ExamSubjectRequest renamed = new ExamSubjectRequest(2L, new BigDecimal("80"), new BigDecimal("30"), null);
+        assertThat(service.updateSubject(1L, 1L, 1L, renamed).subjectName()).isEqualTo("English");
+
+        service.deleteSubject(1L, 1L, 1L);
+        verify(examSeatRepository).deleteByExamSubjectId(1L);
+        verify(examSubjectRepository).delete(paper);
+    }
+
+    @Test
+    void updateAndDeletePaperErrors() {
+        Exam exam = Fixtures.exam();
+        ExamSubject paper = Fixtures.examSubject();
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        when(examSubjectRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(paper));
+        ExamSubjectRequest req = new ExamSubjectRequest(1L, new BigDecimal("40"), new BigDecimal("50"), null);
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, req)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Pass marks");
+
+        ExamSubjectRequest ok = new ExamSubjectRequest(2L, new BigDecimal("80"), new BigDecimal("30"), null);
+        when(gradeRepository.existsByExamSubjectId(1L)).thenReturn(true);
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("marks");
+        assertThatThrownBy(() -> service.deleteSubject(1L, 1L, 1L)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("marks");
+
+        when(gradeRepository.existsByExamSubjectId(1L)).thenReturn(false);
+        when(examSubjectRepository.existsByExamIdAndSubjectId(1L, 2L)).thenReturn(true);
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok))
+                .isInstanceOf(DuplicateResourceException.class);
+
+        exam.setScheduleLocked(true);
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("locked");
+
+        exam.setScheduleLocked(false);
+        exam.setPublished(true);
+        assertThatThrownBy(() -> service.deleteSubject(1L, 1L, 1L)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Unpublish");
+
+        paper.getExam().setId(9L);
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok)).isInstanceOf(ResourceNotFoundException.class);
+        when(examSubjectRepository.findByIdAndSchoolId(8L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.deleteSubject(1L, 1L, 8L)).isInstanceOf(ResourceNotFoundException.class);
+    }
 }

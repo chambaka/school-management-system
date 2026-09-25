@@ -258,6 +258,42 @@ public class ExamService {
         return toExamSubject(examSubjectRepository.save(examSubject));
     }
 
+    @Transactional
+    public ExamSubjectResponse updateSubject(Long schoolId, Long examId, Long paperId, ExamSubjectRequest request) {
+        Exam exam = require(schoolId, examId);
+        ExamSubject paper = requirePaper(schoolId, examId, paperId);
+        assertPaperWritable(exam);
+        if (request.passMarks().compareTo(request.maxMarks()) > 0) {
+            throw new BusinessException("Pass marks cannot exceed max marks");
+        }
+        Long currentSubjectId = paper.getSubject().getId();
+        if (!currentSubjectId.equals(request.subjectId())) {
+            if (gradeRepository.existsByExamSubjectId(paper.getId())) {
+                throw new BusinessException("Remove marks for this paper first");
+            }
+            if (examSubjectRepository.existsByExamIdAndSubjectId(examId, request.subjectId())) {
+                throw new DuplicateResourceException("Subject is already added to this exam");
+            }
+            paper.setSubject(subjectService.require(schoolId, request.subjectId()));
+        }
+        applyPaper(schoolId, paper, request);
+        return toExamSubject(examSubjectRepository.save(paper));
+    }
+
+    @Transactional
+    public void deleteSubject(Long schoolId, Long examId, Long paperId) {
+        Exam exam = require(schoolId, examId);
+        ExamSubject paper = requirePaper(schoolId, examId, paperId);
+        if (exam.isPublished()) {
+            throw new BusinessException("Unpublish this exam first");
+        }
+        if (gradeRepository.existsByExamSubjectId(paper.getId())) {
+            throw new BusinessException("Remove marks for this paper first");
+        }
+        examSeatRepository.deleteByExamSubjectId(paper.getId());
+        examSubjectRepository.delete(paper);
+    }
+
     @Transactional(readOnly = true)
     public List<ExamSubjectResponse> listSubjects(Long schoolId, Long examId) {
         require(schoolId, examId);
@@ -359,6 +395,35 @@ public class ExamService {
     public Exam require(Long schoolId, Long id) {
         return examRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Exam", id));
+    }
+
+    private ExamSubject requirePaper(Long schoolId, Long examId, Long paperId) {
+        ExamSubject paper = examSubjectRepository.findByIdAndSchoolId(paperId, schoolId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Exam paper", paperId));
+        if (!paper.getExam().getId().equals(examId)) {
+            throw new ResourceNotFoundException("Exam paper does not belong to this exam");
+        }
+        return paper;
+    }
+
+    private void assertPaperWritable(Exam exam) {
+        if (exam.isScheduleLocked()) {
+            throw new BusinessException("This exam timetable is locked");
+        }
+    }
+
+    private void applyPaper(Long schoolId, ExamSubject paper, ExamSubjectRequest request) {
+        paper.setMaxMarks(request.maxMarks());
+        paper.setPassMarks(request.passMarks());
+        paper.setExamDate(request.examDate());
+        paper.setStartTime(request.startTime());
+        paper.setEndTime(request.endTime());
+        paper.setVenue(request.venue());
+        if (request.invigilatorId() != null) {
+            paper.setInvigilator(teacherService.require(schoolId, request.invigilatorId()));
+        } else {
+            paper.setInvigilator(null);
+        }
     }
 
     @Transactional
