@@ -340,8 +340,9 @@ public class ExamService {
         for (ExamSubject paper : papers) {
             List<Student> students = studentRepository.findBySchoolIdAndSchoolClassId(schoolId, exam.getSchoolClass().getId())
                     .stream().filter(s -> s.getStatus() == null || s.getStatus() == StudentStatus.ACTIVE).toList();
+            boolean keepSitting = paper.getExamDate() != null && paper.getStartTime() != null;
             int safety = 0;
-            while (safety++ < 20) {
+            while (!keepSitting && safety++ < 20) {
                 paper.setExamDate(date);
                 paper.setStartTime(morning ? LocalTime.of(8, 0) : LocalTime.of(11, 0));
                 paper.setEndTime(morning ? LocalTime.of(10, 0) : LocalTime.of(12, 30));
@@ -381,6 +382,9 @@ public class ExamService {
                 examSeat.setStudent(student);
                 examSeat.setSeatNumber(String.format("S-%02d", seat++));
                 examSeatRepository.save(examSeat);
+            }
+            if (keepSitting) {
+                continue;
             }
             if (!morning) {
                 date = date.plusDays(1);
