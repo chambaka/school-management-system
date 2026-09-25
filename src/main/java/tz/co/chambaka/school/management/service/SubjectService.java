@@ -65,9 +65,15 @@ public class SubjectService {
     @Transactional
     public SubjectResponse update(Long schoolId, Long id, SubjectRequest request) {
         Subject subject = require(schoolId, id);
+        if (!subject.getCode().equalsIgnoreCase(request.code())
+                && subjectRepository.existsBySchoolIdAndCodeIgnoreCase(schoolId, request.code())) {
+            throw new DuplicateResourceException("Subject code already exists");
+        }
         subject.setName(request.name());
         subject.setCode(request.code());
-        subject.setDescription(request.description());
+        if (request.description() != null) {
+            subject.setDescription(request.description());
+        }
         return academicMapper.toSubject(subject);
     }
 

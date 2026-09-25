@@ -61,6 +61,16 @@ class SubjectServiceTest {
         when(subjectRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(subject));
         service.update(1L, 1L, new SubjectRequest("Math", "MTH", "d"));
         assertThat(subject.getName()).isEqualTo("Math");
+        assertThat(subject.getCode()).isEqualTo("MTH");
+    }
+
+    @Test
+    void updateRejectsDuplicateCode() {
+        Subject subject = Fixtures.subject();
+        when(subjectRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(subject));
+        when(subjectRepository.existsBySchoolIdAndCodeIgnoreCase(1L, "ENG")).thenReturn(true);
+        assertThatThrownBy(() -> service.update(1L, 1L, new SubjectRequest("English", "ENG", null)))
+                .isInstanceOf(DuplicateResourceException.class);
     }
 
     @Test
