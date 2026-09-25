@@ -82,6 +82,42 @@ class AcademicTermServiceTest {
     }
 
     @Test
+    void updatesTermAndMarksCurrent() {
+        AcademicTerm term = term(1L, "Term One", false);
+        AcademicTerm other = term(2L, "Term Two", true);
+        when(repository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(term));
+        when(academicYearService.require(1L, 1L)).thenReturn(Fixtures.year());
+        when(repository.findBySchoolIdAndAcademicYearIdOrderByStartDateAsc(1L, 1L)).thenReturn(List.of(term, other));
+
+        var response = service.update(1L, 1L, new AcademicTermRequest(
+                1L, "Term One B", LocalDate.of(2026, 1, 2), LocalDate.of(2026, 4, 2), true));
+
+        assertThat(response.name()).isEqualTo("Term One B");
+        assertThat(term.isCurrentTerm()).isTrue();
+        assertThat(other.isCurrentTerm()).isFalse();
+    }
+
+    @Test
+    void updateKeepsSameNameAndRejectsInvalidOrDuplicate() {
+        AcademicTerm term = term(1L, "Term One", false);
+        when(repository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(term));
+        when(academicYearService.require(1L, 1L)).thenReturn(Fixtures.year());
+
+        assertThat(service.update(1L, 1L, new AcademicTermRequest(
+                1L, "Term One", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 4, 1), false)).name())
+                .isEqualTo("Term One");
+
+        assertThatThrownBy(() -> service.update(1L, 1L, new AcademicTermRequest(
+                1L, "Bad", LocalDate.of(2026, 5, 2), LocalDate.of(2026, 5, 1), false)))
+                .isInstanceOf(BusinessException.class);
+
+        when(repository.existsBySchoolIdAndAcademicYearIdAndNameIgnoreCase(1L, 1L, "Term Two")).thenReturn(true);
+        assertThatThrownBy(() -> service.update(1L, 1L, new AcademicTermRequest(
+                1L, "Term Two", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 4, 1), false)))
+                .isInstanceOf(DuplicateResourceException.class);
+    }
+
+    @Test
     void deleteRemovesUnusedTerm() {
         AcademicTerm term = term(1L, "Term One", true);
         when(repository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(term));

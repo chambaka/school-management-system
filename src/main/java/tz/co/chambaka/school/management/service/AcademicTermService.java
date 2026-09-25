@@ -67,6 +67,30 @@ public class AcademicTermService {
         return toResponse(term);
     }
 
+    @Transactional
+    public AcademicTermResponse update(Long schoolId, Long id, AcademicTermRequest request) {
+        if (request.endDate().isBefore(request.startDate())) {
+            throw new BusinessException("Term end date must be after start date");
+        }
+        AcademicTerm term = require(schoolId, id);
+        AcademicYear year = academicYearService.require(schoolId, request.academicYearId());
+        boolean sameNameAndYear = term.getName().equalsIgnoreCase(request.name())
+                && term.getAcademicYear().getId().equals(year.getId());
+        if (!sameNameAndYear && academicTermRepository.existsBySchoolIdAndAcademicYearIdAndNameIgnoreCase(
+                schoolId, year.getId(), request.name())) {
+            throw new DuplicateResourceException("Term already exists: " + request.name());
+        }
+        term.setAcademicYear(year);
+        term.setName(request.name());
+        term.setStartDate(request.startDate());
+        term.setEndDate(request.endDate());
+        term.setCurrentTerm(request.currentTerm());
+        if (request.currentTerm()) {
+            markCurrent(schoolId, year.getId(), term.getId());
+        }
+        return toResponse(term);
+    }
+
     public AcademicTerm require(Long schoolId, Long id) {
         return academicTermRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> ResourceNotFoundException.of("AcademicTerm", id));

@@ -543,6 +543,7 @@ class ControllersTest {
         terms.list(null);
         terms.list(1L);
         terms.create(termRequest);
+        terms.update(1L, termRequest);
         terms.delete(1L);
 
         ResultConfigController resultConfig = new ResultConfigController(resultConfigService, tenantResolver);
