@@ -53,6 +53,12 @@ public class ExamController {
         return examService.create(tenantResolver.requireSchoolId(), request);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize(Access.EXAM_MANAGE)
+    public ExamResponse update(@PathVariable Long id, @Valid @RequestBody ExamRequest request) {
+        return examService.update(tenantResolver.requireSchoolId(), id, request);
+    }
+
     @PostMapping("/{id}/submit")
     @PreAuthorize(Access.GRADE_ENTER)
     public ExamResponse submit(@PathVariable Long id) {

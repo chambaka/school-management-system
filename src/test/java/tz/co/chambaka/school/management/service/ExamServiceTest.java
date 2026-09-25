@@ -119,6 +119,13 @@ class ExamServiceTest {
         assertThat(service.create(1L, req).examType()).isEqualTo(ExamType.FINAL);
 
         when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        assertThat(service.update(1L, 1L, new ExamRequest(1L, 1L, "Final", ExamType.FINAL,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 10))).name()).isEqualTo("Final");
+        assertThatThrownBy(() -> service.update(1L, 1L, new ExamRequest(1L, 1L, "X", ExamType.QUIZ,
+                LocalDate.of(2026, 6, 10), LocalDate.of(2026, 6, 1))))
+                .isInstanceOf(BusinessException.class);
+
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
         exam.setApprovalStatus(ExamApprovalStatus.APPROVED);
         when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L)).thenReturn(List.of());
         assertThat(service.publish(1L, 1L, true).published()).isTrue();

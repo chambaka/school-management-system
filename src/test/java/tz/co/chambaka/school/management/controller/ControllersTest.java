@@ -457,6 +457,7 @@ class ControllersTest {
         ExamController exams = new ExamController(examService, tenantResolver);
         exams.list(Fixtures.principal(Role.HEADMASTER), null);
         exams.create(new ExamRequest(1L, 1L, "Mid", ExamType.MIDTERM, LocalDate.now(), LocalDate.now().plusDays(1)));
+        exams.update(1L, new ExamRequest(1L, 1L, "Mid", ExamType.MIDTERM, LocalDate.now(), LocalDate.now().plusDays(1)));
         exams.publish(1L, true);
         exams.subjects(1L);
         exams.addSubject(1L, new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null));

@@ -141,6 +141,25 @@ public class ExamService {
     }
 
     @Transactional
+    public ExamResponse update(Long schoolId, Long id, ExamRequest request) {
+        if (request.endDate().isBefore(request.startDate())) {
+            throw new BusinessException("Exam end date must be after start date");
+        }
+        Exam exam = require(schoolId, id);
+        exam.setAcademicYear(academicYearService.require(schoolId, request.academicYearId()));
+        exam.setAcademicTerm(request.academicTermId() == null ? null : academicTermService.require(schoolId, request.academicTermId()));
+        exam.setSchoolClass(classService.require(schoolId, request.schoolClassId()));
+        exam.setName(request.name());
+        exam.setExamType(request.examType());
+        exam.setAssessmentComponent(request.assessmentComponent() != null
+                ? request.assessmentComponent()
+                : defaultComponent(request.examType()));
+        exam.setStartDate(request.startDate());
+        exam.setEndDate(request.endDate());
+        return toExam(exam);
+    }
+
+    @Transactional
     public ExamResponse submit(Long schoolId, Long id) {
         Exam exam = require(schoolId, id);
         if (exam.getApprovalStatus() != ExamApprovalStatus.DRAFT
