@@ -21,4 +21,6 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
     boolean existsByExamIdAndStudentIdAndSubjectId(Long examId, Long studentId, Long subjectId);
 
     boolean existsBySubjectId(Long subjectId);
+
+    boolean existsByExamId(Long examId);
 }

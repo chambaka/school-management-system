@@ -455,6 +455,7 @@ class ControllersTest {
         exams.publish(1L, true);
         exams.subjects(1L);
         exams.addSubject(1L, new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null));
+        exams.delete(1L);
 
         GradeController grades = new GradeController(gradeService, tenantResolver);
         grades.byExam(1L);

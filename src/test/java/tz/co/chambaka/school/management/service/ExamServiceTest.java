@@ -16,6 +16,7 @@ import tz.co.chambaka.school.management.repository.ClassroomRepository;
 import tz.co.chambaka.school.management.repository.ExamRepository;
 import tz.co.chambaka.school.management.repository.ExamSeatRepository;
 import tz.co.chambaka.school.management.repository.ExamSubjectRepository;
+import tz.co.chambaka.school.management.repository.GradeRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
@@ -33,6 +34,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,6 +64,8 @@ class ExamServiceTest {
     private ExamSeatRepository examSeatRepository;
     @Mock
     private AlertService alertService;
+    @Mock
+    private GradeRepository gradeRepository;
     @InjectMocks
     private ExamService service;
 
@@ -212,5 +216,34 @@ class ExamServiceTest {
         assertThatThrownBy(() -> service.addSubject(1L, 1L,
                 new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null)))
                 .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void deleteRemovesUnusedExamAndItsPapers() {
+        Exam exam = Fixtures.exam();
+        ExamSubject paper = Fixtures.examSubject();
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        when(gradeRepository.existsByExamId(1L)).thenReturn(false);
+        when(examSubjectRepository.findByExamId(1L)).thenReturn(List.of(paper));
+
+        service.delete(1L, 1L);
+
+        verify(examSeatRepository).deleteByExamSubjectId(paper.getId());
+        verify(examSubjectRepository).deleteByExamId(1L);
+        verify(examRepository).delete(exam);
+    }
+
+    @Test
+    void deleteBlockedWhenPublishedOrHasMarks() {
+        Exam exam = Fixtures.exam();
+        exam.setPublished(true);
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Unpublish");
+
+        exam.setPublished(false);
+        when(gradeRepository.existsByExamId(1L)).thenReturn(true);
+        assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("marks");
     }
 }

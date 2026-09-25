@@ -17,4 +17,6 @@ public interface ExamSubjectRepository extends JpaRepository<ExamSubject, Long> 
     boolean existsByExamIdAndSubjectId(Long examId, Long subjectId);
 
     boolean existsBySubjectId(Long subjectId);
+
+    void deleteByExamId(Long examId);
 }

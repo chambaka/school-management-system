@@ -23,6 +23,7 @@ import tz.co.chambaka.school.management.repository.ClassroomRepository;
 import tz.co.chambaka.school.management.repository.ExamRepository;
 import tz.co.chambaka.school.management.repository.ExamSeatRepository;
 import tz.co.chambaka.school.management.repository.ExamSubjectRepository;
+import tz.co.chambaka.school.management.repository.GradeRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherRepository;
 import tz.co.chambaka.school.management.solver.ExamConflictEngine;
@@ -54,6 +55,7 @@ public class ExamService {
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
     private final AlertService alertService;
+    private final GradeRepository gradeRepository;
 
     public ExamService(
             ExamRepository examRepository,
@@ -67,7 +69,8 @@ public class ExamService {
             ClassroomRepository classroomRepository,
             TeacherRepository teacherRepository,
             StudentRepository studentRepository,
-            AlertService alertService
+            AlertService alertService,
+            GradeRepository gradeRepository
     ) {
         this.examRepository = examRepository;
         this.examSubjectRepository = examSubjectRepository;
@@ -81,6 +84,7 @@ public class ExamService {
         this.teacherRepository = teacherRepository;
         this.studentRepository = studentRepository;
         this.alertService = alertService;
+        this.gradeRepository = gradeRepository;
     }
 
     @Transactional(readOnly = true)
@@ -346,6 +350,22 @@ public class ExamService {
     public Exam require(Long schoolId, Long id) {
         return examRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Exam", id));
+    }
+
+    @Transactional
+    public void delete(Long schoolId, Long id) {
+        Exam exam = require(schoolId, id);
+        if (exam.isPublished()) {
+            throw new BusinessException("Unpublish this exam first");
+        }
+        if (gradeRepository.existsByExamId(id)) {
+            throw new BusinessException("Remove marks for this exam first");
+        }
+        for (ExamSubject paper : examSubjectRepository.findByExamId(id)) {
+            examSeatRepository.deleteByExamSubjectId(paper.getId());
+        }
+        examSubjectRepository.deleteByExamId(id);
+        examRepository.delete(exam);
     }
 
     private static AssessmentComponent defaultComponent(ExamType type) {
