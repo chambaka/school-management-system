@@ -13,6 +13,7 @@ public record TenantResponse(
         String currency,
         TenantStatus status,
         String subscriptionPlan,
+        int termsPerYear,
         long schoolCount
 ) {
 }

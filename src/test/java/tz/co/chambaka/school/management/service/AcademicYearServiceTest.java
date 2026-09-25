@@ -7,6 +7,8 @@ import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.mapper.AcademicMapper;
 import tz.co.chambaka.school.management.model.AcademicYear;
+import tz.co.chambaka.school.management.model.AcademicTerm;
+import tz.co.chambaka.school.management.model.Tenant;
 import tz.co.chambaka.school.management.repository.AcademicTermRepository;
 import tz.co.chambaka.school.management.repository.AcademicYearRepository;
 import tz.co.chambaka.school.management.repository.ExamRepository;
@@ -14,9 +16,11 @@ import tz.co.chambaka.school.management.repository.FeeStructureRepository;
 import tz.co.chambaka.school.management.repository.InvoiceRepository;
 import tz.co.chambaka.school.management.repository.ResultWeightConfigRepository;
 import tz.co.chambaka.school.management.repository.SchoolClassRepository;
+import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.StudentEnrolmentRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherSubjectRepository;
+import tz.co.chambaka.school.management.repository.TenantRepository;
 import tz.co.chambaka.school.management.repository.TimetableLockRepository;
 import tz.co.chambaka.school.management.repository.TimetableSlotRepository;
 import tz.co.chambaka.school.management.support.Fixtures;
@@ -33,6 +37,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -45,6 +50,10 @@ class AcademicYearServiceTest {
     private AcademicMapper academicMapper;
     @Mock
     private AcademicTermRepository academicTermRepository;
+    @Mock
+    private SchoolRepository schoolRepository;
+    @Mock
+    private TenantRepository tenantRepository;
     @Mock
     private SchoolClassRepository schoolClassRepository;
     @Mock
@@ -85,6 +94,7 @@ class AcademicYearServiceTest {
         AcademicYearRequest req = new AcademicYearRequest("2026/2027",
                 LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), true);
         assertThat(service.create(1L, req).name()).isEqualTo("2026/2027");
+        verify(academicTermRepository).saveAll(anyList());
 
         when(academicYearRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(year));
         AcademicYearRequest notCurrent = new AcademicYearRequest("2026/2027",
@@ -227,5 +237,67 @@ class AcademicYearServiceTest {
         when(timetableLockRepository.existsByAcademicYearId(1L)).thenReturn(true);
         assertThatThrownBy(() -> service.delete(1L, 1L)).isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Unlock");
+    }
+
+    @Test
+    void createGeneratesTermsFromOrganizationSetting() {
+        Tenant tenant = Fixtures.tenant();
+        tenant.setTermsPerYear(2);
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
+        when(tenantRepository.findById(10L)).thenReturn(Optional.of(tenant));
+        when(academicYearRepository.existsBySchoolIdAndNameIgnoreCase(1L, "2026/2027")).thenReturn(false);
+        when(academicYearRepository.save(any(AcademicYear.class))).thenAnswer(inv -> {
+            AcademicYear saved = inv.getArgument(0);
+            saved.setId(1L);
+            return saved;
+        });
+        when(academicMapper.toYear(any(AcademicYear.class))).thenReturn(
+                new AcademicYearResponse(1L, "2026/2027",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), true));
+
+        service.create(1L, new AcademicYearRequest("2026/2027",
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), true));
+
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<List<AcademicTerm>> captor =
+                org.mockito.ArgumentCaptor.forClass(List.class);
+        verify(academicTermRepository).saveAll(captor.capture());
+        List<AcademicTerm> terms = captor.getValue();
+        assertThat(terms).hasSize(2);
+        assertThat(terms).extracting(AcademicTerm::getName).containsExactly("Term 1", "Term 2");
+        assertThat(terms.get(0).getStartDate()).isEqualTo(LocalDate.of(2026, 1, 1));
+        assertThat(terms.get(0).getEndDate()).isEqualTo(LocalDate.of(2026, 7, 1));
+        assertThat(terms.get(0).isCurrentTerm()).isTrue();
+        assertThat(terms.get(1).getStartDate()).isEqualTo(LocalDate.of(2026, 7, 2));
+        assertThat(terms.get(1).getEndDate()).isEqualTo(LocalDate.of(2026, 12, 31));
+        assertThat(terms.get(1).isCurrentTerm()).isFalse();
+    }
+
+    @Test
+    void createDefaultsToFourTerms() {
+        when(academicYearRepository.existsBySchoolIdAndNameIgnoreCase(1L, "2026/2027")).thenReturn(false);
+        when(academicYearRepository.save(any(AcademicYear.class))).thenAnswer(inv -> {
+            AcademicYear saved = inv.getArgument(0);
+            saved.setId(1L);
+            return saved;
+        });
+        when(academicMapper.toYear(any(AcademicYear.class))).thenReturn(
+                new AcademicYearResponse(1L, "2026/2027",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), false));
+
+        service.create(1L, new AcademicYearRequest("2026/2027",
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), false));
+
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<List<AcademicTerm>> captor =
+                org.mockito.ArgumentCaptor.forClass(List.class);
+        verify(academicTermRepository).saveAll(captor.capture());
+        List<AcademicTerm> terms = captor.getValue();
+        assertThat(terms).hasSize(4);
+        assertThat(terms).extracting(AcademicTerm::getName)
+                .containsExactly("Term 1", "Term 2", "Term 3", "Term 4");
+        assertThat(terms.get(0).getStartDate()).isEqualTo(LocalDate.of(2026, 1, 1));
+        assertThat(terms.get(3).getEndDate()).isEqualTo(LocalDate.of(2026, 12, 31));
+        assertThat(terms).allMatch(term -> !term.isCurrentTerm());
     }
 }

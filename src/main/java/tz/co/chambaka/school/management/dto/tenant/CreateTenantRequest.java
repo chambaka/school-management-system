@@ -9,6 +9,10 @@ public record CreateTenantRequest(
         String phone,
         String country,
         String timezone,
-        String currency
+        String currency,
+        Integer termsPerYear
 ) {
+    public CreateTenantRequest(String name, String email, String phone, String country, String timezone, String currency) {
+        this(name, email, phone, country, timezone, currency, null);
+    }
 }

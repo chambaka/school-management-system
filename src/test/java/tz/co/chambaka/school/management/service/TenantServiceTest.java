@@ -92,6 +92,7 @@ class TenantServiceTest {
         when(schoolRepository.findByTenantIdOrderByNameAsc(any())).thenReturn(List.of());
         var response = tenantService.create(new CreateTenantRequest("Org", null, null, null, "  ", ""));
         assertThat(response.timezone()).isEqualTo("Africa/Dar_es_Salaam");
+        assertThat(response.termsPerYear()).isEqualTo(4);
         assertThat(response.currency()).isEqualTo("TZS");
     }
 
@@ -266,6 +267,35 @@ class TenantServiceTest {
                 "East", "Main", null, null, null, null, null)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("active organization");
+    }
+
+    @Test
+    void createAndUpdateTermsPerYear() {
+        when(tenantRepository.existsBySlug(any())).thenReturn(false);
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(inv -> {
+            Tenant saved = inv.getArgument(0);
+            saved.setId(11L);
+            return saved;
+        });
+        when(schoolRepository.findByTenantIdOrderByNameAsc(any())).thenReturn(List.of());
+
+        assertThat(tenantService.create(new CreateTenantRequest(
+                "Org", null, null, null, "UTC", "USD", 2)).termsPerYear()).isEqualTo(2);
+
+        Tenant tenant = Fixtures.tenant();
+        when(tenantRepository.findById(10L)).thenReturn(Optional.of(tenant));
+        tenantService.update(10L, new UpdateTenantRequest(
+                null, null, null, null, null, null, null, null, 2));
+        assertThat(tenant.getTermsPerYear()).isEqualTo(2);
+
+        assertThatThrownBy(() -> tenantService.update(10L, new UpdateTenantRequest(
+                null, null, null, null, null, null, null, null, 3)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("2 or 4");
+        assertThatThrownBy(() -> tenantService.create(new CreateTenantRequest(
+                "Other", null, null, null, "UTC", "USD", 3)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("2 or 4");
     }
 
     @Test

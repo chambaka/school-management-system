@@ -103,7 +103,8 @@ public class TenantService {
                 request.phone(),
                 request.country(),
                 request.timezone(),
-                request.currency()));
+                request.currency(),
+                request.termsPerYear()));
     }
 
     @Transactional
@@ -139,6 +140,9 @@ public class TenantService {
         }
         if (request.subscriptionPlan() != null) {
             tenant.setSubscriptionPlan(request.subscriptionPlan());
+        }
+        if (request.termsPerYear() != null) {
+            tenant.setTermsPerYear(requireTermsPerYear(request.termsPerYear()));
         }
         log.info("Updated tenant id={} status={}", tenant.getId(), tenant.getStatus());
         return toResponse(tenant);
@@ -220,7 +224,8 @@ public class TenantService {
                 request.phone(),
                 request.country(),
                 request.timezone(),
-                request.currency());
+                request.currency(),
+                null);
     }
 
     @Transactional
@@ -234,6 +239,7 @@ public class TenantService {
             tenant.setCurrency("TZS");
             tenant.setStatus(TenantStatus.ACTIVE);
             tenant.setSubscriptionPlan("STARTER");
+            tenant.setTermsPerYear(Tenant.DEFAULT_TERMS_PER_YEAR);
             tenant = tenantRepository.save(tenant);
             log.info("Ensured default tenant id={} slug={}", tenant.getId(), tenant.getSlug());
             return tenant;
@@ -269,7 +275,8 @@ public class TenantService {
             String phone,
             String country,
             String timezone,
-            String currency
+            String currency,
+            Integer termsPerYear
     ) {
         Tenant tenant = new Tenant();
         tenant.setName(name);
@@ -281,6 +288,7 @@ public class TenantService {
         tenant.setCurrency(currency != null && !currency.isBlank() ? currency : "TZS");
         tenant.setStatus(TenantStatus.ACTIVE);
         tenant.setSubscriptionPlan("STARTER");
+        tenant.setTermsPerYear(requireTermsPerYear(termsPerYear));
         tenant.setTrialEndsAt(null);
         tenant = tenantRepository.save(tenant);
         log.info("Created tenant id={} slug={}", tenant.getId(), tenant.getSlug());
@@ -336,6 +344,7 @@ public class TenantService {
                 tenant.getCurrency(),
                 tenant.getStatus(),
                 tenant.getSubscriptionPlan(),
+                tenant.resolvedTermsPerYear(),
                 schoolRepository.findByTenantIdOrderByNameAsc(tenant.getId()).stream()
                         .filter(school -> school.getStatus() != SchoolStatus.ARCHIVED)
                         .count());
@@ -374,6 +383,16 @@ public class TenantService {
 
     private static String blankTo(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
+    }
+
+    static int requireTermsPerYear(Integer value) {
+        if (value == null) {
+            return Tenant.DEFAULT_TERMS_PER_YEAR;
+        }
+        if (value != 2 && value != 4) {
+            throw new BusinessException("Terms per year must be 2 or 4");
+        }
+        return value;
     }
 
 }

@@ -98,7 +98,7 @@ public final class Fixtures {
     public static TenantResponse tenantResponse() {
         return new TenantResponse(
                 TENANT_ID, "Chambaka Group", "chambaka-group", "org@example.com", null, "TZ",
-                "Africa/Dar_es_Salaam", "TZS", TenantStatus.ACTIVE, "STARTER", 1);
+                "Africa/Dar_es_Salaam", "TZS", TenantStatus.ACTIVE, "STARTER", 4, 1);
     }
 
     public static School school() {

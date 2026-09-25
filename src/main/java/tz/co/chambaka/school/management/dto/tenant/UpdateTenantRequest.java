@@ -10,6 +10,19 @@ public record UpdateTenantRequest(
         String timezone,
         String currency,
         TenantStatus status,
-        String subscriptionPlan
+        String subscriptionPlan,
+        Integer termsPerYear
 ) {
+    public UpdateTenantRequest(
+            String name,
+            String email,
+            String phone,
+            String country,
+            String timezone,
+            String currency,
+            TenantStatus status,
+            String subscriptionPlan
+    ) {
+        this(name, email, phone, country, timezone, currency, status, subscriptionPlan, null);
+    }
 }

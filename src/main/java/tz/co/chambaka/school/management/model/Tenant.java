@@ -17,6 +17,8 @@ import java.time.Instant;
 @Table(name = "tenants")
 public class Tenant extends BaseEntity {
 
+    public static final int DEFAULT_TERMS_PER_YEAR = 4;
+
     @Column(nullable = false, length = 150)
     private String name;
 
@@ -45,5 +47,12 @@ public class Tenant extends BaseEntity {
     @Column(nullable = false, length = 30)
     private String subscriptionPlan = "STARTER";
 
+    @Column(name = "terms_per_year")
+    private Integer termsPerYear = DEFAULT_TERMS_PER_YEAR;
+
     private Instant trialEndsAt;
+
+    public int resolvedTermsPerYear() {
+        return Integer.valueOf(2).equals(termsPerYear) ? 2 : DEFAULT_TERMS_PER_YEAR;
+    }
 }

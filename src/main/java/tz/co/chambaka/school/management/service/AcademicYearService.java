@@ -6,7 +6,10 @@ import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.mapper.AcademicMapper;
+import tz.co.chambaka.school.management.model.AcademicTerm;
 import tz.co.chambaka.school.management.model.AcademicYear;
+import tz.co.chambaka.school.management.model.School;
+import tz.co.chambaka.school.management.model.Tenant;
 import tz.co.chambaka.school.management.repository.AcademicTermRepository;
 import tz.co.chambaka.school.management.repository.AcademicYearRepository;
 import tz.co.chambaka.school.management.repository.ExamRepository;
@@ -14,14 +17,19 @@ import tz.co.chambaka.school.management.repository.FeeStructureRepository;
 import tz.co.chambaka.school.management.repository.InvoiceRepository;
 import tz.co.chambaka.school.management.repository.ResultWeightConfigRepository;
 import tz.co.chambaka.school.management.repository.SchoolClassRepository;
+import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.StudentEnrolmentRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.repository.TeacherSubjectRepository;
+import tz.co.chambaka.school.management.repository.TenantRepository;
 import tz.co.chambaka.school.management.repository.TimetableLockRepository;
 import tz.co.chambaka.school.management.repository.TimetableSlotRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -31,6 +39,8 @@ public class AcademicYearService {
     private final AcademicYearRepository academicYearRepository;
     private final AcademicMapper academicMapper;
     private final AcademicTermRepository academicTermRepository;
+    private final SchoolRepository schoolRepository;
+    private final TenantRepository tenantRepository;
     private final SchoolClassRepository schoolClassRepository;
     private final StudentRepository studentRepository;
     private final ExamRepository examRepository;
@@ -46,6 +56,8 @@ public class AcademicYearService {
             AcademicYearRepository academicYearRepository,
             AcademicMapper academicMapper,
             AcademicTermRepository academicTermRepository,
+            SchoolRepository schoolRepository,
+            TenantRepository tenantRepository,
             SchoolClassRepository schoolClassRepository,
             StudentRepository studentRepository,
             ExamRepository examRepository,
@@ -60,6 +72,8 @@ public class AcademicYearService {
         this.academicYearRepository = academicYearRepository;
         this.academicMapper = academicMapper;
         this.academicTermRepository = academicTermRepository;
+        this.schoolRepository = schoolRepository;
+        this.tenantRepository = tenantRepository;
         this.schoolClassRepository = schoolClassRepository;
         this.studentRepository = studentRepository;
         this.examRepository = examRepository;
@@ -91,6 +105,7 @@ public class AcademicYearService {
         year.setEndDate(request.endDate());
         year.setCurrentYear(request.currentYear());
         year = academicYearRepository.save(year);
+        generateTerms(schoolId, year);
         if (request.currentYear()) {
             markCurrent(schoolId, year.getId());
         }
@@ -188,6 +203,40 @@ public class AcademicYearService {
         List<AcademicYear> years = academicYearRepository.findBySchoolIdOrderByStartDateDesc(schoolId);
         years.forEach(year -> year.setCurrentYear(year.getId().equals(id)));
         academicYearRepository.saveAll(years);
+    }
+
+    private void generateTerms(Long schoolId, AcademicYear year) {
+        int count = resolveTermsPerYear(schoolId);
+        LocalDate start = year.getStartDate();
+        LocalDate end = year.getEndDate();
+        long totalDays = Math.max(1, ChronoUnit.DAYS.between(start, end) + 1);
+        List<AcademicTerm> terms = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            LocalDate termStart = start.plusDays(totalDays * i / count);
+            LocalDate termEnd = i == count - 1
+                    ? end
+                    : start.plusDays(totalDays * (i + 1) / count).minusDays(1);
+            if (termEnd.isBefore(termStart)) {
+                termEnd = termStart;
+            }
+            AcademicTerm term = new AcademicTerm();
+            term.setSchoolId(schoolId);
+            term.setAcademicYear(year);
+            term.setName("Term " + (i + 1));
+            term.setStartDate(termStart);
+            term.setEndDate(termEnd);
+            term.setCurrentTerm(year.isCurrentYear() && i == 0);
+            terms.add(term);
+        }
+        academicTermRepository.saveAll(terms);
+    }
+
+    private int resolveTermsPerYear(Long schoolId) {
+        return schoolRepository.findById(schoolId)
+                .map(School::getTenantId)
+                .flatMap(tenantRepository::findById)
+                .map(Tenant::resolvedTermsPerYear)
+                .orElse(Tenant.DEFAULT_TERMS_PER_YEAR);
     }
 
     private void validateDates(AcademicYearRequest request) {
