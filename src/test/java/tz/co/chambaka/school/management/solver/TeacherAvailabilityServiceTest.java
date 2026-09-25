@@ -41,6 +41,16 @@ class TeacherAvailabilityServiceTest {
         when(repository.findBySchoolIdAndTeacherId(1L, 1L)).thenReturn(List.of(row));
         when(repository.findBySchoolIdOrderByDayOfWeekAscStartTimeAsc(1L)).thenReturn(List.of(row));
         assertThat(service.list(1L, 1L)).hasSize(1);
+        TeacherAvailability friday = new TeacherAvailability();
+        friday.setId(9L);
+        friday.setTeacher(Fixtures.teacher());
+        friday.setDayOfWeek(DayOfWeek.FRIDAY);
+        friday.setStartTime(LocalTime.of(8, 0));
+        friday.setEndTime(LocalTime.of(12, 0));
+        when(repository.findBySchoolIdOrderByDayOfWeekAscStartTimeAsc(1L)).thenReturn(List.of(friday, row));
+        assertThat(service.list(1L, null)).extracting(TeacherAvailabilityResponse::dayOfWeek)
+                .containsExactly(DayOfWeek.MONDAY, DayOfWeek.FRIDAY);
+        when(repository.findBySchoolIdOrderByDayOfWeekAscStartTimeAsc(1L)).thenReturn(List.of(row));
         assertThat(service.list(1L, null)).first().extracting("teacherName").isEqualTo(Fixtures.teacher().getUser().getName());
 
         when(teacherService.require(1L, 1L)).thenReturn(Fixtures.teacher());

@@ -7,7 +7,9 @@ import tz.co.chambaka.school.management.service.TeacherService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -26,7 +28,12 @@ public class TeacherAvailabilityService {
         List<TeacherAvailability> rows = teacherId == null
                 ? repository.findBySchoolIdOrderByDayOfWeekAscStartTimeAsc(schoolId)
                 : repository.findBySchoolIdAndTeacherId(schoolId, teacherId);
-        return rows.stream().map(TeacherAvailabilityService::toResponse).toList();
+        return rows.stream()
+                .sorted(Comparator
+                        .comparingInt((TeacherAvailability row) -> weekdayRank(row.getDayOfWeek()))
+                        .thenComparing(TeacherAvailability::getStartTime, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(TeacherAvailabilityService::toResponse)
+                .toList();
     }
 
     @Transactional
@@ -61,6 +68,10 @@ public class TeacherAvailabilityService {
         row.setDayOfWeek(request.dayOfWeek());
         row.setStartTime(request.startTime());
         row.setEndTime(request.endTime());
+    }
+
+    private static int weekdayRank(DayOfWeek day) {
+        return day == null ? DayOfWeek.SUNDAY.getValue() + 1 : day.getValue();
     }
 
     private static void assertTimes(TeacherAvailabilityRequest request) {
