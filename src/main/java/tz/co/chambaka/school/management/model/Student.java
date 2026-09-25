@@ -46,7 +46,7 @@ public class Student extends TenantEntity {
     @Column(length = 500)
     private String address;
 
-    @Column(length = 30)
+    @Column(length = 160)
     private String emergencyContact;
 
     @Column(length = 1000)
