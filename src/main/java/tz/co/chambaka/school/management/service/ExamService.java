@@ -167,6 +167,9 @@ public class ExamService {
                 && exam.getApprovalStatus() != ExamApprovalStatus.REJECTED) {
             throw new BusinessException("Marks can only be submitted while the exam is in draft, entered, or rejected");
         }
+        if (!gradeRepository.existsByExamId(id)) {
+            throw new BusinessException("Enter marks before sending this exam for checking");
+        }
         exam.setApprovalStatus(ExamApprovalStatus.ENTERED);
         exam.setRejectionNote(null);
         return toExam(exam);
@@ -396,6 +399,9 @@ public class ExamService {
     @Transactional
     public ExamResponse lockSchedule(Long schoolId, Long examId, boolean locked) {
         Exam exam = require(schoolId, examId);
+        if (locked && !hasSchedule(examSubjectRepository.findByExamId(examId))) {
+            throw new BusinessException("Schedule the papers before locking");
+        }
         exam.setScheduleLocked(locked);
         return toExam(exam);
     }
@@ -536,8 +542,14 @@ public class ExamService {
                 exam.isScheduleLocked(),
                 exam.getRejectionNote(),
                 subjects,
-                List.copyOf(teachers)
+                List.copyOf(teachers),
+                hasSchedule(papers),
+                gradeRepository.existsByExamId(exam.getId())
         );
+    }
+
+    private static boolean hasSchedule(List<ExamSubject> papers) {
+        return !papers.isEmpty() && papers.stream().allMatch(paper -> paper.getExamDate() != null && paper.getStartTime() != null);
     }
 
     private ExamSubjectResponse toExamSubject(ExamSubject examSubject) {

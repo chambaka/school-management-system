@@ -175,6 +175,7 @@ class ExamServiceTest {
         Exam exam = Fixtures.exam();
         exam.setApprovalStatus(ExamApprovalStatus.DRAFT);
         when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        when(gradeRepository.existsByExamId(1L)).thenReturn(true);
         assertThat(service.submit(1L, 1L).approvalStatus()).isEqualTo(ExamApprovalStatus.ENTERED);
         assertThat(service.verify(1L, 1L).approvalStatus()).isEqualTo(ExamApprovalStatus.VERIFIED);
         assertThat(service.approve(1L, 1L).approvalStatus()).isEqualTo(ExamApprovalStatus.APPROVED);
@@ -214,6 +215,32 @@ class ExamServiceTest {
                 .thenReturn(List.of(exam));
         assertThat(service.list(1L, null, Role.PARENT)).hasSize(1);
         assertThat(service.list(1L, 1L, Role.STUDENT)).hasSize(1);
+    }
+
+    @Test
+    void submitRequiresMarks() {
+        Exam exam = Fixtures.exam();
+        exam.setApprovalStatus(ExamApprovalStatus.DRAFT);
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        when(gradeRepository.existsByExamId(1L)).thenReturn(false);
+        assertThatThrownBy(() -> service.submit(1L, 1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("marks");
+    }
+
+    @Test
+    void lockRequiresASchedule() {
+        Exam exam = Fixtures.exam();
+        ExamSubject paper = Fixtures.examSubject();
+        paper.setStartTime(null);
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
+        when(examSubjectRepository.findByExamId(1L)).thenReturn(List.of(paper));
+        assertThat(service.lockSchedule(1L, 1L, false).scheduleLocked()).isFalse();
+        assertThatThrownBy(() -> service.lockSchedule(1L, 1L, true))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Schedule");
+        paper.setStartTime(java.time.LocalTime.of(8, 0));
+        assertThat(service.lockSchedule(1L, 1L, true).scheduleLocked()).isTrue();
     }
 
     @Test

@@ -26,7 +26,9 @@ public record ExamResponse(
         boolean scheduleLocked,
         String rejectionNote,
         List<String> subjects,
-        List<String> teachers
+        List<String> teachers,
+        boolean hasSchedule,
+        boolean gradesEntered
 ) {
     public ExamResponse(
             Long id,
@@ -46,6 +48,6 @@ public record ExamResponse(
     ) {
         this(id, academicYearId, null, false, academicTermId, academicTermName, schoolClassId, schoolClassName, name,
                 examType, assessmentComponent, approvalStatus, startDate, endDate, published, scheduleLocked, null,
-                List.of(), List.of());
+                List.of(), List.of(), false, false);
     }
 }
