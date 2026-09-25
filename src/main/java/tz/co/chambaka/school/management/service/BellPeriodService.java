@@ -47,10 +47,27 @@ public class BellPeriodService {
     }
 
     @Transactional
+    public BellPeriodResponse update(Long schoolId, Long id, BellPeriodRequest request) {
+        if (!request.endTime().isAfter(request.startTime())) {
+            throw new BusinessException("Period end must be after start");
+        }
+        BellPeriod period = require(schoolId, id);
+        period.setName(request.name());
+        period.setStartTime(request.startTime());
+        period.setEndTime(request.endTime());
+        period.setKind(request.kind());
+        period.setSortOrder(request.sortOrder());
+        return toResponse(period);
+    }
+
+    @Transactional
     public void delete(Long schoolId, Long id) {
-        BellPeriod period = bellPeriodRepository.findByIdAndSchoolId(id, schoolId)
+        bellPeriodRepository.delete(require(schoolId, id));
+    }
+
+    public BellPeriod require(Long schoolId, Long id) {
+        return bellPeriodRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> ResourceNotFoundException.of("BellPeriod", id));
-        bellPeriodRepository.delete(period);
     }
 
     public List<BellPeriod> lessonPeriods(Long schoolId) {

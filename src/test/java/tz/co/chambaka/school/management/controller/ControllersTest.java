@@ -580,6 +580,7 @@ class ControllersTest {
                 tz.co.chambaka.school.management.model.enums.PeriodKind.LESSON, 1);
         bells.list();
         bells.create(bell);
+        bells.update(1L, bell);
         bells.delete(1L);
 
         when(reportExportService.reportCardPdf(any(), any(), any(), any())).thenReturn(new byte[]{1});

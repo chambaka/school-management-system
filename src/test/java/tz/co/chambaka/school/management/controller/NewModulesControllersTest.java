@@ -111,7 +111,12 @@ class NewModulesControllersTest {
 
         TeacherAvailabilityController availability = new TeacherAvailabilityController(availabilityService, tenantResolver);
         availability.list(1L);
+        availability.list(null);
         availability.create(new TeacherAvailabilityRequest(1L, DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(12, 0)));
+        availability.update(4L, new TeacherAvailabilityRequest(1L, DayOfWeek.TUESDAY, LocalTime.of(8, 0), LocalTime.of(12, 0)));
+        availability.delete(4L);
         verify(availabilityService).create(eq(1L), any());
+        verify(availabilityService).update(eq(1L), eq(4L), any());
+        verify(availabilityService).delete(1L, 4L);
     }
 }

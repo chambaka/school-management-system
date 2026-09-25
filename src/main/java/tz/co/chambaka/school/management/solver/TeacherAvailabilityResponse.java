@@ -6,6 +6,7 @@ import java.time.LocalTime;
 public record TeacherAvailabilityResponse(
         Long id,
         Long teacherId,
+        String teacherName,
         DayOfWeek dayOfWeek,
         LocalTime startTime,
         LocalTime endTime

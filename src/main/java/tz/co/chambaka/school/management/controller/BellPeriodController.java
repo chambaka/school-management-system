@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -44,6 +45,12 @@ public class BellPeriodController {
     @PreAuthorize(Access.TIMETABLE_MANAGE)
     public BellPeriodResponse create(@Valid @RequestBody BellPeriodRequest request) {
         return bellPeriodService.create(tenantResolver.requireSchoolId(), request);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize(Access.TIMETABLE_MANAGE)
+    public BellPeriodResponse update(@PathVariable Long id, @Valid @RequestBody BellPeriodRequest request) {
+        return bellPeriodService.update(tenantResolver.requireSchoolId(), id, request);
     }
 
     @DeleteMapping("/{id}")

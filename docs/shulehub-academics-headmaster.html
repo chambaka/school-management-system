@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub Academics menu — Headmaster guide</title>
+  <style>
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10pt;
+      line-height: 1.4;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 20px 22px 18px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    header.cover h1 {
+      margin: 0 0 6px;
+      font-size: 20pt;
+      letter-spacing: 0.02em;
+    }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 3px; color: #c9d4e3; font-size: 10.5pt; }
+    header.cover .tagline {
+      margin-top: 10px;
+      color: #F5C451;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    h2 {
+      margin: 16px 0 8px;
+      font-size: 13pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 10px 0 4px;
+      font-size: 11pt;
+      color: #06101F;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8px; }
+    ol, ul { margin: 0 0 10px; padding-left: 18px; }
+    li { margin: 2px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10px; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 5px 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 8.5pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      font-size: 9.5pt;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+    .step {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 8px 10px;
+      page-break-inside: avoid;
+    }
+    .step .n {
+      display: inline-block;
+      width: 20px; height: 20px; line-height: 20px;
+      text-align: center;
+      background: #06101F;
+      color: #F5C451;
+      border-radius: 50%;
+      font-size: 9pt;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    .step strong { color: #06101F; }
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .card {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 9px 11px;
+      page-break-inside: avoid;
+    }
+    .card h3 { margin: 0 0 4px; }
+    .chip {
+      display: inline-block;
+      background: #06101F;
+      color: #F5C451;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 99px;
+      margin-right: 4px;
+    }
+    .muted { color: #3d4d5e; font-size: 9.5pt; }
+    footer {
+      margin-top: 12px;
+      font-size: 8.5pt;
+      color: #5b6b7c;
+    }
+    .page-break { page-break-before: always; }
+    .toc li { margin: 3px 0; }
+    .flow {
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: #06101F;
+    }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">Academics menu</span></h1>
+    <p>Headmaster guide · How to set up the school year, classes, rooms, teachers, and grading</p>
+    <p>Sign in as Headmaster → left menu → <strong>Academics</strong></p>
+    <p class="tagline">Years · Terms · Classes · Subjects · Rooms · Allocations · Result weights · Grading bands</p>
+  </header>
+
+  <h2>Who this is for</h2>
+  <p>Academics is the school’s structure. Students, exams, the timetable, attendance, and report cards all hang off what you set here. Headmaster, School admin, and Academic master can open the page. Some buttons are limited — see <strong>Who can do what</strong>.</p>
+  <div class="note">
+    Academics is <strong>not</strong> the teacher staff list, the student list, the exam mark book, or the weekly timetable. Those are separate menus. This page only builds the skeleton those menus use.
+  </div>
+
+  <h2>Contents</h2>
+  <ol class="toc">
+    <li>How the pieces fit together</li>
+    <li>Open the page and read the screen</li>
+    <li>Who can do what</li>
+    <li>Set up in this order</li>
+    <li>Years &amp; terms</li>
+    <li>Classes and sections</li>
+    <li>Subjects and curriculum topics</li>
+    <li>Rooms (buildings and classrooms)</li>
+    <li>Teachers tab (who teaches what)</li>
+    <li>Results (how marks combine)</li>
+    <li>Grading (letters and mark ranges)</li>
+    <li>What other menus use this</li>
+    <li>Typical day</li>
+    <li>If something fails</li>
+  </ol>
+
+  <h2>How the pieces fit together</h2>
+  <p class="flow">Organization → School year → Terms → Class → Section → Student</p>
+  <p class="flow">Subject → Curriculum topic (optional) → Allocation (who teaches it) → Timetable / Exam / Grade</p>
+  <p class="flow">Building → Room → Timetable slot</p>
+  <p class="flow">Result weights + Grading bands → Term result → Report card</p>
+  <table>
+    <thead>
+      <tr><th>Piece</th><th>What it is</th><th>Lives on</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Organization terms count</td><td>2 or 4 terms for every new year in that organization</td><td>Platform admin → Configurations</td></tr>
+      <tr><td>Academic year</td><td>One school year (for example 2026/2027). One year is marked Current.</td><td>Academics → Years &amp; terms</td></tr>
+      <tr><td>Term</td><td>A slice of that year (Term 1, Term 2…). Created automatically when you add a year.</td><td>Academics → Years &amp; terms</td></tr>
+      <tr><td>Class</td><td>A named group in that year (Form 1, Form 2). Code must be unique in that year.</td><td>Academics → Classes</td></tr>
+      <tr><td>Section</td><td>A stream inside the class (A, B). Students are admitted into a section.</td><td>Academics → Classes</td></tr>
+      <tr><td>Subject</td><td>A taught course (Mathematics). Code must be unique at the school.</td><td>Academics → Subjects</td></tr>
+      <tr><td>Curriculum topic</td><td>Optional syllabus heading under a subject, optionally limited to one class.</td><td>Academics → Subjects</td></tr>
+      <tr><td>Building</td><td>A named block (Block A). Used only as the room dropdown.</td><td>Academics → Rooms</td></tr>
+      <tr><td>Classroom / room</td><td>A place on the timetable (Lab 1). Pick a building.</td><td>Academics → Rooms</td></tr>
+      <tr><td>Allocation</td><td>This teacher teaches this subject to this class (optional section) in this year.</td><td>Academics → Teachers</td></tr>
+      <tr><td>Result weights</td><td>How midterm, semi, and terminal marks combine for this school and year.</td><td>Academics → Results</td></tr>
+      <tr><td>Grading bands</td><td>Letter and point ranges for this school only (A 80–100, and so on).</td><td>Academics → Grading</td></tr>
+    </tbody>
+  </table>
+  <div class="note">Classes belong to a year. Subjects belong to the school (they are reused every year). Allocations belong to a year. Grading bands belong to the school, not to a year. Result weights belong to a year, and can be narrowed to one term or one subject.</div>
+
+  <h2>Open the page and read the screen</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Sign in with your Headmaster email or phone.</div>
+    <div class="step"><span class="n">2</span> If you have more than one school, pick the school first (Schools → Open school). Everything on Academics is for that school only.</div>
+    <div class="step"><span class="n">3</span> Click <strong>Academics</strong> in the left menu.</div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Part of the screen</th><th>What it is for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Set up in this order</td><td>Gold chips at the top: Year → Term → Class → Section → Subject → Allocate teacher.</td></tr>
+      <tr><td>Counts</td><td>Years, Classes, Subjects, Allocations. Quick check that the skeleton is filling in.</td></tr>
+      <tr><td>Tabs</td><td>Years &amp; terms · Classes · Subjects · Rooms · Teachers · Results · Grading.</td></tr>
+      <tr><td>Search</td><td>Filters the list on the tab you are on. Hidden on Results (that tab is a form, not a list).</td></tr>
+      <tr><td>Gold Add button</td><td>Opens a form over the page. Confirm before save. Close, Cancel, Escape, or a click outside closes without saving.</td></tr>
+      <tr><td>Pen icon</td><td>Edit that row.</td></tr>
+      <tr><td>Trash icon</td><td>Delete. Always asks you to confirm. ShuleHub may still refuse if other data is attached.</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Click a year on Years &amp; terms to select it (highlighted). Terms under it belong to that year. New terms default to the selected year.</p>
+
+  <h2>Who can do what</h2>
+  <table>
+    <thead>
+      <tr><th>Action</th><th>Headmaster</th><th>School admin</th><th>Academic master</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Open Academics</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Years, terms, classes, sections, subjects, topics, rooms, allocations</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Buildings (add / edit / delete)</td><td>Yes</td><td>Yes</td><td>View only — ask Headmaster or School admin to add one</td></tr>
+      <tr><td>Result weights (Results tab)</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+      <tr><td>Grading bands (Grading tab)</td><td>Yes</td><td>View only</td><td>Yes</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Teachers, parents, and students do not see this menu. Platform admin does not set classes here — they set how many terms a new year gets, on Configurations.</p>
+
+  <h2 class="page-break">Set up in this order</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Confirm terms-per-year with platform admin (2 or 4). This is per organization, on Configurations.</div>
+    <div class="step"><span class="n">2</span> Add the academic year. Terms are created automatically.</div>
+    <div class="step"><span class="n">3</span> Adjust term dates if the split is wrong.</div>
+    <div class="step"><span class="n">4</span> Add classes for that year (Form 1, Form 2…).</div>
+    <div class="step"><span class="n">5</span> Add sections (A, B) so students can be admitted.</div>
+    <div class="step"><span class="n">6</span> Add subjects (Mathematics, English…).</div>
+    <div class="step"><span class="n">7</span> Add teachers on the <strong>Teachers</strong> menu (staff directory), then come back here.</div>
+    <div class="step"><span class="n">8</span> Allocate who teaches what (Academics → Teachers tab).</div>
+    <div class="step"><span class="n">9</span> Add buildings, then rooms, if you will use the timetable.</div>
+    <div class="step"><span class="n">10</span> Save grading bands for this school. Optionally save result weights for the year.</div>
+  </div>
+  <div class="note">You can admit students after you have a year, a class, and a section. You can create exams after you have a year, class, and subjects. You can build a timetable after allocations and rooms exist.</div>
+
+  <h2>Years &amp; terms</h2>
+  <h3>Academic years</h3>
+  <p>A year is the container for classes, exams, fees, allocations, and enrolments. Exactly one year should be Current. Admit, exams, and promotion use the current year by default.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Tab <strong>Years &amp; terms</strong>. Click <strong>Add year</strong>.</div>
+    <div class="step"><span class="n">2</span> Enter a name (2026/2027), start date, and end date. End must be after start.</div>
+    <div class="step"><span class="n">3</span> Save and confirm. Terms appear automatically: Term 1 … Term N, dates split evenly across the year.</div>
+  </div>
+  <p>N is 2 or 4, from the organization’s setting on platform Configurations. Changing that setting later does <strong>not</strong> rewrite years you already created. It only affects new years.</p>
+  <p>If the new year is saved as current (the usual case), Term 1 is marked Current. Other years lose the Current chip.</p>
+  <ul>
+    <li><strong>Make current</strong> — shown on years that are not current. Confirm first. Only one current year at a time.</li>
+    <li><strong>Pen</strong> — change name or dates. Does not recreate terms.</li>
+    <li><strong>Trash</strong> — delete the year only after you have cleared what hangs on it (see failures table).</li>
+    <li>Click the year row to select it. The Terms card then shows that year’s terms.</li>
+  </ul>
+
+  <h3>Terms</h3>
+  <p>Terms belong to the selected year. You normally only edit dates, or add an extra term if you must.</p>
+  <ul>
+    <li><strong>Add term</strong> — year (defaults to the selected year), name, start, end. End must be after start. Name cannot repeat in that year.</li>
+    <li><strong>Pen</strong> — rename or move dates.</li>
+    <li><strong>Trash</strong> — refused if exams or result weights still use the term.</li>
+    <li><span class="chip">Current</span> marks the active term for that year.</li>
+  </ul>
+
+  <h2>Classes and sections</h2>
+  <p>A class is “Form 3 in 2026/2027”. A section is “Form 3 A”. Students sit in a section. You can have a class with no section, but admit and the timetable work better once A or B exists.</p>
+  <h3>Add a class</h3>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Tab <strong>Classes</strong>. Click <strong>Add class</strong>.</div>
+    <div class="step"><span class="n">2</span> Pick the year (defaults to the current year). Enter name (Form 3) and code (F3).</div>
+    <div class="step"><span class="n">3</span> Save and confirm. The code cannot repeat in that same year.</div>
+  </div>
+  <p>There is no edit-class form on this screen. To correct a class, delete it (if it is unused) and add it again, or leave it and add a new one.</p>
+  <h3>Add a section</h3>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> On the class row, click <strong>Add section</strong>.</div>
+    <div class="step"><span class="n">2</span> Class is already chosen. Enter name (A) and optional capacity (seats).</div>
+    <div class="step"><span class="n">3</span> Save. The same section name cannot repeat in that class.</div>
+  </div>
+  <ul>
+    <li>Trash on the class — refused if students, remaining sections, exams, or fee structures still use it. Allocations and notices for that class are cleared automatically.</li>
+    <li>Trash on the section — refused if students are still in it. Allocations, timetable slots, and attendance rows for that section are cleared.</li>
+  </ul>
+
+  <h2 class="page-break">Subjects and curriculum topics</h2>
+  <h3>Subjects</h3>
+  <p>Subjects are school-wide. You do not recreate Mathematics every year. They appear on allocations, the timetable, exams, and grades.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Tab <strong>Subjects</strong>. Click <strong>Add subject</strong>.</div>
+    <div class="step"><span class="n">2</span> Enter name (Mathematics) and code (MATH). Code must be unique at this school.</div>
+    <div class="step"><span class="n">3</span> Save. Use the pen later to rename. Trash is refused if exam papers or grades still use the subject. Allocations and timetable slots for it are removed with the subject.</div>
+  </div>
+
+  <h3>Curriculum topics</h3>
+  <p>Optional syllabus headings (Quadratic equations) under a subject. You can limit a topic to one class, or leave class as Any class. Objectives show on the card.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> On the same tab, click <strong>Add topic</strong>.</div>
+    <div class="step"><span class="n">2</span> Pick subject, optional class, title, and optional objectives.</div>
+    <div class="step"><span class="n">3</span> Save. Pen to edit. Trash to delete. Topics do not block deleting a subject on their own.</div>
+  </div>
+  <p class="muted">Curriculum topics are for planning. Official term results and report cards use exams and grading bands, not topics.</p>
+
+  <h2>Rooms (buildings and classrooms)</h2>
+  <h3>Buildings</h3>
+  <p>A building is a name in a dropdown (Block A, Science block). Headmaster and School admin create them. Academic master can see the list and pick a building when adding a room, but cannot add the building.</p>
+  <ul>
+    <li><strong>Add building</strong> — name (required), notes (optional). Name must be unique at the school.</li>
+    <li>Pen — rename. Rooms that pointed at the old name follow the new name.</li>
+    <li>Trash — refused until every room in that building is removed.</li>
+  </ul>
+
+  <h3>Classrooms (rooms)</h3>
+  <p>A room is what the timetable uses (Lab 1, Hall).</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Click <strong>Add room</strong>.</div>
+    <div class="step"><span class="n">2</span> Enter name. Optional: code, capacity, building (from the list above), notes.</div>
+    <div class="step"><span class="n">3</span> Save. Name and code (if you set one) must be unique at the school.</div>
+  </div>
+  <p>Pen to edit. Trash is refused if the room is still on the timetable.</p>
+
+  <h2>Teachers tab (who teaches what)</h2>
+  <div class="note">This tab is <strong>not</strong> the staff directory. Add people on the <strong>Teachers</strong> menu first. Here you only say who teaches which subject to which class this year.</div>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Tab <strong>Teachers</strong>. Click <strong>Allocate teacher</strong>.</div>
+    <div class="step"><span class="n">2</span> Pick teacher, subject, class, year (defaults to current). Section is optional — leave “Whole class” if they teach every stream.</div>
+    <div class="step"><span class="n">3</span> Save. The same teacher + subject + class + section + year cannot be saved twice.</div>
+  </div>
+  <p>Pen to change the link. Trash removes only the allocation, not the teacher account. You need allocations before you build a useful timetable.</p>
+
+  <h2>Results (how marks combine)</h2>
+  <p>Official term results come from exams, not from assignments. Assignments are continuous assessment only. This tab sets the weights ShuleHub uses when it combines exam components.</p>
+  <p>Default math (Appendix A):</p>
+  <ul>
+    <li>Semi-terminal result = midterm × 10% + semi exam × 90%.</li>
+    <li>Term result = that semi-terminal result × 50% + terminal exam × 50%.</li>
+  </ul>
+  <p>Those two pairs must each add to 100. You can save a rule for:</p>
+  <ul>
+    <li>The whole year (term = All terms, subject = All subjects), or</li>
+    <li>One term, or</li>
+    <li>One subject, or</li>
+    <li>One term and one subject.</li>
+  </ul>
+  <p>The most specific saved rule wins. If nothing is saved, the 10/90 then 50/50 default is used.</p>
+  <p>Headmaster and Academic master can save. School admin should not use this tab to write weights.</p>
+  <p>Saved rules appear as a short list under the form (subject name or “All subjects”, then the four numbers).</p>
+
+  <h2>Grading (letters and mark ranges)</h2>
+  <p>Grading bands belong to <strong>this school only</strong>. They are not shared across the organization. Report cards and grades look up the letter from the student’s percentage using this list.</p>
+  <p>Until this school saves its own bands, ShuleHub shows a default A–F set:</p>
+  <table>
+    <thead>
+      <tr><th>Letter</th><th>From %</th><th>To %</th><th>Points</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>A</td><td>80</td><td>100</td><td>5.00</td></tr>
+      <tr><td>B</td><td>70</td><td>79</td><td>4.00</td></tr>
+      <tr><td>C</td><td>60</td><td>69</td><td>3.00</td></tr>
+      <tr><td>D</td><td>50</td><td>59</td><td>2.00</td></tr>
+      <tr><td>F</td><td>0</td><td>49</td><td>0.00</td></tr>
+    </tbody>
+  </table>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Tab <strong>Grading</strong>. If the defaults are what you want, click <strong>Save for this school</strong> and confirm.</div>
+    <div class="step"><span class="n">2</span> Or click <strong>Add band</strong>. Enter letter, points, from %, to %. Confirm. Bands sort high-to-low by from %.</div>
+    <div class="step"><span class="n">3</span> Pen to change a band. Trash to remove one. Search filters by letter, range, or points.</div>
+  </div>
+  <p>Headmaster and Academic master can add, edit, delete, and save. School admin can see the list.</p>
+  <div class="note">A percentage is matched to the first band where it falls between from % and to %. Leave no gaps if you do not want a leftover F from the built-in fallback.</div>
+
+  <h2 class="page-break">What other menus use this</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>Students</h3>
+      <p>Admit into a class and section of a year. Promote into the next year’s class. A student can also have no class.</p>
+    </div>
+    <div class="card">
+      <h3>Exams and Grades</h3>
+      <p>An exam belongs to a year (and usually a term and class). Papers pick subjects. Official term results combine exam components using Results weights, then letters from Grading.</p>
+    </div>
+    <div class="card">
+      <h3>Timetable</h3>
+      <p>Needs allocations (who teaches what) and rooms. Buildings are only the dropdown behind rooms.</p>
+    </div>
+    <div class="card">
+      <h3>Teachers (directory)</h3>
+      <p>People records. Department list is separate. Qualification list is set by platform admin on Configurations. Allocations on Academics point at these people.</p>
+    </div>
+    <div class="card">
+      <h3>Fees</h3>
+      <p>Fee structures can be tied to a year and class. You cannot delete a year or class that still has fees.</p>
+    </div>
+    <div class="card">
+      <h3>Report cards</h3>
+      <p>Show exam and term results. Letters and points come from this school’s grading bands.</p>
+    </div>
+  </div>
+
+  <h2>Typical day</h2>
+  <table>
+    <thead>
+      <tr><th>Job</th><th>Clicks</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Start a new school year</td><td>Academics → Years &amp; terms → Add year → save. Check Term dates. Make current if needed.</td></tr>
+      <tr><td>Open Form 1 with two streams</td><td>Classes → Add class → Add section A → Add section B</td></tr>
+      <tr><td>Add Mathematics</td><td>Subjects → Add subject → MATH</td></tr>
+      <tr><td>Asha teaches Maths to Form 1 A</td><td>Teachers menu (add Asha if needed) → Academics → Teachers → Allocate teacher</td></tr>
+      <tr><td>Name Block A and Lab 1</td><td>Rooms → Add building → Add room → pick Block A</td></tr>
+      <tr><td>Set this school’s A–F bands</td><td>Grading → Save for this school, or Add band / pen / trash</td></tr>
+      <tr><td>Change how term marks mix</td><td>Results → pick year (and optional term/subject) → four weights that pair to 100 → Save weights</td></tr>
+      <tr><td>Wrong term dates</td><td>Select the year → pen on the term → save</td></tr>
+      <tr><td>Teacher changes class</td><td>Teachers tab → pen on the allocation</td></tr>
+      <tr><td>Remove an unused year</td><td>Delete terms, classes, exams, fees, allocations, weights first, then trash the year</td></tr>
+    </tbody>
+  </table>
+
+  <h2>If something fails</h2>
+  <table>
+    <thead>
+      <tr><th>What you see</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Academic year already exists</td><td>Use another year name at this school.</td></tr>
+      <tr><td>End date must be after start date</td><td>Fix the dates on the year or term.</td></tr>
+      <tr><td>Delete year refused — terms / classes / students / exams / fees / allocations / weights / enrolment history / invoices / timetable</td><td>Remove or move those items first, in that spirit. Enrolment history blocks delete permanently for that year.</td></tr>
+      <tr><td>Term already exists</td><td>That name is already used in this year.</td></tr>
+      <tr><td>Delete term refused</td><td>Remove exams or result weights for that term first.</td></tr>
+      <tr><td>Class code already exists in this academic year</td><td>Use another code (F3 vs F3A) in the same year.</td></tr>
+      <tr><td>Delete class refused</td><td>Move students, delete sections, and remove exams or fees for that class.</td></tr>
+      <tr><td>Section already exists in this class</td><td>A and B cannot be added twice on the same class.</td></tr>
+      <tr><td>Delete section refused</td><td>Move or remove students in that section first.</td></tr>
+      <tr><td>Subject code already exists</td><td>Codes are unique for the whole school.</td></tr>
+      <tr><td>Delete subject refused</td><td>Remove the subject from exam papers, then grades.</td></tr>
+      <tr><td>Building name already exists</td><td>Pick another name.</td></tr>
+      <tr><td>Delete building refused</td><td>Delete or move its rooms first.</td></tr>
+      <tr><td>Classroom name or code already exists</td><td>Names and codes are unique at the school.</td></tr>
+      <tr><td>Remove this room from the timetable first</td><td>Clear timetable slots that use the room, then trash it.</td></tr>
+      <tr><td>This subject allocation already exists</td><td>That teacher already has that subject, class, section, and year.</td></tr>
+      <tr><td>No buildings / ask Headmaster or School admin</td><td>Academic master cannot create buildings. Someone with building rights must add one.</td></tr>
+      <tr><td>No allocations yet. Add teachers and subjects first</td><td>Create people on the Teachers menu, subjects here, then allocate.</td></tr>
+      <tr><td>Weights must add to 100</td><td>Midterm + semi exam = 100, and semi result + terminal = 100.</td></tr>
+      <tr><td>Grading save missing or refused</td><td>Only Headmaster and Academic master can write bands and weights.</td></tr>
+      <tr><td>Add buttons missing</td><td>You are not Headmaster, School admin, or Academic master — or that action is limited (buildings, grading).</td></tr>
+      <tr><td>Wrong school’s classes</td><td>Open the correct school first. Academics never mixes schools.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Icons and confirms (whole page)</h2>
+  <ul>
+    <li>Pen = edit. Trash = delete. Plus = add.</li>
+    <li>Save, delete, make current, and save weights / bands ask for confirm.</li>
+    <li>Search is on the current tab only. Clearing search shows the full list again.</li>
+    <li>Empty states tell you the next step (add a year first, add a building first, and so on).</li>
+  </ul>
+
+  <footer>
+    ShuleHub · Headmaster · Academics menu · Data is per school · Terms-per-year is per organization on Configurations · Grading bands are per school · Confirm dialogs appear before save and delete
+  </footer>
+</body>
+</html>

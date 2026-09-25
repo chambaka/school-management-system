@@ -62,6 +62,12 @@ class BellPeriodServiceTest {
 
         BellPeriod period = period(1L, "P1", PeriodKind.LESSON);
         when(repository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(period));
+        assertThat(service.update(1L, 1L, new BellPeriodRequest(
+                "Period 1", LocalTime.of(7, 30), LocalTime.of(8, 10), PeriodKind.LESSON, 1)).name())
+                .isEqualTo("Period 1");
+        assertThatThrownBy(() -> service.update(1L, 1L, new BellPeriodRequest(
+                "Bad", LocalTime.NOON, LocalTime.NOON, PeriodKind.LESSON, 1)))
+                .isInstanceOf(BusinessException.class);
         service.delete(1L, 1L);
         verify(repository).delete(period);
 
