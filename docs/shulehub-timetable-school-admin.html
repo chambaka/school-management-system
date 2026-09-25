@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub Timetable — School admin guide</title>
+  <style>
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10pt;
+      line-height: 1.4;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 20px 22px 18px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    header.cover h1 {
+      margin: 0 0 6px;
+      font-size: 20pt;
+      letter-spacing: 0.02em;
+    }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 3px; color: #c9d4e3; font-size: 10.5pt; }
+    header.cover .tagline {
+      margin-top: 10px;
+      color: #F5C451;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    h2 {
+      margin: 16px 0 8px;
+      font-size: 13pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 10px 0 4px;
+      font-size: 11pt;
+      color: #06101F;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8px; }
+    ol, ul { margin: 0 0 10px; padding-left: 18px; }
+    li { margin: 2px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10px; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 5px 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 8.5pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      font-size: 9.5pt;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+    .step {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 8px 10px;
+      page-break-inside: avoid;
+    }
+    .step .n {
+      display: inline-block;
+      width: 20px; height: 20px; line-height: 20px;
+      text-align: center;
+      background: #06101F;
+      color: #F5C451;
+      border-radius: 50%;
+      font-size: 9pt;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    .step strong { color: #06101F; }
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .card {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 9px 11px;
+      page-break-inside: avoid;
+    }
+    .card h3 { margin: 0 0 4px; }
+    .chip {
+      display: inline-block;
+      background: #06101F;
+      color: #F5C451;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 99px;
+      margin-right: 4px;
+    }
+    .muted { color: #3d4d5e; font-size: 9.5pt; }
+    footer {
+      margin-top: 12px;
+      font-size: 8.5pt;
+      color: #5b6b7c;
+    }
+    .page-break { page-break-before: always; }
+    .toc li { margin: 3px 0; }
+    .flow {
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: #06101F;
+    }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">Timetable</span></h1>
+    <p>School admin guide · Every part of the weekly timetable, bell times, and teacher hours</p>
+    <p>Sign in → left menu → <strong>Timetable</strong></p>
+    <p class="tagline">Week · Bell times · Teacher hours · Generate · Lock · One section at a time</p>
+  </header>
+
+  <h2>Who this is for</h2>
+  <p>This guide is for the school office. It explains the whole Timetable screen: what each control does, what must exist first, and what happens when a week is generated, edited, or locked. School admin can open the week and read it. Building and changing the week is done by Headmaster or Academic master.</p>
+  <div class="note">
+    The Timetable menu is the class week. It is not Academics (years, classes, subjects, rooms, who teaches what), not Attendance, and not the teacher’s personal home. Those menus feed this one.
+  </div>
+
+  <h2>Contents</h2>
+  <ol class="toc">
+    <li>How the pieces fit together</li>
+    <li>Open the page and read the screen</li>
+    <li>Who can do what</li>
+    <li>What must exist first</li>
+    <li>Week grid</li>
+    <li>Add, edit, and delete a lesson</li>
+    <li>Generate week</li>
+    <li>Lock and unlock</li>
+    <li>Bell times</li>
+    <li>Teacher hours</li>
+    <li>What other people see</li>
+    <li>Typical jobs</li>
+    <li>If something fails</li>
+  </ol>
+
+  <h2>How the pieces fit together</h2>
+  <p class="flow">Year → Class → Section → this week’s grid</p>
+  <p class="flow">Subject + Teacher + Allocation → Generate week, or Add lesson by hand</p>
+  <p class="flow">Bell times (school-wide) → rows on every class week</p>
+  <p class="flow">Teacher hours (optional, school-wide) → where Generate is allowed to place that teacher</p>
+  <p class="flow">Room (optional) → named on the cell, and blocked if already booked</p>
+  <table>
+    <thead>
+      <tr><th>Piece</th><th>What it is</th><th>Scope</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Year</td><td>The school year the week belongs to. The section list follows the year you pick.</td><td>One year at a time in the toolbar</td></tr>
+      <tr><td>Section</td><td>One stream, such as Form 1 A. The grid is that section’s week only.</td><td>One section at a time</td></tr>
+      <tr><td>Lesson</td><td>One cell: subject, teacher, day, start, end, and optional room.</td><td>That section and year</td></tr>
+      <tr><td>Bell time</td><td>A named row (P1, Short break, Lunch) with a start, an end, and a type.</td><td>The whole school. Every class week uses the same rows.</td></tr>
+      <tr><td>Lesson period</td><td>A bell whose type is Lesson. These become the rows you can fill.</td><td>School-wide</td></tr>
+      <tr><td>Break</td><td>A bell whose type is Break. Shown under the grid. You cannot put a subject on it.</td><td>School-wide</td></tr>
+      <tr><td>Teacher hours</td><td>A window when a teacher may be placed. Empty means free all day.</td><td>That teacher, for the whole school</td></tr>
+      <tr><td>Lock</td><td>Freezes lessons for one section in one year.</td><td>That section and year only. Other classes stay editable.</td></tr>
+      <tr><td>Allocation</td><td>Who teaches which subject to which class. Generate reads this. You set it on Academics → Teachers, not here.</td><td>Year, class, optional section</td></tr>
+    </tbody>
+  </table>
+  <div class="note">The week is Monday to Friday only. There is no Saturday or Sunday column.</div>
+
+  <h2>Open the page and read the screen</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Sign in. If the account can open more than one school, open the correct school first. The timetable never mixes schools.</div>
+    <div class="step"><span class="n">2</span> Click <strong>Timetable</strong> in the left menu.</div>
+    <div class="step"><span class="n">3</span> The heading says <strong>Timetable</strong>. Under it: “One week for one class section. Rows are periods. A filled cell is a lesson.”</div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Part of the screen</th><th>What it is for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Year</td><td>Dropdown of academic years. Sections in the next box are the ones that belong to this year.</td></tr>
+      <tr><td>Section</td><td>Dropdown of class streams, shown as “Form 1 A”. Choose one to load its week. “Choose class section” means nothing is loaded yet.</td></tr>
+      <tr><td>Locked chip</td><td>Appears only when this section’s week for this year is locked. Hidden when the week is open.</td></tr>
+      <tr><td>Lesson count</td><td>How many lessons are saved for the selected section, for example “12 lessons”. Shown after you pick a section.</td></tr>
+      <tr><td>Generate week</td><td>Headmaster and Academic master only. Replaces this section’s week from allocations. Asks you to confirm. Greyed out while locked.</td></tr>
+      <tr><td>Lock / Unlock</td><td>Headmaster and Academic master only. The label flips. Confirm before either change.</td></tr>
+      <tr><td>Add lesson</td><td>Headmaster and Academic master only. Opens the lesson form. Hidden while the week is locked, and hidden until a section is chosen.</td></tr>
+      <tr><td>Tabs</td><td><strong>Week</strong> is always there. <strong>Bell times</strong> and <strong>Teacher hours</strong> appear for Headmaster and Academic master.</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Changing the year clears the section if that stream does not belong to the new year. You then pick the section again.</p>
+
+  <h2>Who can do what</h2>
+  <table>
+    <thead>
+      <tr><th>Action</th><th>School admin</th><th>Headmaster</th><th>Academic master</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Open Timetable and pick year and section</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Read the week, lesson count, lock chip, and breaks</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Click a cell, Add lesson, edit, delete</td><td>No</td><td>Yes, while unlocked</td><td>Yes, while unlocked</td></tr>
+      <tr><td>Generate week, Lock, Unlock</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Bell times tab (add, edit, delete, drag order)</td><td>No — tab is hidden</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Teacher hours tab</td><td>No — tab is hidden</td><td>Yes</td><td>Yes</td></tr>
+    </tbody>
+  </table>
+  <p>Teacher, Staff, and Invigilator can also open this menu and read a section’s week. They do not get Generate, Lock, Bell times, or Teacher hours. Students and parents do not see this menu. A student sees today’s lessons on their own home. A teacher sees their own lessons on the teacher home.</p>
+  <div class="note">If Add lesson, Bell times, or Teacher hours are missing, the signed-in role is view-only on this page. Ask the Headmaster or Academic master to make the change.</div>
+
+  <h2 class="page-break">What must exist first</h2>
+  <p>The week cannot be filled until Academics and the staff list are in place. Do these on the other menus, in this order.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> <strong>Academics → Years &amp; terms</strong> — a year exists, and the one you want is available in the Year dropdown.</div>
+    <div class="step"><span class="n">2</span> <strong>Academics → Classes</strong> — a class in that year, and at least one section (A, B).</div>
+    <div class="step"><span class="n">3</span> <strong>Academics → Subjects</strong> — each subject you will place (Mathematics, English).</div>
+    <div class="step"><span class="n">4</span> <strong>Teachers</strong> menu — the people who will stand in the cells.</div>
+    <div class="step"><span class="n">5</span> <strong>Academics → Teachers</strong> — allocate teacher + subject + class + year. Section can be “whole class” or one stream. Generate uses these links. Add lesson can still pick any subject and teacher even without an allocation.</div>
+    <div class="step"><span class="n">6</span> <strong>Academics → Rooms</strong> — optional. Buildings, then classrooms. The lesson form’s Room list is these names. You can leave a lesson with no room.</div>
+    <div class="step"><span class="n">7</span> <strong>Timetable → Bell times</strong> — optional before the first look. Until someone saves bells, every class week uses the default day below.</div>
+  </div>
+  <p>Until a section is chosen, the Week tab shows an empty message instead of a grid. Typical messages:</p>
+  <ul>
+    <li>“Add a school year in Academics first.” — no years.</li>
+    <li>“Add a class and a section (A, B) in Academics first.” — no sections.</li>
+    <li>“Pick a class section to see its week.” — year exists, nothing selected.</li>
+    <li>“No lessons yet. Allocate teachers to this class in Academics → Teachers, then generate — or click an empty cell.” — section chosen, no lessons, and no allocations for that class.</li>
+    <li>“No lessons yet. Generate from allocations, or click an empty cell to add one.” — allocations exist, the week is still empty.</li>
+    <li>“No lessons on this week yet.” — you are view-only and the week is empty.</li>
+  </ul>
+
+  <h2>Week grid</h2>
+  <p>After you pick a section, the card title is the class and section (Form 1 A) and the year. The line under it says whether a click will add or edit a lesson, or only view it. View is used when the week is locked, or when your role cannot edit.</p>
+  <table>
+    <thead>
+      <tr><th>Part of the grid</th><th>What you see</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Corner</td><td>The word Period.</td></tr>
+      <tr><td>Day headers</td><td>Mon, Tue, Wed, Thu, Fri.</td></tr>
+      <tr><td>Left of each row</td><td>Period name and clock time, for example P1 and 07:30–08:10. Only lesson periods are rows. Breaks are not rows.</td></tr>
+      <tr><td>Empty cell</td><td>Blank, with a plus if you can edit. Click it to add a lesson already set to that day and that period’s start and end.</td></tr>
+      <tr><td>Filled cell</td><td>Subject in bold, teacher name under it, room in smaller type if one was set.</td></tr>
+      <tr><td>Trash on a cell</td><td>Headmaster and Academic master, and only while unlocked. Asks “Delete …?” before the lesson is removed. The rest of the week stays.</td></tr>
+      <tr><td>Breaks under the grid</td><td>One pill per break, “Short break · 09:30–09:50”. These are rest, not teaching slots.</td></tr>
+    </tbody>
+  </table>
+  <p>A cell matches a lesson when the lesson’s day and start time are the same as that period. If a lesson was typed with a start time that matches no bell, it still counts in the lesson total, but it will not sit in a row.</p>
+  <p>If the school has no lesson bells and no saved lessons, the grid can build rows from the start times of lessons already saved, named P1, P2, and so on in time order.</p>
+
+  <h2 class="page-break">Add, edit, and delete a lesson</h2>
+  <p>Headmaster and Academic master. The week must be unlocked, and a section must be selected for Add lesson. A click on a cell is the same form.</p>
+  <h3>Add</h3>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Click <strong>Add lesson</strong>, or click an empty cell. The form title is <strong>Add lesson</strong>. The note says a lesson is one slot: subject, teacher, day, and period time.</div>
+    <div class="step"><span class="n">2</span> <strong>Subject</strong> — required. List of school subjects.</div>
+    <div class="step"><span class="n">3</span> <strong>Teacher</strong> — required. List of teachers.</div>
+    <div class="step"><span class="n">4</span> <strong>Day</strong> — Mon, Tue, Wed, Thu, or Fri. An empty-cell click fills the day you clicked.</div>
+    <div class="step"><span class="n">5</span> <strong>Room</strong> — “No room”, or a classroom. The label shows the room name and, if set, the building.</div>
+    <div class="step"><span class="n">6</span> <strong>Starts</strong> and <strong>Ends</strong> — required. An empty-cell click fills that period’s times. End must be later than start.</div>
+    <div class="step"><span class="n">7</span> Click <strong>Add lesson</strong>. Confirm “Add this lesson to the week?”. Close, Cancel, Escape, or a click on the dim background closes without saving.</div>
+  </div>
+  <h3>Edit</h3>
+  <p>Click a filled cell. The title becomes <strong>Edit lesson</strong>. The same fields open with the current values. <strong>Save lesson</strong> asks “Save changes to this lesson?”. The lesson stays on the same section.</p>
+  <h3>Delete</h3>
+  <p>Trash on the cell. Confirm the delete. This removes one lesson only.</p>
+  <p>Saving checks three clashes for that day. A clash is any overlap of the clock times, not only an exact match:</p>
+  <ul>
+    <li>This section already has a lesson in that time — “This slot overlaps an existing timetable entry”.</li>
+    <li>This teacher already teaches any class in that time — “This teacher is already teaching at that time”.</li>
+    <li>This room name is already used in that time — “This room is already booked at that time”. No room means the room check is skipped.</li>
+  </ul>
+  <p>Editing your own lesson does not clash with itself. Two lessons may touch, such as 08:10 end and 08:10 start. They clash if one starts before the other ends.</p>
+
+  <h2>Generate week</h2>
+  <p>Headmaster and Academic master. You need a year and a section, and the week must be unlocked. The button asks: “Replace this week with lessons from Academics allocations?”</p>
+  <div class="note">
+    Confirming deletes every lesson already on this section, then writes a new week. If some lessons cannot be placed, they are simply missing. Unlock is not enough to get the old week back. Copy anything you must keep, or add it again by hand after generate.
+  </div>
+  <p>Generate looks at allocations for this year and this class. An allocation for the whole class is included. An allocation for this section is included. An allocation for a different section of the same class is skipped.</p>
+  <p>For each allocation it tries to place five lessons across Monday–Friday, using lesson bell periods only (not breaks). It walks days and periods in order and skips a candidate when:</p>
+  <ul>
+    <li>The teacher has teacher hours, and this period is not fully inside a window on that day. A teacher with no hours is treated as free all day.</li>
+    <li>The same subject would sit in the period immediately before or after on that same day. Back-to-back doubles are avoided. A gap is allowed.</li>
+    <li>The section, the teacher, or the chosen room is already busy, including lessons already on other classes.</li>
+  </ul>
+  <p>A room is chosen from the school’s classrooms when any exist. If both the room and the section have a capacity, Generate prefers a room at least as large as the section. If none is large enough, it still uses a room. Lessons can be saved with no room when the school has no classrooms.</p>
+  <p>Generate does not open the lesson form and does not ask again for each cell. When it finishes, the grid reloads. The lesson count is whatever was placed, which can be less than five per subject if the week ran out of legal slots.</p>
+
+  <h2>Lock and unlock</h2>
+  <p>Lock applies to the selected section and the selected year. Other sections are not locked by this click.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Pick the year and section.</div>
+    <div class="step"><span class="n">2</span> Click <strong>Lock</strong>. Confirm “Lock this week? No one can change slots until you unlock.”</div>
+    <div class="step"><span class="n">3</span> The <span class="chip">Locked</span> chip appears. Add lesson disappears. Generate is disabled. Cells no longer open the form. Trash disappears. The subtitle says click a cell to view.</div>
+    <div class="step"><span class="n">4</span> Click <strong>Unlock</strong> and confirm “Unlock so this week can be edited?” The chip goes away and editing returns.</div>
+  </div>
+  <p>A locked week rejects add, edit, delete, and generate with “This timetable is locked”, even if a button were forced. Bell times and teacher hours are not locked by this switch. They are school-wide and stay editable.</p>
+
+  <h2 class="page-break">Bell times</h2>
+  <p>Headmaster and Academic master. Tab <strong>Bell times</strong>. The note: these rows appear on every class week. A lesson period is a teaching row. A break is rest time, not a lesson. Drag a row by its handle to change the order.</p>
+  <div class="note">
+    Bells are not per class. Reordering or editing P1 changes the rows on Form 1 A and Form 4 B alike. Lessons already saved keep their own start times. After you change a bell’s clock time, a lesson still appears on the row whose start matches the lesson, not on the row that used to have that name.
+  </div>
+  <h3>Default day, before anyone saves</h3>
+  <p>If this school has never saved bell times, the list is a preview. The hint says “P1–P8 below are defaults until you save times for this school.” The first add, edit, delete, or drag saves the whole day for the school.</p>
+  <table>
+    <thead>
+      <tr><th>Order</th><th>Name</th><th>Time</th><th>Type</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>P1</td><td>07:30–08:10</td><td>Lesson period</td></tr>
+      <tr><td>2</td><td>P2</td><td>08:10–08:50</td><td>Lesson period</td></tr>
+      <tr><td>3</td><td>P3</td><td>08:50–09:30</td><td>Lesson period</td></tr>
+      <tr><td>4</td><td>Short break</td><td>09:30–09:50</td><td>Break</td></tr>
+      <tr><td>5</td><td>P4</td><td>09:50–10:30</td><td>Lesson period</td></tr>
+      <tr><td>6</td><td>P5</td><td>10:30–11:10</td><td>Lesson period</td></tr>
+      <tr><td>7</td><td>P6</td><td>11:10–11:50</td><td>Lesson period</td></tr>
+      <tr><td>8</td><td>Lunch</td><td>11:50–12:30</td><td>Break</td></tr>
+      <tr><td>9</td><td>P7</td><td>12:30–13:10</td><td>Lesson period</td></tr>
+      <tr><td>10</td><td>P8</td><td>13:10–13:50</td><td>Lesson period</td></tr>
+    </tbody>
+  </table>
+  <h3>Each row</h3>
+  <p>The row shows the name, then “Lesson period” or “Break”, then the clock times. On the right, three gold buttons:</p>
+  <ul>
+    <li><strong>Drag handle</strong> — three horizontal lines. Title “Drag up or down”. Press it, move onto another row, and release. That row takes the other row’s place. The week grid uses this order for lesson rows. Breaks stay in this same list order under the grid.</li>
+    <li><strong>Pen</strong> — edit that bell.</li>
+    <li><strong>Trash</strong> — delete. Confirm “Delete …?”.</li>
+  </ul>
+  <h3>Add or edit a period</h3>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Click <strong>Add period</strong>, or the pen. Title is “Add period” or “Edit period”. The note: name, type, and the start and end of this bell.</div>
+    <div class="step"><span class="n">2</span> <strong>Name</strong> — required. Placeholder P1. Use a short label teachers will recognise.</div>
+    <div class="step"><span class="n">3</span> <strong>Type</strong> — Lesson or Break.</div>
+    <div class="step"><span class="n">4</span> <strong>Start</strong> and <strong>End</strong> — required. End must be after start, or you see “Period end must be after start”.</div>
+    <div class="step"><span class="n">5</span> <strong>Add period</strong> or <strong>Save period</strong>. Confirm “Add this period to the school day?” or “Save changes to this period?”.</div>
+  </div>
+  <p>There is no separate “sort number” field. Order is the list order. Drag is how you change it. New periods are added at the end until you drag them.</p>
+
+  <h2>Teacher hours</h2>
+  <p>Headmaster and Academic master. Tab <strong>Teacher hours</strong>. Optional. If a teacher has hours, Generate only places them inside those windows. Leave a teacher off this list to treat them as free all day.</p>
+  <p>Hours do not block Add lesson. A hand-placed lesson can still sit outside the window. Only Generate obeys the windows.</p>
+  <p>The list is sorted by weekday, Monday at the top, then Friday. On the same day, earlier start times come first. Each row is the teacher’s name, then the short day, then from–to (Mon · 08:00–16:00).</p>
+  <h3>Add teacher hours</h3>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Click <strong>Add teacher hours</strong>.</div>
+    <div class="step"><span class="n">2</span> <strong>Teacher</strong> — required.</div>
+    <div class="step"><span class="n">3</span> <strong>Day</strong> — <strong>Monday to Friday</strong>, or one of Mon, Tue, Wed, Thu, Fri. Monday to Friday is only on add, not on edit.</div>
+    <div class="step"><span class="n">4</span> <strong>From</strong> and <strong>To</strong> — required. To must be after From, or you see “End time must be after start time”. The form opens at 08:00–16:00.</div>
+    <div class="step"><span class="n">5</span> One day: button <strong>Add hours</strong>, confirm “Save these teacher hours?”. Monday to Friday: button <strong>Add Monday to Friday</strong>, confirm “Save these hours for Monday through Friday?”. That writes five rows, one per weekday, with the same times.</div>
+  </div>
+  <p>While Monday to Friday is selected, the form note says Generate only places this teacher inside this window on Monday through Friday. For a single day, the note says “on that day”.</p>
+  <h3>Edit and delete</h3>
+  <ul>
+    <li><strong>Pen</strong> — title “Edit teacher hours”. You change one saved row: teacher, one day, from, to. <strong>Save hours</strong> asks “Save changes to these hours?”. You cannot turn one row into the whole week from edit. Add again with Monday to Friday if you need all five.</li>
+    <li><strong>Trash</strong> — confirm “Delete …?”. Removes that one window. If it was the teacher’s last window, Generate treats them as free all day again.</li>
+  </ul>
+  <p>A window counts only when the whole period sits inside it. A period 07:30–08:10 is outside a window that starts at 08:00. A period 08:00–08:40 is inside 08:00–16:00. Several windows on the same day are allowed. Generate accepts the period if any one window on that day covers it completely.</p>
+  <p>If Monday to Friday saves only some days and then fails, the list refreshes so you can see the days that were stored. Delete the extras before you try again, or you will have two windows on those days.</p>
+
+  <h2 class="page-break">What other people see</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>School admin</h3>
+      <p>Timetable menu, Week tab only. Pick year and section, read cells, lock chip, lesson count, and breaks. No generate, lock, bells, or hours.</p>
+    </div>
+    <div class="card">
+      <h3>Teacher</h3>
+      <p>Teacher home lists that teacher’s own lessons. They can also open Timetable and read any section, without edit buttons.</p>
+    </div>
+    <div class="card">
+      <h3>Student</h3>
+      <p>Student home shows today’s timetable for their section. They do not open this admin page.</p>
+    </div>
+    <div class="card">
+      <h3>Attendance</h3>
+      <p>A lesson log can be tied to a timetable slot for the section. The slot list follows what was saved on the week.</p>
+    </div>
+  </div>
+  <p class="muted">Staff and Invigilator match the teacher’s timetable menu: they can read a week and cannot change it.</p>
+
+  <h2>Typical jobs</h2>
+  <table>
+    <thead>
+      <tr><th>Job</th><th>Who</th><th>Clicks</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>See Form 1 A this year</td><td>School admin, or anyone who can open the menu</td><td>Timetable → Year → Section “Form 1 A”</td></tr>
+      <tr><td>Check whether the week is frozen</td><td>School admin</td><td>Look for the Locked chip next to the lesson count</td></tr>
+      <tr><td>Set the school day before generating</td><td>Headmaster or Academic master</td><td>Bell times → edit the defaults, or Add period → drag the handle into order</td></tr>
+      <tr><td>Keep a teacher to mornings only</td><td>Headmaster or Academic master</td><td>Teacher hours → Add teacher hours → Monday to Friday → 07:30–12:30 → Add Monday to Friday</td></tr>
+      <tr><td>Fill a class from allocations</td><td>Headmaster or Academic master</td><td>Week → year and section → Generate week → confirm</td></tr>
+      <tr><td>Put one lesson in by hand</td><td>Headmaster or Academic master</td><td>Click the empty cell, or Add lesson → subject, teacher, day, times → confirm</td></tr>
+      <tr><td>Move a lesson</td><td>Headmaster or Academic master</td><td>Click the filled cell → change day or times → Save lesson</td></tr>
+      <tr><td>Remove one lesson</td><td>Headmaster or Academic master</td><td>Trash on that cell → confirm</td></tr>
+      <tr><td>Publish the week so nobody edits it</td><td>Headmaster or Academic master</td><td>Lock → confirm. Repeat per section.</td></tr>
+      <tr><td>Change a locked week</td><td>Headmaster or Academic master</td><td>Unlock → confirm → edit → Lock again</td></tr>
+      <tr><td>Swap P1 and P2 on every class</td><td>Headmaster or Academic master</td><td>Bell times → drag P2’s handle onto P1</td></tr>
+    </tbody>
+  </table>
+
+  <h2>If something fails</h2>
+  <table>
+    <thead>
+      <tr><th>What you see</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Add lesson, Bell times, or Teacher hours are missing</td><td>This role can read the week only. Sign in as Headmaster or Academic master.</td></tr>
+      <tr><td>Generate and Add lesson are missing, Locked chip is showing</td><td>The week is locked. Unlock first.</td></tr>
+      <tr><td>This timetable is locked</td><td>Unlock this section and year, then try again.</td></tr>
+      <tr><td>End time must be after start time</td><td>On a lesson or on teacher hours, set To later than From.</td></tr>
+      <tr><td>Period end must be after start</td><td>On a bell, set End later than Start.</td></tr>
+      <tr><td>This slot overlaps an existing timetable entry</td><td>This section already has a lesson overlapping that day and time. Pick another period or shorten the times.</td></tr>
+      <tr><td>This teacher is already teaching at that time</td><td>They are on another class, or on this one, in an overlapping time. Choose another teacher or another slot.</td></tr>
+      <tr><td>This room is already booked at that time</td><td>That room name is taken. Pick another room or No room.</td></tr>
+      <tr><td>Generate left gaps</td><td>The old week is already gone. Hours, clashes, or back-to-back rules blocked some lessons. Widen teacher hours, add lesson periods, or add the missing cells by hand.</td></tr>
+      <tr><td>A lesson does not appear in the grid but the count includes it</td><td>Its start time does not match a lesson bell. Edit the lesson times, or edit the bell so the starts match.</td></tr>
+      <tr><td>Monday to Friday created extra rows</td><td>Those days already had a window. Delete the ones you do not want. Edit changes only one row.</td></tr>
+      <tr><td>Drag did not stick</td><td>Release the handle while it is over another bell row. The row you drop on is the new place.</td></tr>
+      <tr><td>Wrong school’s week</td><td>Open the correct school first. Timetable data never crosses schools.</td></tr>
+      <tr><td>Section list is empty</td><td>This year has no classes with sections, or the year dropdown is on a year you did not set up.</td></tr>
+      <tr><td>No lessons yet, and Generate would have nothing to place</td><td>Allocate teachers on Academics → Teachers for this class and year, then generate.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Icons and confirms</h2>
+  <ul>
+    <li>Plus = add. Pen = edit. Trash = delete. Three lines = drag a bell row up or down.</li>
+    <li>Add lesson, Save lesson, Generate week, Lock, Unlock, delete lesson, save or delete a bell, and save or delete teacher hours all ask you to confirm.</li>
+    <li>Close, Cancel, Escape, or a click on the dim background leaves the form without saving.</li>
+    <li>The Week tab is one section. Bell times and teacher hours apply to the whole school.</li>
+  </ul>
+
+  <footer>
+    ShuleHub · School admin · Timetable · Week is per section and year · Bell times and teacher hours are per school · Lock is per section and year · Monday to Friday only · Confirm before generate, because it replaces the week
+  </footer>
+</body>
+</html>
