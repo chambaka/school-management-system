@@ -175,6 +175,11 @@ class ExamServiceTest {
         assertThat(exam.getRejectionNote()).isEqualTo("Fix totals");
         assertThat(service.submit(1L, 1L).approvalStatus()).isEqualTo(ExamApprovalStatus.ENTERED);
         exam.setApprovalStatus(ExamApprovalStatus.APPROVED);
+        exam.setPublished(true);
+        exam.setApprovalStatus(ExamApprovalStatus.PUBLISHED);
+        assertThat(service.reject(1L, 1L, "no").approvalStatus()).isEqualTo(ExamApprovalStatus.REJECTED);
+        assertThat(exam.isPublished()).isFalse();
+        exam.setApprovalStatus(ExamApprovalStatus.DRAFT);
         assertThatThrownBy(() -> service.reject(1L, 1L, "no")).isInstanceOf(BusinessException.class);
         exam.setApprovalStatus(ExamApprovalStatus.VERIFIED);
         assertThatThrownBy(() -> service.submit(1L, 1L)).isInstanceOf(BusinessException.class);

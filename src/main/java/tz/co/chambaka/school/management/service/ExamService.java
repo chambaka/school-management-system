@@ -157,8 +157,11 @@ public class ExamService {
     public ExamResponse reject(Long schoolId, Long id, String note) {
         Exam exam = require(schoolId, id);
         ExamApprovalStatus status = exam.getApprovalStatus();
-        if (status != ExamApprovalStatus.ENTERED && status != ExamApprovalStatus.VERIFIED) {
-            throw new BusinessException("Only entered or verified results can be rejected");
+        if (status != ExamApprovalStatus.ENTERED
+                && status != ExamApprovalStatus.VERIFIED
+                && status != ExamApprovalStatus.APPROVED
+                && status != ExamApprovalStatus.PUBLISHED) {
+            throw new BusinessException("Only submitted results can be returned to the teacher");
         }
         exam.setApprovalStatus(ExamApprovalStatus.REJECTED);
         exam.setRejectionNote(note == null || note.isBlank() ? "Returned to the teacher" : note.trim());
