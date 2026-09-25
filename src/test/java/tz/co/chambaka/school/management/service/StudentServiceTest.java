@@ -87,7 +87,7 @@ class StudentServiceTest {
         });
         CreateStudentRequest create = new CreateStudentRequest(
                 "Juma", "Juma", "Hassan", "Ally", "Tanzanian", "j@x.com", "pw", "07", "1", LocalDate.of(2010, 1, 1),
-                Gender.MALE, "O+", LocalDate.of(2026, 1, 1), "addr", "0711", null, 1L, 1L, 1L);
+                Gender.MALE, "O+", LocalDate.of(2026, 1, 1), AddressText.SAMPLE, "0711", null, 1L, 1L, 1L);
         StudentResponse created = service.create(1L, create);
         assertThat(created.id()).isEqualTo(2L);
         assertThat(created.admissionNo()).startsWith("ADM-");
@@ -96,7 +96,7 @@ class StudentServiceTest {
 
         service.update(1L, 1L, new UpdateStudentRequest(
                 "Juma 2", "08", "2", LocalDate.of(2011, 1, 1), Gender.FEMALE, "A+",
-                "new", "0722", null, 1L, 1L, 1L, false));
+                AddressText.SAMPLE, "0722", null, 1L, 1L, 1L, false));
         assertThat(student.getUser().getName()).isEqualTo("Juma 2");
         assertThat(student.getUser().isEnabled()).isFalse();
         assertThat(student.getGender()).isEqualTo(Gender.FEMALE);
@@ -148,9 +148,13 @@ class StudentServiceTest {
                 .thenReturn(Fixtures.user(4L, Role.STUDENT));
         when(studentRepository.save(any(Student.class))).thenAnswer(inv -> inv.getArgument(0));
         CreateStudentRequest bare = new CreateStudentRequest(
-                "N", "n@x.com", "pw", null, null, null, null, null, null, null, null, null, null, null, null);
+                "N", "n@x.com", "pw", null, null, null, null, null, null, AddressText.SAMPLE, null, null, null, null, null);
         assertThat(service.create(1L, bare).schoolClassId()).isNull();
         assertThat(service.create(1L, bare).admissionNo()).startsWith("ADM-");
+        assertThatThrownBy(() -> service.create(1L, new CreateStudentRequest(
+                "N", "n@x.com", "pw", null, null, null, null, null, null, "home", null, null, null, null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("region");
 
         when(studentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.require(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
@@ -182,8 +186,8 @@ class StudentServiceTest {
         when(studentParentRepository.findByStudentId(2L)).thenReturn(List.of());
         CreateStudentRequest create = new CreateStudentRequest(
                 "Juma", null, null, null, null, "j@x.com", "pw", "07", null, null, Gender.MALE, null,
-                null, null, null, null, null, null, null,
-                new AdmitParentRequest("Mama Juma", "m@x.com", null, "0753", "Trader", "Mikocheni", RelationshipType.MOTHER));
+                null, AddressText.SAMPLE, null, null, null, null, null,
+                new AdmitParentRequest("Mama Juma", "m@x.com", null, "0753", "Trader", AddressText.SAMPLE, RelationshipType.MOTHER));
         assertThat(service.create(1L, create).id()).isEqualTo(2L);
         verify(parentRepository).save(any(Parent.class));
         verify(studentParentRepository).save(any(StudentParent.class));

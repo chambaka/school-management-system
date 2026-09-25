@@ -84,6 +84,10 @@ public class StudentService {
         if (request.parent() != null && request.parent().provided() && !request.parent().complete()) {
             throw new BusinessException("Parent name and email are required");
         }
+        AddressText.require(request.address());
+        if (request.parent() != null && request.parent().complete()) {
+            AddressText.require(request.parent().address());
+        }
         User user = userAccountService.create(
                 schoolId, request.name(), request.email(), request.password(), Role.STUDENT, request.phone());
         applyNames(user, request.firstName(), request.middleName(), request.lastName(), request.name());
@@ -140,6 +144,7 @@ public class StudentService {
             student.setBloodGroup(request.bloodGroup());
         }
         if (request.address() != null) {
+            AddressText.require(request.address());
             student.setAddress(request.address());
         }
         if (request.emergencyContact() != null) {
@@ -241,6 +246,7 @@ public class StudentService {
     }
 
     private void linkNewParent(Long schoolId, Student student, AdmitParentRequest request) {
+        AddressText.require(request.address());
         User user = userAccountService.create(
                 schoolId, request.name(), request.email(), request.password(), Role.PARENT, request.phone());
         Parent parent = new Parent();

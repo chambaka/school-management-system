@@ -54,6 +54,7 @@ public class ParentService {
 
     @Transactional
     public ParentResponse create(Long schoolId, CreateParentRequest request) {
+        AddressText.require(request.address());
         User user = userAccountService.create(
                 schoolId, request.name(), request.email(), request.password(), Role.PARENT, request.phone());
         Parent parent = new Parent();
@@ -87,6 +88,7 @@ public class ParentService {
             parent.setOccupation(request.occupation());
         }
         if (request.address() != null) {
+            AddressText.require(request.address());
             parent.setAddress(request.address());
         }
         return toResponse(parent);

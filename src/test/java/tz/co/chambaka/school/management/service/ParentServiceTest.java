@@ -61,7 +61,7 @@ class ParentServiceTest {
             saved.setId(2L);
             return saved;
         });
-        assertThat(service.create(1L, new CreateParentRequest("Mama", "m@x.com", "pw", "07", "Trader", "addr"))
+        assertThat(service.create(1L, new CreateParentRequest("Mama", "m@x.com", "pw", "07", "Trader", AddressText.SAMPLE))
                 .occupation()).isEqualTo("Trader");
 
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
@@ -87,11 +87,11 @@ class ParentServiceTest {
         assertThat(service.listChildren(1L, 1L)).hasSize(1);
         assertThat(service.get(1L, 1L).occupation()).isEqualTo("Trader");
 
-        service.update(1L, 1L, new UpdateParentRequest("Mama Asha", "0712345678", "Nurse", "Arusha", false));
+        service.update(1L, 1L, new UpdateParentRequest("Mama Asha", "0712345678", "Nurse", AddressText.SAMPLE, false));
         assertThat(parent.getUser().getName()).isEqualTo("Mama Asha");
         assertThat(parent.getUser().isEnabled()).isFalse();
         assertThat(parent.getOccupation()).isEqualTo("Nurse");
-        assertThat(parent.getAddress()).isEqualTo("Arusha");
+        assertThat(parent.getAddress()).isEqualTo(AddressText.SAMPLE);
 
         service.update(1L, 1L, new UpdateParentRequest(null, null, null, null, null));
         assertThat(parent.getOccupation()).isEqualTo("Nurse");
