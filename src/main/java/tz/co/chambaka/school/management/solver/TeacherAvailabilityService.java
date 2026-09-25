@@ -7,6 +7,7 @@ import tz.co.chambaka.school.management.service.TeacherService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -63,7 +64,11 @@ public class TeacherAvailabilityService {
     }
 
     private static void assertTimes(TeacherAvailabilityRequest request) {
-        if (!request.endTime().isAfter(request.startTime())) {
+        assertTimes(request.startTime(), request.endTime());
+    }
+
+    private static void assertTimes(LocalTime startTime, LocalTime endTime) {
+        if (!endTime.isAfter(startTime)) {
             throw new BusinessException("End time must be after start time");
         }
     }
