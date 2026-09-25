@@ -11,7 +11,7 @@ public record CreateTeacherRequest(
         @NotBlank @Email String email,
         @Size(min = 8, max = 72) String password,
         String phone,
-        @NotBlank String employeeId,
+        @Size(max = 50) String employeeId,
         String qualification,
         String specialization,
         String department,

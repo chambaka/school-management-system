@@ -2,7 +2,9 @@ package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.curriculum.CurriculumController;
 import tz.co.chambaka.school.management.dto.academic.BuildingRequest;
+import tz.co.chambaka.school.management.dto.teacher.QualificationRequest;
 import tz.co.chambaka.school.management.service.BuildingService;
+import tz.co.chambaka.school.management.service.QualificationService;
 import tz.co.chambaka.school.management.curriculum.CurriculumService;
 import tz.co.chambaka.school.management.curriculum.CurriculumTopicRequest;
 import tz.co.chambaka.school.management.ledger.LedgerController;
@@ -48,6 +50,7 @@ class NewModulesControllersTest {
     @Mock PushService pushService;
     @Mock TeacherAvailabilityService availabilityService;
     @Mock BuildingService buildingService;
+    @Mock QualificationService qualificationService;
 
     @BeforeEach
     void school() {
@@ -65,6 +68,15 @@ class NewModulesControllersTest {
         verify(buildingService).create(eq(1L), any());
         verify(buildingService).update(eq(1L), eq(3L), any());
         verify(buildingService).delete(1L, 3L);
+
+        QualificationController qualifications = new QualificationController(qualificationService);
+        qualifications.list();
+        qualifications.create(new QualificationRequest("Diploma", 1));
+        qualifications.update(4L, new QualificationRequest("Degree", 2));
+        qualifications.delete(4L);
+        verify(qualificationService).create(any());
+        verify(qualificationService).update(eq(4L), any());
+        verify(qualificationService).delete(4L);
 
         CurriculumController curriculum = new CurriculumController(curriculumService, tenantResolver);
         curriculum.list(null);

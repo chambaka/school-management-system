@@ -1,6 +1,7 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.teacher.CreateTeacherRequest;
+import tz.co.chambaka.school.management.dto.teacher.TeacherResponse;
 import tz.co.chambaka.school.management.dto.teacher.UpdateTeacherRequest;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
@@ -41,6 +42,8 @@ class TeacherServiceTest {
     private DepartmentService departmentService;
     @Mock
     private PhotoStorageService photoStorageService;
+    @Mock
+    private QualificationService qualificationService;
     @InjectMocks
     private TeacherService service;
 
@@ -64,6 +67,8 @@ class TeacherServiceTest {
         });
         when(departmentService.requireByName(1L, "Science")).thenReturn(Fixtures.department("Science"));
         when(departmentService.requireByName(1L, "Arts")).thenReturn(Fixtures.department("Arts"));
+        when(qualificationService.requireByName("BSc")).thenReturn("BSc");
+        when(qualificationService.requireByName("MSc")).thenReturn("MSc");
         CreateTeacherRequest create = new CreateTeacherRequest(
                 "Asha", "asha@x.com", "pw", "07", "T-002", "BSc", "Math", "Science", LocalDate.of(2024, 1, 1));
         assertThat(service.create(1L, create).id()).isEqualTo(2L);
@@ -103,6 +108,27 @@ class TeacherServiceTest {
     }
 
     @Test
+    void rejectsUnknownQualificationAndKeepsExisting() {
+        when(qualificationService.requireByName("Unknown"))
+                .thenThrow(new BusinessException("Qualification is not configured"));
+        when(userAccountService.create(1L, "Asha", "asha@x.com", "pw", Role.TEACHER, null))
+                .thenReturn(Fixtures.user(3L, Role.TEACHER));
+        assertThatThrownBy(() -> service.create(1L, new CreateTeacherRequest(
+                "Asha", "asha@x.com", "pw", null, "T-004", "Unknown", null, null, null)))
+                .isInstanceOf(BusinessException.class);
+
+        Teacher teacher = Fixtures.teacher();
+        teacher.setQualification("Old diploma");
+        when(teacherRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(teacher));
+        service.update(1L, 1L, new UpdateTeacherRequest(null, null, "Old diploma", null, null, null, null));
+        assertThat(teacher.getQualification()).isEqualTo("Old diploma");
+        verify(qualificationService, org.mockito.Mockito.never()).requireByName("Old diploma");
+
+        service.update(1L, 1L, new UpdateTeacherRequest(null, null, "  ", null, null, null, null));
+        assertThat(teacher.getQualification()).isNull();
+    }
+
+    @Test
     void lookupsAndErrors() {
         Teacher teacher = Fixtures.teacher();
         when(teacherRepository.existsBySchoolIdAndEmployeeIdIgnoreCase(1L, "T-001")).thenReturn(true);
@@ -116,6 +142,17 @@ class TeacherServiceTest {
         when(teacherRepository.findByUserId(8L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.requireByUser(8L)).isInstanceOf(ResourceNotFoundException.class);
         assertThat(service.requireByUserSafe(8L)).isNull();
+    }
+
+    @Test
+    void createAllowsMissingEmployeeId() {
+        when(userAccountService.create(1L, "Asha", "asha@x.com", "pw", Role.TEACHER, null))
+                .thenReturn(Fixtures.user(3L, Role.TEACHER));
+        when(teacherRepository.save(any(Teacher.class))).thenAnswer(inv -> inv.getArgument(0));
+        TeacherResponse created = service.create(1L, new CreateTeacherRequest(
+                "Asha", "asha@x.com", "pw", null, "  ", null, null, null, null));
+        assertThat(created.employeeId()).isNull();
+        verify(teacherRepository, org.mockito.Mockito.never()).existsBySchoolIdAndEmployeeIdIgnoreCase(any(), any());
     }
 
     @Test

@@ -71,6 +71,15 @@ class AllocationServiceTest {
         when(teacherSubjectRepository.findByIdAndSchoolId(3L, 1L)).thenReturn(Optional.of(withSection));
         service.delete(1L, 3L);
         verify(teacherSubjectRepository).delete(withSection);
+
+        when(teacherSubjectRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(withSection));
+        when(teacherService.require(1L, 1L)).thenReturn(Fixtures.teacher());
+        when(subjectService.require(1L, 1L)).thenReturn(Fixtures.subject());
+        when(classService.require(1L, 1L)).thenReturn(Fixtures.schoolClass());
+        when(sectionService.require(1L, 1L)).thenReturn(Fixtures.section());
+        when(academicYearService.require(1L, 1L)).thenReturn(Fixtures.year());
+        assertThat(service.update(1L, 1L, new AllocationRequest(1L, 1L, 1L, 1L, 1L)).teacherName())
+                .isEqualTo(Fixtures.teacher().getUser().getName());
     }
 
     @Test

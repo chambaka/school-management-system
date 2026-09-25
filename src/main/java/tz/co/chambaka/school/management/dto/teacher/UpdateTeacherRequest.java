@@ -9,6 +9,18 @@ public record UpdateTeacherRequest(
         String specialization,
         String department,
         LocalDate joiningDate,
-        Boolean enabled
+        Boolean enabled,
+        String employeeId
 ) {
+    public UpdateTeacherRequest(
+            String name,
+            String phone,
+            String qualification,
+            String specialization,
+            String department,
+            LocalDate joiningDate,
+            Boolean enabled
+    ) {
+        this(name, phone, qualification, specialization, department, joiningDate, enabled, null);
+    }
 }

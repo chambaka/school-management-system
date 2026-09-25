@@ -442,6 +442,7 @@ class ControllersTest {
         AllocationController allocations = new AllocationController(allocationService, tenantResolver);
         allocations.list(1L, null);
         allocations.create(new AllocationRequest(1L, 1L, 1L, 1L, 1L));
+        allocations.update(1L, new AllocationRequest(1L, 1L, 1L, 1L, 1L));
         allocations.delete(1L);
 
         TimetableController timetable = new TimetableController(timetableService, tenantResolver);

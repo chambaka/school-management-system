@@ -28,17 +28,20 @@ public class TeacherService {
     private final UserAccountService userAccountService;
     private final DepartmentService departmentService;
     private final PhotoStorageService photoStorageService;
+    private final QualificationService qualificationService;
 
     public TeacherService(
             TeacherRepository teacherRepository,
             UserAccountService userAccountService,
             DepartmentService departmentService,
-            PhotoStorageService photoStorageService
+            PhotoStorageService photoStorageService,
+            QualificationService qualificationService
     ) {
         this.teacherRepository = teacherRepository;
         this.userAccountService = userAccountService;
         this.departmentService = departmentService;
         this.photoStorageService = photoStorageService;
+        this.qualificationService = qualificationService;
     }
 
     @Transactional(readOnly = true)
@@ -55,7 +58,8 @@ public class TeacherService {
 
     @Transactional
     public TeacherResponse create(Long schoolId, CreateTeacherRequest request) {
-        if (teacherRepository.existsBySchoolIdAndEmployeeIdIgnoreCase(schoolId, request.employeeId())) {
+        String employeeId = blankToNull(request.employeeId());
+        if (employeeId != null && teacherRepository.existsBySchoolIdAndEmployeeIdIgnoreCase(schoolId, employeeId)) {
             throw new DuplicateResourceException("Employee ID already exists");
         }
         User user = userAccountService.create(
@@ -63,8 +67,8 @@ public class TeacherService {
         Teacher teacher = new Teacher();
         teacher.setSchoolId(schoolId);
         teacher.setUser(user);
-        teacher.setEmployeeId(request.employeeId());
-        teacher.setQualification(request.qualification());
+        teacher.setEmployeeId(employeeId);
+        teacher.setQualification(resolveQualification(request.qualification(), null));
         teacher.setSpecialization(request.specialization());
         teacher.setDepartment(resolveDepartment(schoolId, request.department()));
         teacher.setJoiningDate(request.joiningDate());
@@ -88,7 +92,7 @@ public class TeacherService {
             user.setEnabled(request.enabled());
         }
         if (request.qualification() != null) {
-            teacher.setQualification(request.qualification());
+            teacher.setQualification(resolveQualification(request.qualification(), teacher.getQualification()));
         }
         if (request.specialization() != null) {
             teacher.setSpecialization(request.specialization());
@@ -98,6 +102,15 @@ public class TeacherService {
         }
         if (request.joiningDate() != null) {
             teacher.setJoiningDate(request.joiningDate());
+        }
+        if (request.employeeId() != null) {
+            String employeeId = blankToNull(request.employeeId());
+            if (employeeId != null
+                    && (teacher.getEmployeeId() == null || !teacher.getEmployeeId().equalsIgnoreCase(employeeId))
+                    && teacherRepository.existsBySchoolIdAndEmployeeIdIgnoreCase(schoolId, employeeId)) {
+                throw new DuplicateResourceException("Employee ID already exists");
+            }
+            teacher.setEmployeeId(employeeId);
         }
         return toResponse(teacher);
     }
@@ -162,6 +175,17 @@ public class TeacherService {
         return departmentService.requireByName(schoolId, department).getName();
     }
 
+    private String resolveQualification(String qualification, String current) {
+        if (qualification == null || qualification.isBlank()) {
+            return null;
+        }
+        String trimmed = qualification.trim();
+        if (current != null && current.equalsIgnoreCase(trimmed)) {
+            return current;
+        }
+        return qualificationService.requireByName(trimmed);
+    }
+
     private TeacherResponse toResponse(Teacher teacher) {
         User user = teacher.getUser();
         return new TeacherResponse(
@@ -193,5 +217,13 @@ public class TeacherService {
 
     static TeacherStatus statusOf(Teacher teacher) {
         return teacher.getStatus() == null ? TeacherStatus.ACTIVE : teacher.getStatus();
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

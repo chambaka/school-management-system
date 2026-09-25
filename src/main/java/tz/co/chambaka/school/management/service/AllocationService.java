@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class AllocationService {
@@ -60,13 +61,22 @@ public class AllocationService {
         }
         TeacherSubject allocation = new TeacherSubject();
         allocation.setSchoolId(schoolId);
-        allocation.setTeacher(teacherService.require(schoolId, request.teacherId()));
-        allocation.setSubject(subjectService.require(schoolId, request.subjectId()));
-        allocation.setSchoolClass(classService.require(schoolId, request.schoolClassId()));
-        allocation.setSection(request.sectionId() == null ? null : sectionService.require(schoolId, request.sectionId()));
-        allocation.setAcademicYear(academicYearService.require(schoolId, request.academicYearId()));
-        allocation.setWeeklyLessons(request.weeklyLessons() == null || request.weeklyLessons() < 1 ? 5 : request.weeklyLessons());
+        apply(schoolId, allocation, request);
         return toResponse(teacherSubjectRepository.save(allocation));
+    }
+
+    @Transactional
+    public AllocationResponse update(Long schoolId, Long id, AllocationRequest request) {
+        TeacherSubject allocation = teacherSubjectRepository.findByIdAndSchoolId(id, schoolId)
+                .orElseThrow(() -> ResourceNotFoundException.of("TeacherSubject", id));
+        if (changed(allocation, request)
+                && teacherSubjectRepository.existsByTeacherIdAndSubjectIdAndSchoolClassIdAndSectionIdAndAcademicYearId(
+                request.teacherId(), request.subjectId(), request.schoolClassId(), request.sectionId(),
+                request.academicYearId())) {
+            throw new DuplicateResourceException("This subject allocation already exists");
+        }
+        apply(schoolId, allocation, request);
+        return toResponse(allocation);
     }
 
     @Transactional
@@ -91,5 +101,23 @@ public class AllocationService {
                 allocation.getAcademicYear().getId(),
                 allocation.getWeeklyLessons() <= 0 ? 5 : allocation.getWeeklyLessons()
         );
+    }
+
+    private void apply(Long schoolId, TeacherSubject allocation, AllocationRequest request) {
+        allocation.setTeacher(teacherService.require(schoolId, request.teacherId()));
+        allocation.setSubject(subjectService.require(schoolId, request.subjectId()));
+        allocation.setSchoolClass(classService.require(schoolId, request.schoolClassId()));
+        allocation.setSection(request.sectionId() == null ? null : sectionService.require(schoolId, request.sectionId()));
+        allocation.setAcademicYear(academicYearService.require(schoolId, request.academicYearId()));
+        allocation.setWeeklyLessons(request.weeklyLessons() == null || request.weeklyLessons() < 1 ? 5 : request.weeklyLessons());
+    }
+
+    private static boolean changed(TeacherSubject allocation, AllocationRequest request) {
+        Long sectionId = allocation.getSection() == null ? null : allocation.getSection().getId();
+        return !allocation.getTeacher().getId().equals(request.teacherId())
+                || !allocation.getSubject().getId().equals(request.subjectId())
+                || !allocation.getSchoolClass().getId().equals(request.schoolClassId())
+                || !Objects.equals(sectionId, request.sectionId())
+                || !allocation.getAcademicYear().getId().equals(request.academicYearId());
     }
 }

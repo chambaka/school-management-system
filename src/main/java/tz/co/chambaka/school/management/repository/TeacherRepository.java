@@ -37,4 +37,6 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
     List<Teacher> findAllBySchoolId(Long schoolId);
 
     boolean existsBySchoolIdAndEmployeeIdIgnoreCase(Long schoolId, String employeeId);
+
+    List<Teacher> findByQualificationIgnoreCase(String qualification);
 }

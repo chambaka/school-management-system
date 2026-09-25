@@ -20,6 +20,7 @@ class AccessTest {
         assertThat(Access.BUILDING_MANAGE).doesNotContain("ACADEMIC_MASTER");
         assertThat(Access.EXAM_INVIGILATE).contains("INVIGILATOR");
         assertThat(Access.ACCOUNT_UNLOCK).contains("HEADMASTER").contains("ACADEMIC_MASTER");
+        assertThat(Access.STAFF_OFFICERS).contains("SUPER_ADMIN").contains("HEADMASTER");
         Constructor<Access> ctor = Access.class.getDeclaredConstructor();
         ctor.setAccessible(true);
         assertThat(ctor.newInstance()).isNotNull();
