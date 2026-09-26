@@ -107,10 +107,18 @@ class TenantResolverTest {
     }
 
     @Test
-    void headmasterWithoutSchoolCanRequestSchool() {
-        var user = Fixtures.user(10L, Role.HEADMASTER);
+    void organizationAdminWithoutSchoolCanRequestSchool() {
+        var user = Fixtures.user(10L, Role.ORGANIZATION_ADMIN);
         user.setSchoolId(null);
         assertThat(resolver().resolve(99L, new tz.co.chambaka.school.management.security.UserPrincipal(user))).isEqualTo(99L);
+    }
+
+    @Test
+    void headmasterWithoutSchoolCannotPickAnotherSchool() {
+        var user = Fixtures.user(10L, Role.HEADMASTER);
+        user.setSchoolId(null);
+        assertThatThrownBy(() -> resolver().resolve(99L, new tz.co.chambaka.school.management.security.UserPrincipal(user)))
+                .isInstanceOf(ApiException.class);
     }
 
     @Test

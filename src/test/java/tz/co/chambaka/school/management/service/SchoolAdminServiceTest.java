@@ -81,8 +81,11 @@ class SchoolAdminServiceTest {
         when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
         service.assertCanManage(1L, Fixtures.principal(Role.SUPER_ADMIN));
 
-        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
         service.assertCanManage(1L, Fixtures.principal(Role.HEADMASTER));
+        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
+        service.assertCanManage(1L, Fixtures.principal(Role.ORGANIZATION_ADMIN));
+        assertThatThrownBy(() -> service.assertCanManage(9L, Fixtures.principal(Role.HEADMASTER)))
+                .isInstanceOf(ApiException.class);
 
         when(schoolRepository.findById(9L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.assertCanManage(9L, Fixtures.principal(Role.SUPER_ADMIN)))

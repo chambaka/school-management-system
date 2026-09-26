@@ -39,8 +39,9 @@ public final class PermissionCatalog {
     public static List<String> forRole(Role role) {
         return switch (role) {
             case SUPER_ADMIN -> List.copyOf(definitions().keySet());
-            case HEADMASTER -> List.of(PEOPLE_MANAGE, EXAM_APPROVE, EXAM_INVIGILATE, REPORT_EXPORT, SCHOOL_SWITCH);
-            case SCHOOL_ADMIN -> List.of(PEOPLE_MANAGE, EXAM_INVIGILATE, REPORT_EXPORT, SCHOOL_SWITCH);
+            case ORGANIZATION_ADMIN -> List.of();
+            case HEADMASTER -> List.of(PEOPLE_MANAGE, EXAM_APPROVE, EXAM_INVIGILATE, REPORT_EXPORT);
+            case SCHOOL_ADMIN -> List.of(PEOPLE_MANAGE, EXAM_INVIGILATE, REPORT_EXPORT);
             case ACADEMIC_MASTER -> List.of(PEOPLE_MANAGE, EXAM_APPROVE, EXAM_VERIFY, EXAM_INVIGILATE, ATTENDANCE_ENTER, TIMETABLE_MANAGE, REPORT_EXPORT);
             case TEACHER -> List.of(EXAM_INVIGILATE, ATTENDANCE_ENTER, REPORT_EXPORT);
             case ACCOUNTANT -> List.of(FINANCE_MANAGE, REPORT_EXPORT);

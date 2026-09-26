@@ -37,9 +37,11 @@ public final class Access {
     public static final String MESSAGE = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER','TEACHER','ACCOUNTANT','PARENT')";
     public static final String AUDIT = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER','ACCOUNTANT')";
     public static final String SCHOOL_USER = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER','TEACHER','ACCOUNTANT','STAFF','INVIGILATOR','STUDENT','PARENT')";
-    public static final String ORG_SCHOOLS = "hasAnyRole('SUPER_ADMIN','HEADMASTER','SCHOOL_ADMIN')";
-    public static final String STAFF_OFFICERS = "hasAnyRole('SUPER_ADMIN','HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER')";
-    public static final String ACCOUNT_UNLOCK = "hasAnyRole('SUPER_ADMIN','HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER')";
+    public static final String ORG_SCHOOLS = "hasAnyRole('SUPER_ADMIN','ORGANIZATION_ADMIN')";
+    public static final String ORG_RENAME = "hasAnyRole('SUPER_ADMIN','ORGANIZATION_ADMIN')";
+    public static final String OFFICER_MANAGE = "hasAnyRole('SUPER_ADMIN','ORGANIZATION_ADMIN','HEADMASTER','SCHOOL_ADMIN')";
+    public static final String STAFF_OFFICERS = "hasAnyRole('SUPER_ADMIN','ORGANIZATION_ADMIN','HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER')";
+    public static final String ACCOUNT_UNLOCK = "hasAnyRole('SUPER_ADMIN','ORGANIZATION_ADMIN','HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER')";
     public static final String CURRICULUM = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER','TEACHER')";
     public static final String BUILDING_MANAGE = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN')";
     public static final String PERMISSIONS = "isAuthenticated()";

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub Exams menu — Headmaster guide</title>
+  <style>
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10pt;
+      line-height: 1.4;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 20px 22px 18px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    header.cover h1 {
+      margin: 0 0 6px;
+      font-size: 20pt;
+      letter-spacing: 0.02em;
+    }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 3px; color: #c9d4e3; font-size: 10.5pt; }
+    header.cover .tagline {
+      margin-top: 10px;
+      color: #F5C451;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    h2 {
+      margin: 16px 0 8px;
+      font-size: 13pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 10px 0 4px;
+      font-size: 11pt;
+      color: #06101F;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8px; }
+    ol, ul { margin: 0 0 10px; padding-left: 18px; }
+    li { margin: 2px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10px; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 5px 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 8.5pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      font-size: 9.5pt;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+    .step {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 8px 10px;
+      page-break-inside: avoid;
+    }
+    .step .n {
+      display: inline-block;
+      width: 20px; height: 20px; line-height: 20px;
+      text-align: center;
+      background: #06101F;
+      color: #F5C451;
+      border-radius: 50%;
+      font-size: 9pt;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    .step strong { color: #06101F; }
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .card {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 9px 11px;
+      page-break-inside: avoid;
+    }
+    .card h3 { margin: 0 0 4px; }
+    .chip {
+      display: inline-block;
+      background: #06101F;
+      color: #F5C451;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 99px;
+      margin-right: 4px;
+    }
+    .muted { color: #3d4d5e; font-size: 9.5pt; }
+    footer {
+      margin-top: 12px;
+      font-size: 8.5pt;
+      color: #5b6b7c;
+    }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">Exams menu</span></h1>
+    <p>Headmaster guide · How to set papers, the sitting plan, and results</p>
+    <p>Sign in as Headmaster → left menu → <strong>Exams</strong></p>
+    <p class="tagline">Create · Papers · Schedule · Lock · Check · Publish</p>
+  </header>
+
+  <h2>Who this is for</h2>
+  <p>You and the Academic master create exams, schedule them, lock the plan, approve, and publish. Teachers can add papers and enter marks. The Academic master is the one who verifies marks. School admin and invigilators can open the list, papers, and seats. They do not create exams or publish results.</p>
+  <div class="note">Set up the academic year, classes, subjects, rooms, and teachers before exam week. Marks are entered on <strong>Grades</strong>, not on this page. This page builds the exam and releases the results.</div>
+
+  <h2>Open the page</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Sign in with your Headmaster email or phone.</div>
+    <div class="step"><span class="n">2</span> If you have more than one school, pick the school first (Schools).</div>
+    <div class="step"><span class="n">3</span> Click <strong>Exams</strong>. The subtitle is “Exams and papers for the selected year.” The year chip at the top opens on the current year.</div>
+  </div>
+
+  <h2>What you see</h2>
+  <table>
+    <thead>
+      <tr><th>Part of the screen</th><th>What it is for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Year</td><td>Shows exams for that year only. Current year is marked.</td></tr>
+      <tr><td>Search</td><td>Filters by name, type, component, term, class, or status as you type.</td></tr>
+      <tr><td>Create exam</td><td>Opens the form for a new exam.</td></tr>
+      <tr><td>Exam row</td><td>Name, type, component, term, start, end, and class. A chip shows the status. A second chip says <span class="chip">Schedule locked</span> after you lock.</td></tr>
+      <tr><td>Papers (n)</td><td>Opens the papers for that exam. The number is how many papers it has. Papers (0) stays clickable so you can add the first one.</td></tr>
+      <tr><td>Pen and trash</td><td>Edit the exam, or delete it. These stay available even when the exam has no papers.</td></tr>
+    </tbody>
+  </table>
+  <div class="note">A grey button does nothing when you click it. Rest the pointer on it. The tooltip says why: no paper yet, no marks yet, no schedule yet, or the schedule is locked.</div>
+
+  <h2>Create an exam</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Click <strong>Create exam</strong>.</div>
+    <div class="step"><span class="n">2</span> Choose the year. Term can stay <strong>None</strong>.</div>
+    <div class="step"><span class="n">3</span> Choose one class, or <strong>All classes</strong>. All classes creates one exam per class. Each class keeps its own papers and marks.</div>
+    <div class="step"><span class="n">4</span> Name it (Midterm is the suggested name). Set start and end dates. The end date must be on or after the start date.</div>
+    <div class="step"><span class="n">5</span> Choose <strong>Type</strong> and <strong>Component</strong> (see below).</div>
+    <div class="step"><span class="n">6</span> Click <strong>Create exam</strong> and confirm.</div>
+  </div>
+  <p>The pen icon edits that exam. You can change year, term, class, name, type, component, and dates. Edit is for one class. It does not offer All classes.</p>
+
+  <h2>Type and component</h2>
+  <p><strong>Type</strong> is the label on the row: Quiz, Midterm, Final, Assignment, or Other. <strong>Component</strong> is what the report uses. Pick the component that matches the result you want, even if the type name is similar.</p>
+  <table>
+    <thead>
+      <tr><th>Component</th><th>How it counts</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>MIDTERM</td><td>The midterm score. It is 10% of the semi-terminal result.</td></tr>
+      <tr><td>SEMI_TERMINAL</td><td>The semi exam. It is 90% of the semi-terminal result.</td></tr>
+      <tr><td>TERMINAL</td><td>The end-of-term exam. The term result is half the semi-terminal result and half this exam.</td></tr>
+      <tr><td>OTHER</td><td>Stored on the exam. It is not one of those three report parts.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Add a paper</h2>
+  <p>A paper is one subject sitting: Maths, English, and so on. Seats are the places for the students in that sitting. You add papers first. Seat numbers appear after Schedule.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> On the exam row, click <strong>Papers (0)</strong> or <strong>Papers (n)</strong>.</div>
+    <div class="step"><span class="n">2</span> Click <strong>Add paper</strong>.</div>
+    <div class="step"><span class="n">3</span> Choose the subject. Max and pass are required. They start at 100 and 40.</div>
+    <div class="step"><span class="n">4</span> Choose an <strong>Invigilator</strong>. This is required. The invigilator is the person supervising that sitting. The list is your teachers. A teacher who teaches the subject and the invigilator on the day can be different people.</div>
+    <div class="step"><span class="n">5</span> Room, date, start, and end are optional. Room is a dropdown of rooms from Academics → Rooms. Choose <strong>No room</strong> if you will let Schedule pick one. If the room list is empty, add rooms under Academics first.</div>
+    <div class="step"><span class="n">6</span> Click <strong>Add paper</strong> and confirm. One subject can appear only once on the same exam.</div>
+  </div>
+  <p>The pen on a paper edits it. The trash deletes it. Delete is refused if that paper already has marks, or if the exam is published. Unpublish first, and clear those marks, then delete.</p>
+  <div class="note">While the schedule is locked, Add paper, edit, and delete are hidden. Unlock the exam before you change papers.</div>
+
+  <h2 class="page-break">Schedule</h2>
+  <p>Schedule builds the sitting plan and the seat numbers. It does not enter marks and it does not change Draft, Verified, or Published.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Add at least one paper. Schedule stays grey until then. The tooltip says “Add a paper before using this”.</div>
+    <div class="step"><span class="n">2</span> Click <strong>Schedule</strong> and confirm “Auto-schedule papers”.</div>
+    <div class="step"><span class="n">3</span> Open <strong>Papers</strong>. The Schedule table shows subject, date, time, room, and invigilator.</div>
+  </div>
+  <p>For a paper that does not yet have a date and a start time, Schedule walks the exam from the start date:</p>
+  <ul>
+    <li>Morning 08:00–10:00, then afternoon 11:00–12:30, then the next weekday. Saturday and Sunday are skipped.</li>
+    <li>The date never goes past the exam end date.</li>
+    <li>The room is a classroom that can hold the active students in that class. If the school has no rooms, the room is Hall A.</li>
+    <li>The invigilator is taken from the teacher list, in turn, so two papers at the same time do not share a person or a room.</li>
+  </ul>
+  <p>A paper that already has a date and a start time keeps that date, time, room, and invigilator. Schedule still rebuilds the seat numbers for it. Run Schedule again to replace the plan. You cannot run it while the exam is locked.</p>
+  <div class="note">Seat numbers are only saved by Schedule. They are S-01, S-02, and so on, for active students in the exam’s class. The exam is for the whole class, not one section.</div>
+
+  <h2>See the plan and the seats</h2>
+  <ol>
+    <li>Click <strong>Papers</strong>. The Schedule table is at the top of that window.</li>
+    <li>Click <strong>Seats</strong> on a paper.</li>
+    <li>After Schedule, you see seat, admission number, and student.</li>
+    <li>Before Schedule, you see the active students in the class, and a note that seat numbers are saved when you run Schedule.</li>
+  </ol>
+  <p>The class timetable (lessons) is a different screen. The exam plan lives here, inside Papers.</p>
+
+  <h2>Lock and unlock</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>Lock</h3>
+      <p>Grey until every paper has a date and a start time. Hover says “Schedule the papers before locking” until then. After lock, the row shows Schedule locked. Papers cannot be added or edited. Schedule stays grey until you unlock.</p>
+    </div>
+    <div class="card">
+      <h3>Unlock</h3>
+      <p>Replaces Lock while the plan is locked. Confirm unlock. Papers can be changed again, and you can run Schedule again.</p>
+    </div>
+  </div>
+  <p class="muted">You can lock a draft. Lock does not publish results. It only freezes the sitting plan.</p>
+
+  <h2>Marks, checking, and publish</h2>
+  <p>Do this after the papers exist. Schedule and lock can come before or after marks. The result steps themselves follow this order. A later button is hidden until the exam reaches that status. It is not a grey button you are meant to force.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> On <strong>Grades</strong>, enter marks for the exam. Send for checking stays grey until at least one mark exists. Hover says “Enter marks on Grades before sending for checking”.</div>
+    <div class="step"><span class="n">2</span> Click <strong>Send for checking</strong>. This does not save marks. It asks the Academic master to look. Marks can still be changed until the exam is verified. The status becomes Entered.</div>
+    <div class="step"><span class="n">3</span> The Academic master clicks <strong>Verify</strong>. You do not see Verify. After that, marks are frozen and the status is Verified.</div>
+    <div class="step"><span class="n">4</span> Click <strong>Approve</strong>. It appears only when the status is Verified.</div>
+    <div class="step"><span class="n">5</span> Click <strong>Publish</strong>. It appears only when the status is Approved. Students and parents can then see the results.</div>
+  </div>
+  <p><strong>Reject</strong> appears once the exam has been sent for checking. It returns the exam to the teacher. If results were published, Reject also hides them. The note “Returned for correction” shows under the row. Send for checking is available again after new marks, labelled as sending again.</p>
+  <p><strong>Unpublish</strong> hides results from students and parents without returning the exam to the teacher. The status stays Approved until you publish again.</p>
+
+  <h2>Delete an exam</h2>
+  <ol>
+    <li>If it is published, click <strong>Unpublish</strong> first.</li>
+    <li>Remove marks for that exam on Grades.</li>
+    <li>Click the trash icon and confirm.</li>
+  </ol>
+  <p>Delete also removes the papers and the seat numbers. It is refused while the exam is published or while any mark remains.</p>
+
+  <h2>Typical week</h2>
+  <table>
+    <thead>
+      <tr><th>Job</th><th>Clicks</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>One exam for every class</td><td>Create exam → All classes → Create exam</td></tr>
+      <tr><td>One subject paper</td><td>Papers → Add paper → subject, max, pass, invigilator → Add paper</td></tr>
+      <tr><td>Build the sitting plan</td><td>Schedule → Papers, to read the Schedule table</td></tr>
+      <tr><td>See who sits where</td><td>Papers → Seats on that subject</td></tr>
+      <tr><td>Stop changes to the plan</td><td>Lock</td></tr>
+      <tr><td>Change a locked plan</td><td>Unlock → edit the paper or Schedule again</td></tr>
+      <tr><td>Ask for a check</td><td>Grades (enter marks) → Send for checking</td></tr>
+      <tr><td>Release results</td><td>After the Academic master verifies → Approve → Publish</td></tr>
+      <tr><td>Hide results</td><td>Unpublish, or Reject if the teacher must correct them</td></tr>
+    </tbody>
+  </table>
+
+  <h2>If something fails</h2>
+  <table>
+    <thead>
+      <tr><th>What you see</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Grey button</td><td>Hover it. Add a paper, enter marks, schedule, or unlock, as the tooltip says.</td></tr>
+      <tr><td>No exams for this year</td><td>Check the year chip, or create the exam.</td></tr>
+      <tr><td>Add a class for this year</td><td>The year has no classes. Create them under Academics, then create the exam.</td></tr>
+      <tr><td>No rooms in the dropdown</td><td>Add rooms under Academics → Rooms. You can still save with No room.</td></tr>
+      <tr><td>No invigilator to choose</td><td>Add a teacher first. A paper cannot be saved without one.</td></tr>
+      <tr><td>Schedule does nothing useful</td><td>Open Papers. The Schedule table is there. Seats shows numbers only after Schedule has run.</td></tr>
+      <tr><td>Seats lists students but no S-01</td><td>Those are the active students in the class. Run Schedule to save seat numbers.</td></tr>
+      <tr><td>Cannot lock</td><td>Every paper needs a date and a start time. Run Schedule, or type them on each paper.</td></tr>
+      <tr><td>Approve or Publish is missing</td><td>That is expected until the previous step is done. Verify (Academic master), then Approve, then Publish.</td></tr>
+      <tr><td>Cannot delete</td><td>Unpublish first if it is published. Remove marks, then delete.</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    ShuleHub · Headmaster · Exams menu · Confirm before you schedule, lock, publish, or delete · Marks are entered on Grades
+  </footer>
+</body>
+</html>

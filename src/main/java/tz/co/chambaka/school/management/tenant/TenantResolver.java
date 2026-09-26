@@ -55,7 +55,7 @@ public class TenantResolver {
         if (principal.getSchoolId() != null) {
             return principal.getSchoolId();
         }
-        if (principal.getRole() == Role.HEADMASTER && requestedSchoolId != null) {
+        if (principal.getRole() == Role.ORGANIZATION_ADMIN && requestedSchoolId != null) {
             return requestedSchoolId;
         }
         throw new ApiException(HttpStatus.FORBIDDEN, "School context is required");

@@ -94,6 +94,13 @@ public class UserAccountService {
         return saved;
     }
 
+    @Transactional
+    public User createForTenant(Long tenantId, String name, String email, String rawPassword, Role role, String phone) {
+        User saved = create(null, name, email, rawPassword, role, phone);
+        saved.setTenantId(tenantId);
+        return userRepository.save(saved);
+    }
+
     private String uniqueUsername(String email) {
         String base = email.contains("@") ? email.substring(0, email.indexOf('@')).toLowerCase().replaceAll("[^a-z0-9]", "") : "user";
         if (base.isBlank()) {

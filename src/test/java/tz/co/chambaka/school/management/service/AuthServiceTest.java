@@ -306,7 +306,7 @@ class AuthServiceTest {
         assertThat(response.accessToken()).isEqualTo("access");
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
-        assertThat(captor.getValue().getRole()).isEqualTo(Role.HEADMASTER);
+        assertThat(captor.getValue().getRole()).isEqualTo(Role.ORGANIZATION_ADMIN);
         assertThat(captor.getValue().getTenantId()).isEqualTo(Fixtures.TENANT_ID);
         assertThat(captor.getValue().getSchoolId()).isNull();
         assertThat(captor.getValue().getCampusId()).isNull();
@@ -351,16 +351,11 @@ class AuthServiceTest {
     }
 
     @Test
-    void switchSchoolAsTenantAdmin() {
-        User user = Fixtures.user(2L, Role.HEADMASTER);
-        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
-        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
-        when(campusService.requirePrimary(1L)).thenReturn(Fixtures.campus());
-        stubTokens(user);
-        authService.switchSchool(2L, new SwitchSchoolRequest(1L, null));
-        assertThat(user.getSchoolId()).isEqualTo(1L);
-        assertThat(user.getCampusId()).isEqualTo(Fixtures.CAMPUS_ID);
-        verify(refreshTokenRepository).deleteByUserId(2L);
+    void switchSchoolForbiddenForHeadmaster() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(Fixtures.user(2L, Role.HEADMASTER)));
+        assertThatThrownBy(() -> authService.switchSchool(2L, new SwitchSchoolRequest(1L, null)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("platform admin");
     }
 
     @Test
@@ -540,7 +535,6 @@ class AuthServiceTest {
         User student = Fixtures.user(4L, Role.STUDENT);
         student.setFailedLoginAttempts(3);
         student.setLockedUntil(Instant.now().plusSeconds(600));
-        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
         when(userRepository.findByIdAndSchoolId(4L, 1L)).thenReturn(Optional.of(student));
 
         var unlocked = authService.unlock(4L, null, Fixtures.principal(Role.HEADMASTER));
@@ -572,7 +566,6 @@ class AuthServiceTest {
         User student = Fixtures.user(4L, Role.STUDENT);
         student.setTotpEnabled(true);
         student.setTotpSecret("EXISTINGSECRET");
-        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
         when(userRepository.findByIdAndSchoolId(4L, 1L)).thenReturn(Optional.of(student));
         doAnswer(invocation -> {
             User target = invocation.getArgument(0);
@@ -602,7 +595,6 @@ class AuthServiceTest {
     void schoolOfficerCannotResetSuperAdminTwoFactor() {
         User platform = Fixtures.user(1L, Role.SUPER_ADMIN);
         platform.setSchoolId(1L);
-        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
         when(userRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(platform));
         assertThatThrownBy(() -> authService.resetTwoFactor(1L, 1L, Fixtures.principal(Role.HEADMASTER)))
                 .isInstanceOf(ApiException.class)
@@ -632,7 +624,6 @@ class AuthServiceTest {
     @Test
     void headmasterResetsPasswordAndSmsesTemporary() {
         User student = Fixtures.user(4L, Role.STUDENT);
-        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
         when(userRepository.findByIdAndSchoolId(4L, 1L)).thenReturn(Optional.of(student));
         when(passwordEncoder.encode(anyString())).thenReturn("hashed-new");
         when(credentialSms.sendTemporaryPassword(eq(student), anyString())).thenReturn(SmsSendResult.ok("ref"));
@@ -657,7 +648,6 @@ class AuthServiceTest {
     @Test
     void headmasterListsSchoolUsers() {
         User student = Fixtures.user(4L, Role.STUDENT);
-        when(tenantService.requireSchoolInTenant(Fixtures.TENANT_ID, 1L)).thenReturn(Fixtures.school());
         when(userRepository.findBySchoolIdAndRoleNot(eq(1L), eq(Role.SUPER_ADMIN), any()))
                 .thenReturn(new PageImpl<>(List.of(student)));
 

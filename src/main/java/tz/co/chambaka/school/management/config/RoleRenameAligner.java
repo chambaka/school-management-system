@@ -12,7 +12,8 @@ import org.springframework.stereotype.Component;
 import java.util.Locale;
 
 /**
- * Legacy {@code ADMIN} / {@code TENANT_ADMIN} must become {@code HEADMASTER} before Hibernate
+ * Legacy {@code ADMIN} becomes {@code HEADMASTER}, and {@code TENANT_ADMIN} becomes
+ * {@code ORGANIZATION_ADMIN}, before Hibernate
  * shrinks MySQL enums. {@link RoleRenameBeforeJpa} runs this as soon as the DataSource exists.
  */
 @Component
@@ -46,9 +47,9 @@ public class RoleRenameAligner implements ApplicationRunner {
         int admins = jdbc.update(
                 "update `" + table + "` set `" + column + "` = 'HEADMASTER' where `" + column + "` = 'ADMIN'");
         int tenants = jdbc.update(
-                "update `" + table + "` set `" + column + "` = 'HEADMASTER' where `" + column + "` = 'TENANT_ADMIN'");
+                "update `" + table + "` set `" + column + "` = 'ORGANIZATION_ADMIN' where `" + column + "` = 'TENANT_ADMIN'");
         if (admins + tenants > 0) {
-            log.info("Renamed legacy roles to HEADMASTER table={} adminRows={} tenantAdminRows={}",
+            log.info("Renamed legacy roles table={} adminRows={} tenantAdminRows={}",
                     table, admins, tenants);
         }
     }

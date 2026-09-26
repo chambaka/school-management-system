@@ -58,7 +58,7 @@ public class SchoolAdminController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(Access.ORG_SCHOOLS)
+    @PreAuthorize(Access.OFFICER_MANAGE)
     public SchoolAdminResponse create(
             @RequestParam Long schoolId,
             @CurrentUser UserPrincipal principal,
@@ -69,7 +69,7 @@ public class SchoolAdminController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize(Access.ORG_SCHOOLS)
+    @PreAuthorize(Access.OFFICER_MANAGE)
     public SchoolAdminResponse update(
             @RequestParam Long schoolId,
             @PathVariable Long id,

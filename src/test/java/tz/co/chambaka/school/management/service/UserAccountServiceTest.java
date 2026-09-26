@@ -126,6 +126,17 @@ class UserAccountServiceTest {
     }
 
     @Test
+    void createForTenantAssignsOrganization() {
+        when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(false);
+        when(passwordEncoder.encode("pw")).thenReturn("hash");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        User saved = service.createForTenant(10L, "N", "a@b.com", "pw", Role.ORGANIZATION_ADMIN, null);
+        assertThat(saved.getTenantId()).isEqualTo(10L);
+        assertThat(saved.getSchoolId()).isNull();
+        assertThat(saved.getRole()).isEqualTo(Role.ORGANIZATION_ADMIN);
+    }
+
+    @Test
     void createWithoutSchoolLeavesTenantBlank() {
         when(userRepository.existsByEmailIgnoreCase("a@b.com")).thenReturn(false);
         when(passwordEncoder.encode("pw")).thenReturn("hash");

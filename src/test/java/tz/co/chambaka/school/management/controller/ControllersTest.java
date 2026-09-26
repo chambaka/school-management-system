@@ -516,7 +516,10 @@ class ControllersTest {
         messages.inbox(Fixtures.principal(Role.PARENT));
         verify(communicationService).inbox(eq(1L), any());
 
-        TenantController tenants = new TenantController(tenantService, tenantResolver);
+        TenantController tenants = new TenantController(
+                tenantService,
+                org.mockito.Mockito.mock(tz.co.chambaka.school.management.service.OrganizationAdminService.class),
+                tenantResolver);
         tenants.listAll();
         tenants.create(new CreateTenantRequest("Org", null, null, null, null, null));
         tenants.get(10L);
@@ -528,6 +531,10 @@ class ControllersTest {
         tenants.currentSchools();
         tenants.renameSchool(1L, new RenameSchoolRequest("East Campus"));
         tenants.addSchool(new CreateSchoolRequest("S2", null, null, null, null, null, null));
+        tenants.platformAdmins(10L);
+        tenants.platformCreateAdmin(10L, new tz.co.chambaka.school.management.dto.tenant.CreateOrganizationAdminRequest("A", "a@b.com", "HaloCampus1!", "07"));
+        tenants.currentAdmins();
+        tenants.createCurrentAdmin(new tz.co.chambaka.school.management.dto.tenant.CreateOrganizationAdminRequest("A", "a@b.com", null, "07"));
         tenants.archive(10L);
         verify(tenantService).archive(10L);
         verify(tenantService).list();

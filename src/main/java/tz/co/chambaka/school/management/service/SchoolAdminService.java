@@ -61,11 +61,17 @@ public class SchoolAdminService {
             schoolRepository.findById(schoolId).orElseThrow(() -> ResourceNotFoundException.of("School", schoolId));
             return;
         }
-        if (principal.getRole() == Role.HEADMASTER || principal.getRole() == Role.SCHOOL_ADMIN) {
+        if (principal.getRole() == Role.ORGANIZATION_ADMIN) {
             tenantService.requireSchoolInTenant(principal.getTenantId(), schoolId);
             return;
         }
-        throw new ApiException(HttpStatus.FORBIDDEN, "Only the headmaster, school admin, or platform admin can manage school officers");
+        if (principal.getRole() == Role.HEADMASTER || principal.getRole() == Role.SCHOOL_ADMIN) {
+            if (principal.getSchoolId() == null || !principal.getSchoolId().equals(schoolId)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "You can only manage officers at your school");
+            }
+            return;
+        }
+        throw new ApiException(HttpStatus.FORBIDDEN, "Only an organization admin, headmaster, school admin, or platform admin can manage school officers");
     }
 
     @Transactional(readOnly = true)

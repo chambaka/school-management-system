@@ -4,10 +4,13 @@ import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.RenameSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
+import tz.co.chambaka.school.management.dto.tenant.CreateOrganizationAdminRequest;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
+import tz.co.chambaka.school.management.dto.tenant.OrganizationAdminResponse;
 import tz.co.chambaka.school.management.dto.tenant.RenameOrganizationRequest;
 import tz.co.chambaka.school.management.dto.tenant.TenantResponse;
 import tz.co.chambaka.school.management.dto.tenant.UpdateTenantRequest;
+import tz.co.chambaka.school.management.service.OrganizationAdminService;
 import tz.co.chambaka.school.management.service.TenantService;
 import tz.co.chambaka.school.management.tenant.TenantResolver;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,10 +35,16 @@ import java.util.List;
 public class TenantController {
 
     private final TenantService tenantService;
+    private final OrganizationAdminService organizationAdminService;
     private final TenantResolver tenantResolver;
 
-    public TenantController(TenantService tenantService, TenantResolver tenantResolver) {
+    public TenantController(
+            TenantService tenantService,
+            OrganizationAdminService organizationAdminService,
+            TenantResolver tenantResolver
+    ) {
         this.tenantService = tenantService;
+        this.organizationAdminService = organizationAdminService;
         this.tenantResolver = tenantResolver;
     }
 
@@ -77,6 +86,35 @@ public class TenantController {
         return tenantService.listSchools(id);
     }
 
+    @GetMapping("/platform/tenants/{id}/admins")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public List<OrganizationAdminResponse> platformAdmins(@PathVariable Long id) {
+        return organizationAdminService.list(id);
+    }
+
+    @PostMapping("/platform/tenants/{id}/admins")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public OrganizationAdminResponse platformCreateAdmin(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateOrganizationAdminRequest request
+    ) {
+        return organizationAdminService.create(id, request);
+    }
+
+    @GetMapping("/tenants/current/admins")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public List<OrganizationAdminResponse> currentAdmins() {
+        return organizationAdminService.list(tenantResolver.requireTenantId());
+    }
+
+    @PostMapping("/tenants/current/admins")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public OrganizationAdminResponse createCurrentAdmin(@Valid @RequestBody CreateOrganizationAdminRequest request) {
+        return organizationAdminService.create(tenantResolver.requireTenantId(), request);
+    }
+
     @PostMapping("/platform/tenants/{id}/schools")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
@@ -91,7 +129,7 @@ public class TenantController {
     }
 
     @PutMapping("/tenants/current")
-    @PreAuthorize(Access.ORG_SCHOOLS)
+    @PreAuthorize(Access.ORG_RENAME)
     public TenantResponse updateCurrent(@Valid @RequestBody RenameOrganizationRequest request) {
         return tenantService.rename(tenantResolver.requireTenantId(), request.name());
     }
@@ -112,7 +150,7 @@ public class TenantController {
     }
 
     @PostMapping("/tenants/current/schools")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize(Access.ORG_SCHOOLS)
     @ResponseStatus(HttpStatus.CREATED)
     public SchoolResponse addSchool(@Valid @RequestBody CreateSchoolRequest request) {
         return tenantService.addSchool(tenantResolver.requireTenantId(), request);

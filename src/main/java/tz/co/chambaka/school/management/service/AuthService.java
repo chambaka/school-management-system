@@ -227,7 +227,7 @@ public class AuthService {
                 .email(request.adminEmail().toLowerCase())
                 .username(request.adminEmail().substring(0, request.adminEmail().indexOf('@')).toLowerCase())
                 .password(passwordEncoder.encode(request.password()))
-                .role(Role.HEADMASTER)
+                .role(Role.ORGANIZATION_ADMIN)
                 .phone(PhoneNumbers.persist(request.phone()))
                 .enabled(true)
                 .build();
@@ -243,15 +243,10 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
         if (!user.getRole().switchesSchool()) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Only the headmaster or platform admin can switch school");
+            throw new ApiException(HttpStatus.FORBIDDEN, "Only a platform admin can switch school");
         }
-        School school;
-        if (user.getRole() == Role.HEADMASTER || user.getRole() == Role.SCHOOL_ADMIN) {
-            school = tenantService.requireSchoolInTenant(user.getTenantId(), request.schoolId());
-        } else {
-            school = schoolRepository.findById(request.schoolId())
-                    .orElseThrow(() -> ResourceNotFoundException.of("School", request.schoolId()));
-        }
+        School school = schoolRepository.findById(request.schoolId())
+                .orElseThrow(() -> ResourceNotFoundException.of("School", request.schoolId()));
         if (school.getStatus() == SchoolStatus.ARCHIVED) {
             throw ResourceNotFoundException.of("School", request.schoolId());
         }
@@ -521,12 +516,18 @@ public class AuthService {
                 }
                 yield scopedSchoolId;
             }
-            case HEADMASTER -> {
-                if (scopedSchoolId == null) {
-                    throw new ApiException(HttpStatus.FORBIDDEN, "Select a school first");
+            case ORGANIZATION_ADMIN -> {
+                if (actor.getTenantId() == null || scopedSchoolId == null) {
+                    throw new ApiException(HttpStatus.FORBIDDEN, "School context is required");
                 }
                 tenantService.requireSchoolInTenant(actor.getTenantId(), scopedSchoolId);
                 yield scopedSchoolId;
+            }
+            case HEADMASTER, SCHOOL_ADMIN -> {
+                if (actor.getSchoolId() == null || (scopedSchoolId != null && !scopedSchoolId.equals(actor.getSchoolId()))) {
+                    throw new ApiException(HttpStatus.FORBIDDEN, "You can only manage accounts at your school");
+                }
+                yield actor.getSchoolId();
             }
             case ACADEMIC_MASTER -> {
                 if (actor.getSchoolId() == null || (scopedSchoolId != null && !scopedSchoolId.equals(actor.getSchoolId()))) {
@@ -549,12 +550,22 @@ public class AuthService {
                 yield userRepository.findById(userId)
                         .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
             }
-            case HEADMASTER -> {
-                if (scopedSchoolId == null) {
-                    throw new ApiException(HttpStatus.FORBIDDEN, "Select a school first");
+            case ORGANIZATION_ADMIN -> {
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
+                if (actor.getTenantId() == null || !actor.getTenantId().equals(user.getTenantId())) {
+                    throw new ApiException(HttpStatus.FORBIDDEN, "You can only manage accounts in your organization");
                 }
-                tenantService.requireSchoolInTenant(actor.getTenantId(), scopedSchoolId);
-                yield userRepository.findByIdAndSchoolId(userId, scopedSchoolId)
+                if (user.getSchoolId() != null) {
+                    tenantService.requireSchoolInTenant(actor.getTenantId(), user.getSchoolId());
+                }
+                yield user;
+            }
+            case HEADMASTER, SCHOOL_ADMIN -> {
+                if (actor.getSchoolId() == null || (scopedSchoolId != null && !scopedSchoolId.equals(actor.getSchoolId()))) {
+                    throw new ApiException(HttpStatus.FORBIDDEN, "You can only unlock accounts at your school");
+                }
+                yield userRepository.findByIdAndSchoolId(userId, actor.getSchoolId())
                         .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
             }
             case ACADEMIC_MASTER -> {

@@ -4,6 +4,7 @@ import java.util.List;
 
 public enum Role {
     SUPER_ADMIN,
+    ORGANIZATION_ADMIN,
     SCHOOL_ADMIN,
     HEADMASTER,
     ACADEMIC_MASTER,
@@ -39,7 +40,7 @@ public enum Role {
     }
 
     public boolean switchesSchool() {
-        return this == SUPER_ADMIN || this == HEADMASTER || this == SCHOOL_ADMIN;
+        return this == SUPER_ADMIN;
     }
 
     public boolean schoolOperations() {

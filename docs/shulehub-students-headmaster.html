@@ -132,7 +132,7 @@
     <h1>ShuleHub <span class="gold">Students menu</span></h1>
     <p>Headmaster guide · How to run the school register</p>
     <p>Sign in as Headmaster → left menu → <strong>Students</strong></p>
-    <p class="tagline">Admit · Create parent · Place · Promote · Keep login safe</p>
+    <p class="tagline">Admit · Address · Insurance · Place · Promote</p>
   </header>
 
   <h2>Who this is for</h2>
@@ -153,7 +153,7 @@
     </thead>
     <tbody>
       <tr><td>Show archived</td><td>Tick to see deactivated students so you can restore them.</td></tr>
-      <tr><td>Search</td><td>Type a name, admission number, email, class, parent, or status to filter the list as you type.</td></tr>
+      <tr><td>Search</td><td>Type a name, admission number, email, phone, class, nationality, insurance provider, membership number, parent, or status to filter the list as you type.</td></tr>
       <tr><td>Admit student</td><td>Opens the form for a new learner.</td></tr>
       <tr><td>Table</td><td>Admission number, name, photo, email, parent, class and section (or — if none), status.</td></tr>
       <tr><td>Sort</td><td>Click Name, Email, or Status to sort the list.</td></tr>
@@ -166,14 +166,48 @@
   <h2>Admit a student</h2>
   <div class="steps">
     <div class="step"><span class="n">1</span> Click <strong>Admit student</strong>.</div>
-    <div class="step"><span class="n">2</span> Enter <strong>First name</strong>, <strong>Last name</strong>, and email. Middle name and nationality are optional.</div>
+    <div class="step"><span class="n">2</span> Enter <strong>First name</strong>, <strong>Last name</strong>, and email. Middle name is optional. <strong>Nationality</strong> is a dropdown and is required. <strong>Tanzanian</strong> is already selected; change it only if the student is not Tanzanian.</div>
     <div class="step"><span class="n">3</span> Enter a phone number (Tanzania format). If you leave password blank, ShuleHub creates a temporary password and tries to SMS it to that phone.</div>
-    <div class="step"><span class="n">4</span> Year can stay <strong>No year</strong>. Class can stay <strong>No class</strong> until you place them. If you pick a class, you can also pick a section or leave <strong>No section</strong>. Add gender, roll number, date of birth, blood group, admission date, address, emergency contact, and medical notes as needed.</div>
-    <div class="step"><span class="n">5</span> Optional: upload a photo (JPEG, PNG, or WebP, max 2 MB).</div>
-    <div class="step"><span class="n">6</span> Optional: tick <strong>Create parent now</strong> (see below).</div>
-    <div class="step"><span class="n">7</span> Click <strong>Save student</strong> and confirm. The admission number is assigned automatically. If you ticked Create parent now, the parent account and the link are created in the same save.</div>
+    <div class="step"><span class="n">4</span> Year can stay <strong>No year</strong>. Class can stay <strong>No class</strong> until you place them. If you pick a class, you can also pick a section or leave <strong>No section</strong>. Gender, roll number, date of birth, and admission date are optional.</div>
+    <div class="step"><span class="n">5</span> Complete the address (required). See <strong>Address</strong> below. Emergency contact, blood group, insurance, and medical notes are optional.</div>
+    <div class="step"><span class="n">6</span> Optional: upload a photo (JPEG, PNG, or WebP, max 2 MB).</div>
+    <div class="step"><span class="n">7</span> Optional: tick <strong>Create parent now</strong> (see below).</div>
+    <div class="step"><span class="n">8</span> Click <strong>Save student</strong> and confirm. The admission number is assigned automatically. If you ticked Create parent now, the parent account and the link are created in the same save.</div>
   </div>
-  <div class="note">If SMS is not configured, the student (and parent) are still created. Give them the password another way. Email cannot be changed after admit — edit the rest of the record instead.</div>
+  <div class="note">If SMS is not configured, the student (and parent) are still created. Give them the password another way. Email cannot be changed after admit — edit the rest of the record instead. Save is blocked until region, district, ward, and street are filled in.</div>
+
+  <h2>Address</h2>
+  <p>Every student address, and every parent created on this form, uses the same location lists: region, then district, then ward.</p>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Required</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Region / Mkoa</td><td>Yes</td><td>Pick the region. Districts load for that region only.</td></tr>
+      <tr><td>District / Wilaya</td><td>Yes</td><td>Pick after the region. Wards load for that district only. Changing the region clears district and ward.</td></tr>
+      <tr><td>Ward / Kata</td><td>Yes</td><td>Pick after the district. Changing the district clears the ward.</td></tr>
+      <tr><td>Street / address line</td><td>Yes</td><td>Mtaa, building, or house number.</td></tr>
+      <tr><td>P.O. Box</td><td>No</td><td>Leave blank if they have none.</td></tr>
+    </tbody>
+  </table>
+  <div class="note">An address saved earlier as one line appears in Street. Choose region, district, and ward before you save that student again. If the three lists stay empty, the location service is not running — you cannot save until they load.</div>
+
+  <h2>Emergency contact, blood group, and insurance</h2>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Required</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Emergency contact name</td><td>No</td><td>The person to call, separate from the parent link.</td></tr>
+      <tr><td>Emergency contact phone</td><td>No</td><td>Their phone, in Tanzania format.</td></tr>
+      <tr><td>Blood group</td><td>No</td><td>Dropdown: A+, A-, B+, B-, AB+, AB-, O+, O-. Leave <strong>Choose</strong> if unknown.</td></tr>
+      <tr><td>Insurance provider</td><td>No</td><td>Dropdown of Tanzanian providers, including NHIF, iCHF, NSSF, Strategis, Jubilee Health, Assemble, and AAR. Leave <strong>Choose</strong> if they have no cover.</td></tr>
+      <tr><td>Add provider…</td><td>No</td><td>If the insurer is missing, choose <strong>Add provider…</strong>, type the name, and click <strong>Add</strong>. That name is selected for this student and stays in the list on this computer. Saving with the name already typed also adds it.</td></tr>
+      <tr><td>Insurance membership number</td><td>No</td><td>The card or membership number.</td></tr>
+      <tr><td>Insurance expiry</td><td>No</td><td>The date the cover ends.</td></tr>
+      <tr><td>Medical notes</td><td>No</td><td>Allergies or other notes. This is separate from insurance.</td></tr>
+    </tbody>
+  </table>
 
   <h2>Create a parent during admission</h2>
   <p>Use this when the guardian is new. You do not need to open the Parents page first.</p>
@@ -181,15 +215,15 @@
     <div class="step"><span class="n">1</span> On the Admit student form, tick <strong>Create parent now</strong>.</div>
     <div class="step"><span class="n">2</span> Enter parent name and email (both required).</div>
     <div class="step"><span class="n">3</span> Enter a parent phone, or set a parent password. If you leave the password blank, ShuleHub creates a temporary password and tries to SMS it.</div>
-    <div class="step"><span class="n">4</span> Choose the relationship: Father, Mother, Guardian, or Other. Occupation and address are optional.</div>
+    <div class="step"><span class="n">4</span> Choose the relationship: Father, Mother, Guardian, or Other. Occupation is optional. Parent address is required, in the same way as the student: region, district, ward, and street. P.O. Box is optional.</div>
     <div class="step"><span class="n">5</span> Save student. The parent is linked as primary contact, emergency contact, and invoice recipient.</div>
   </div>
-  <div class="note">Save stays disabled until the parent has a name, email, and either a phone or a strong password. If the parent email is already registered, the whole admit is rejected — change the email or link an existing parent after save.</div>
+  <div class="note">Save stays disabled until the parent has a name, email, and either a phone or a strong password. The parent address must also be complete. If the parent email is already registered, the whole admit is rejected — change the email or link an existing parent after save.</div>
 
   <h2>Edit a student</h2>
   <ol>
     <li>Click the gold pen icon on the row.</li>
-    <li>Change names, phone, photo, notes, year, class, or section.</li>
+    <li>Change names, nationality, phone, address, emergency contact, blood group, insurance, photo, notes, year, class, or section. Address still needs region, district, ward, and street.</li>
     <li>To take them out of a year, choose <strong>No year</strong>. To take them out of a class, choose <strong>No class</strong> (section clears). To keep the class and drop only the stream, choose <strong>No section</strong>.</li>
     <li>Click <strong>Save changes</strong> and confirm.</li>
   </ol>
@@ -266,7 +300,8 @@
       <tr><th>Job</th><th>Clicks</th></tr>
     </thead>
     <tbody>
-      <tr><td>New admission with guardian</td><td>Admit student → fill → Create parent now → Save student</td></tr>
+      <tr><td>New admission with guardian</td><td>Admit student → address → Create parent now → parent address → Save student</td></tr>
+      <tr><td>Record insurance</td><td>Pen → Insurance provider (or Add provider…) → membership number and expiry → Save changes</td></tr>
       <tr><td>New admission only</td><td>Admit student → fill → Save student</td></tr>
       <tr><td>Wrong class</td><td>Pen → change class/section → Save changes</td></tr>
       <tr><td>Student with no year or class yet</td><td>Pen → No year / No class → Save changes (or leave them empty at admit)</td></tr>
@@ -286,7 +321,10 @@
     </thead>
     <tbody>
       <tr><td>Empty class or year lists</td><td>Open Academics and create the year, class, and section first.</td></tr>
-      <tr><td>Cannot save a new student</td><td>Need first name, last name, and a phone or a password that meets the strength bar. If Create parent now is ticked, parent name, email, and phone or password are also required.</td></tr>
+      <tr><td>Cannot save a new student</td><td>Need first name, last name, nationality, region, district, ward, street, and a phone or a password that meets the strength bar. If Create parent now is ticked, parent name, email, the same address fields, and phone or password are also required.</td></tr>
+      <tr><td>Region, district, or ward list is empty</td><td>The location service is not available. Wait until the lists load, then choose region, then district, then ward.</td></tr>
+      <tr><td>Old address will not save</td><td>It is sitting in Street as plain text. Choose region, district, and ward, then save again.</td></tr>
+      <tr><td>Insurance provider is not in the list</td><td>Choose <strong>Add provider…</strong>, type the name, and click <strong>Add</strong>.</td></tr>
       <tr><td>Email is already registered</td><td>The parent (or student) email is in use. Use another email, or admit without Create parent now and Link the existing parent.</td></tr>
       <tr><td>Photo rejected</td><td>Use JPEG/PNG/WebP under 2 MB.</td></tr>
       <tr><td>“No SMS was sent”</td><td>Student still saved or password still reset. Check the phone number, or tell them the password in person.</td></tr>
