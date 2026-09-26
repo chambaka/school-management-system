@@ -21,13 +21,28 @@ public final class ResultMath {
     }
 
     public static BigDecimal semiTerminal(BigDecimal midterm, BigDecimal semiExam, BigDecimal midtermWeight, BigDecimal semiExamWeight) {
-        return weighted(midterm, midtermWeight).add(weighted(semiExam, semiExamWeight)).setScale(2, RoundingMode.HALF_UP);
+        return combine(midterm, midtermWeight, semiExam, semiExamWeight);
     }
 
     public static BigDecimal terminal(BigDecimal semiTerminalResult, BigDecimal terminalExam, BigDecimal semiResultWeight, BigDecimal terminalExamWeight) {
-        return weighted(semiTerminalResult, semiResultWeight)
-                .add(weighted(terminalExam, terminalExamWeight))
-                .setScale(2, RoundingMode.HALF_UP);
+        return combine(semiTerminalResult, semiResultWeight, terminalExam, terminalExamWeight);
+    }
+
+    /**
+     * Mixes two scores by weight. A missing score is left out, so the score that was taken stands on its own.
+     * A zero is a real mark and is included.
+     */
+    static BigDecimal combine(BigDecimal left, BigDecimal leftWeight, BigDecimal right, BigDecimal rightWeight) {
+        if (left == null && right == null) {
+            return null;
+        }
+        if (left == null) {
+            return right.setScale(2, RoundingMode.HALF_UP);
+        }
+        if (right == null) {
+            return left.setScale(2, RoundingMode.HALF_UP);
+        }
+        return weighted(left, leftWeight).add(weighted(right, rightWeight)).setScale(2, RoundingMode.HALF_UP);
     }
 
     public static String letter(BigDecimal percentage, Iterable<GradeBand> bands) {

@@ -273,7 +273,7 @@ public class GradeService {
         return studentRepository.findBySchoolIdAndSchoolClassId(schoolId, classId).stream()
                 .filter(s -> s.getStatus() == null || s.getStatus() == StudentStatus.ACTIVE)
                 .map(student -> computeTermResult(schoolId, student, subjectId, subjectName, academicYearId, termId, exams))
-                .sorted(Comparator.comparing(TermResultResponse::terminalResult).reversed()
+                .sorted(Comparator.comparing(TermResultResponse::terminalResult, Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing(TermResultResponse::studentName, Comparator.nullsLast(String::compareToIgnoreCase)))
                 .toList();
     }
@@ -414,8 +414,12 @@ public class GradeService {
         if (rows.isEmpty()) {
             return BigDecimal.ZERO;
         }
-        BigDecimal total = rows.stream().map(TermResultResponse::terminalResult).reduce(BigDecimal.ZERO, BigDecimal::add);
-        return total.divide(BigDecimal.valueOf(rows.size()), 2, RoundingMode.HALF_UP);
+        List<BigDecimal> scores = rows.stream().map(TermResultResponse::terminalResult).filter(score -> score != null).toList();
+        if (scores.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = scores.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        return total.divide(BigDecimal.valueOf(scores.size()), 2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal componentScore(List<Exam> exams, Long studentId, Long subjectId, AssessmentComponent component) {
@@ -425,10 +429,13 @@ public class GradeService {
                 .filter(grade -> grade.getSubject().getId().equals(subjectId))
                 .map(Grade::getMarksObtained)
                 .findFirst()
-                .orElse(BigDecimal.ZERO);
+                .orElse(null);
     }
 
     private String letterGrade(Long schoolId, BigDecimal percentage) {
+        if (percentage == null) {
+            return "";
+        }
         if (resultConfigService != null) {
             return resultConfigService.letterFor(schoolId, percentage);
         }
