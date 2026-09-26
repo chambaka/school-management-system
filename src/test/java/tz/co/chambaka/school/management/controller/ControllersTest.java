@@ -151,6 +151,8 @@ class ControllersTest {
     @Mock
     private GradeService gradeService;
     @Mock
+    private tz.co.chambaka.school.management.service.GradeImportService gradeImportService;
+    @Mock
     private PromotionService promotionService;
     @Mock
     private AttendanceService attendanceService;
@@ -465,7 +467,7 @@ class ControllersTest {
         exams.deleteSubject(1L, 1L);
         exams.delete(1L);
 
-        GradeController grades = new GradeController(gradeService, tenantResolver);
+        GradeController grades = new GradeController(gradeService, gradeImportService, tenantResolver);
         grades.byExam(1L);
         grades.record(Fixtures.principal(Role.TEACHER), new GradeRequest(1L, 1L, 1L, BigDecimal.TEN, null));
         grades.delete(1L, 1L, 1L);
@@ -636,7 +638,7 @@ class ControllersTest {
         exams.lockSchedule(1L, true);
         exams.seats(1L);
 
-        GradeController grades = new GradeController(gradeService, tenantResolver);
+        GradeController grades = new GradeController(gradeService, gradeImportService, tenantResolver);
         var bulk = new tz.co.chambaka.school.management.dto.academic.BulkGradeRequest(
                 1L, 1L, List.of(new tz.co.chambaka.school.management.dto.academic.BulkGradeRequest.Entry(
                         1L, BigDecimal.TEN, "Good")));

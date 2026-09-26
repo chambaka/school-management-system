@@ -2,42 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>ShuleHub roles and platform access</title>
+  <title>ShuleHub roles — who can do what</title>
   <style>
-    @page { size: A4 landscape; margin: 12mm 12mm 14mm; }
+    @page { size: A4; margin: 12mm 12mm 14mm; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
       color: #122033;
-      font-size: 10.5pt;
-      line-height: 1.35;
+      font-size: 10pt;
+      line-height: 1.4;
     }
-    header {
+    header.cover {
       background: #06101F;
       color: #fff;
-      padding: 16px 20px 14px;
+      padding: 20px 22px 18px;
       border-radius: 8px;
       margin-bottom: 14px;
     }
-    header h1 {
-      margin: 0 0 4px;
-      font-size: 20pt;
-      letter-spacing: 0.02em;
-    }
-    header .gold { color: #F5C451; }
-    header p { margin: 0; color: #c9d4e3; font-size: 10pt; }
+    header.cover h1 { margin: 0 0 6px; font-size: 20pt; letter-spacing: 0.02em; }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 3px; color: #c9d4e3; font-size: 10.5pt; }
+    header.cover .tagline { margin-top: 10px; color: #F5C451; font-weight: 700; font-size: 11pt; }
     h2 {
       margin: 16px 0 8px;
-      font-size: 12.5pt;
+      font-size: 13pt;
       color: #06101F;
       border-bottom: 2px solid #F5C451;
       padding-bottom: 3px;
+      page-break-after: avoid;
     }
-    table { border-collapse: collapse; width: 100%; }
+    h3 { margin: 0 0 4px; font-size: 12pt; color: #06101F; }
+    p { margin: 0 0 8px; }
+    ul { margin: 4px 0 0; padding-left: 16px; }
+    li { margin: 2px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10px; }
     th, td {
       border: 1px solid #d5dde6;
-      padding: 5px 6px;
+      padding: 4px 5px;
       vertical-align: top;
       text-align: left;
     }
@@ -45,199 +47,292 @@
       background: #06101F;
       color: #fff;
       font-weight: 600;
-      font-size: 8.5pt;
+      font-size: 8pt;
     }
     tbody tr:nth-child(even) { background: #f4f7fb; }
-    .roles td:first-child { font-weight: 700; white-space: nowrap; }
-    .roles td:nth-child(2) { white-space: nowrap; }
-    .cards {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-    .card {
+    .matrix { font-size: 8pt; }
+    .matrix td, .matrix th { text-align: center; }
+    .matrix td:first-child, .matrix th:first-child { text-align: left; font-weight: 600; white-space: nowrap; }
+    .role {
       border: 1px solid #d5dde6;
       border-radius: 6px;
-      padding: 8px 10px;
+      padding: 10px 12px;
+      margin: 0 0 8px;
       page-break-inside: avoid;
     }
-    .card h3 {
-      margin: 0 0 4px;
-      font-size: 11pt;
-      color: #06101F;
-    }
-    .card .tag {
+    .tag {
       display: inline-block;
       background: #F5C451;
       color: #06101F;
       font-size: 8pt;
       font-weight: 700;
-      padding: 1px 6px;
+      padding: 1px 7px;
       border-radius: 99px;
       margin-bottom: 4px;
     }
-    .card ul { margin: 4px 0 0; padding-left: 16px; }
-    .card li { margin: 1px 0; }
-    .matrix th, .matrix td {
-      font-size: 8pt;
-      text-align: center;
-      padding: 4px 3px;
+    .menus { margin: 6px 0 0; font-size: 9.5pt; }
+    .menus strong { color: #06101F; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      font-size: 9.5pt;
     }
-    .matrix th:first-child, .matrix td:first-child {
-      text-align: left;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    .yes { color: #0a7a4a; font-weight: 700; }
-    .no { color: #b0b8c2; }
-    footer {
-      margin-top: 12px;
-      font-size: 8.5pt;
-      color: #5b6b7c;
-    }
-    .note { font-size: 9pt; color: #3d4d5e; }
+    footer { margin-top: 12px; font-size: 8.5pt; color: #5b6b7c; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>ShuleHub <span class="gold">roles and platform access</span></h1>
-    <p>Current roles after removing ADMIN and TENANT_ADMIN. SUPER_ADMIN kept. School access follows School.xlsx.</p>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">roles</span></h1>
+    <p>What each role is for, and which part of the platform that person can open.</p>
+    <p class="tagline">Platform · Organization · School</p>
   </header>
 
-  <h2>Roles</h2>
-  <table class="roles">
+  <h2>Three levels</h2>
+  <p>A person has one role. The role decides the menus on the left and what the buttons on those screens will do.</p>
+  <table>
     <thead>
-      <tr>
-        <th>Role</th>
-        <th>Lands on</th>
-        <th>Scope</th>
-      </tr>
+      <tr><th>Level</th><th>Who</th><th>What they look after</th></tr>
     </thead>
     <tbody>
-      <tr><td>SUPER_ADMIN</td><td>Tenants (multi) or Schools (single-tenant)</td><td>Whole platform</td></tr>
-      <tr><td>HEADMASTER</td><td>Dashboard</td><td>One organization / school</td></tr>
-      <tr><td>ACADEMIC_MASTER</td><td>Dashboard</td><td>One school</td></tr>
-      <tr><td>ACCOUNTANT</td><td>Finance</td><td>One school</td></tr>
-      <tr><td>TEACHER</td><td>Teacher home</td><td>Assigned classes</td></tr>
-      <tr><td>PARENT</td><td>Parent home</td><td>Own children</td></tr>
-      <tr><td>STUDENT</td><td>Student home</td><td>Own record</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Platform admin</td>
+        <td>Every organization. Creates the organization and its first organization admin.</td>
+      </tr>
+      <tr>
+        <td>Organization</td>
+        <td>Organization admin</td>
+        <td>One organization: its profile, its schools, and the officers of those schools.</td>
+      </tr>
+      <tr>
+        <td>School</td>
+        <td>Headmaster and everyone below</td>
+        <td>One school: people, teaching, exams, fees, and the day-to-day screens.</td>
+      </tr>
     </tbody>
   </table>
-
-  <h2>What each role can do</h2>
-  <div class="cards">
-    <div class="card">
-      <div class="tag">Platform</div>
-      <h3>SUPER_ADMIN</h3>
-      <ul>
-        <li>Create and manage tenants and schools</li>
-        <li>Platform config and platform audit</li>
-        <li>Switch into a school</li>
-        <li>In single-tenant mode, uses Headmaster school screens for the default organization</li>
-        <li>Does not do day-to-day school work unless a school is selected</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="tag">School lead</div>
-      <h3>HEADMASTER</h3>
-      <ul>
-        <li>Schools in the organization (add / switch)</li>
-        <li>Students, parents, teachers, officers — create and manage</li>
-        <li>Academics (classes, subjects) — manage</li>
-        <li>Timetable — view only</li>
-        <li>Attendance — view; manage teacher attendance</li>
-        <li>Exams — approve / publish; grades and report cards — view / approve</li>
-        <li>Fees and invoices — view (cannot generate invoices or record payments)</li>
-        <li>Notices (school-wide), messages, SMS to parents, branding, school audit</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="tag">Teaching operations</div>
-      <h3>ACADEMIC_MASTER</h3>
-      <ul>
-        <li>Students, parents, teachers, officers — manage</li>
-        <li>Academics — manage</li>
-        <li>Timetable — the only role that can edit it</li>
-        <li>Attendance — view and enter</li>
-        <li>Exams — manage; grades — enter / verify; report cards — prepare</li>
-        <li>Fees — view only (no payments or invoice write)</li>
-        <li>Academic notices, messages to teachers, SMS to parents, limited audit</li>
-        <li>Cannot manage branding or organization schools</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="tag">Finance</div>
-      <h3>ACCOUNTANT</h3>
-      <ul>
-        <li>Student directory — limited (billing)</li>
-        <li>Fees, invoices, payments — create, generate, record</li>
-        <li>Financial reports / finance audit</li>
-        <li>Finance notices and finance-related messages</li>
-        <li>Cannot register students, manage teachers, edit timetable, or enter attendance / marks</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="tag">Assigned work</div>
-      <h3>TEACHER</h3>
-      <ul>
-        <li>Students — assigned classes</li>
-        <li>Timetable (view), attendance (enter), exams / grades (enter marks)</li>
-        <li>Assignments / assessments (class)</li>
-        <li>Report cards — view / prepare</li>
-        <li>Notices (class), messages to parents</li>
-        <li>Cannot register students, manage teachers, edit timetable, or see fees</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="tag">Family / learner</div>
-      <h3>PARENT and STUDENT</h3>
-      <ul>
-        <li><strong>Parent:</strong> view own children — classes, subjects, timetable, attendance, exams, results, report cards</li>
-        <li><strong>Parent:</strong> view fees and pay their account; receive notices; message the school</li>
-        <li><strong>Parent:</strong> cannot manage staff, academics, or school finance</li>
-        <li><strong>Student:</strong> own home, timetable, attendance, notices, own finance / report card</li>
-        <li><strong>Student:</strong> cannot manage anything</li>
-      </ul>
-    </div>
+  <div class="note">
+    The Platform admin creates an organization admin. The organization admin appoints the Headmaster and the School admin for each school. The Headmaster and the School admin appoint the other school officers: Academic master, Teacher, Accountant, Staff, and Invigilator. Parents and students are created from the school’s people screens.
   </div>
 
-  <h2>Module matrix</h2>
-  <p class="note">* SUPER_ADMIN only after selecting a school, or in single-tenant mode where the UI treats them as Headmaster.</p>
+  <h2>Platform admin</h2>
+  <div class="role">
+    <div class="tag">Whole platform</div>
+    <h3>Opens on Tenants</h3>
+    <ul>
+      <li>Create an organization, then suspend it, activate it, or archive it.</li>
+      <li>Add a school to any organization, and open Officers for any school.</li>
+      <li>Create organization admins. This is the only role that can create them.</li>
+      <li>Config: shared qualification list, how many terms a new school year uses, Google Authenticator for each school, and which actions are written to the audit.</li>
+      <li>Users across the platform, and the platform audit.</li>
+      <li>Security: own password and sign-in code.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Tenants, Schools, Config, Users, Audit, Security.</p>
+    <p class="menus">On a single-organization install, the same account also sees the Headmaster school menus, plus Schools and Audit for that organization. Config stays.</p>
+  </div>
+
+  <h2>Organization admin</h2>
+  <div class="role">
+    <div class="tag">One organization</div>
+    <h3>Opens on Schools</h3>
+    <ul>
+      <li>Organization profile: name, email, phone, country, timezone, currency, and terms per year (2 or 4).</li>
+      <li>Add a school, rename it, suspend it, or activate it again. A suspended school cannot sign in.</li>
+      <li>Overview for each school: students, teachers, exams not yet published, and outstanding fees.</li>
+      <li>Officers for a school, including Headmaster and School admin.</li>
+      <li>Audit of organization profile, school, and officer changes.</li>
+      <li>Security: own password and sign-in code.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Schools, Audit, Security.</p>
+    <p class="menus">This role does not open a school dashboard, and does not create another organization or another organization admin.</p>
+  </div>
+
+  <h2>Headmaster</h2>
+  <div class="role">
+    <div class="tag">One school</div>
+    <h3>Opens on Home</h3>
+    <ul>
+      <li>Admit and manage students, parents, and teachers. Users and Officers for this school.</li>
+      <li>Academics: years, terms, classes, subjects, buildings, rooms, and grading bands.</li>
+      <li>Timetable: lessons, bell times, and teacher hours.</li>
+      <li>Exams: create, papers, schedule, send for checking, reject, approve, and publish. Verify is the Academic master’s step.</li>
+      <li>Grades: enter marks, download the Excel template, import marks, and prepare term results.</li>
+      <li>Assignments, and the staff attendance register. Student attendance is entered by the Academic master and teachers.</li>
+      <li>Finance is view: fee structures, invoices, and the student ledger. Creating fees, generating invoices, recording payments, and discounts stay with the Accountant.</li>
+      <li>Reports, messages, notices, branding, and the school audit.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Home, Students, Users, Officers, Teachers, Parents, Academics, Timetable, Exams, Grades, Assignments, Attendance, Finance, Reports, Messages, Notices, Branding, Audit, Security.</p>
+  </div>
+
+  <h2>School admin</h2>
+  <div class="role">
+    <div class="tag">One school</div>
+    <h3>Opens on Home</h3>
+    <ul>
+      <li>Same people work as the Headmaster: students, parents, teachers, users, and officers.</li>
+      <li>Academics, including buildings and rooms. Grading bands stay with the Headmaster and the Academic master.</li>
+      <li>Timetable and exams are open to look at. This role does not edit the timetable and does not create, verify, approve, or publish exams.</li>
+      <li>No Grades menu, so this role does not enter marks.</li>
+      <li>Staff attendance register. The student register is entered by the Academic master and teachers.</li>
+      <li>Finance is view: fee structures and the student ledger.</li>
+      <li>Reports, messages, notices, branding, and the school audit.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Home, Students, Users, Officers, Teachers, Parents, Academics, Timetable, Exams, Assignments, Attendance, Finance, Reports, Messages, Notices, Branding, Audit, Security.</p>
+  </div>
+
+  <h2>Academic master</h2>
+  <div class="role">
+    <div class="tag">Teaching operations</div>
+    <h3>Opens on Home</h3>
+    <ul>
+      <li>Students, parents, teachers, and users.</li>
+      <li>Academics and grading bands. Buildings and rooms stay with the Headmaster and the School admin.</li>
+      <li>Timetable: lessons, bell times, and teacher hours.</li>
+      <li>Exams, including Verify. Also reject, approve, and publish, with the Headmaster.</li>
+      <li>Grades: enter marks, Excel import, and term results.</li>
+      <li>Student attendance and the staff register.</li>
+      <li>Assignments, reports, messages, notices, and the school audit. Finance is view.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Home, Students, Users, Teachers, Parents, Academics, Timetable, Exams, Grades, Assignments, Attendance, Finance, Reports, Messages, Notices, Audit, Security.</p>
+    <p class="menus">No Officers menu, no Branding, and no organization Schools page.</p>
+  </div>
+
+  <h2>Teacher</h2>
+  <div class="role">
+    <div class="tag">Assigned classes</div>
+    <h3>Opens on Home</h3>
+    <ul>
+      <li>See the student directory and the timetable.</li>
+      <li>Enter exam marks on Grades, including the Excel template and import, and send an exam for checking.</li>
+      <li>Create assignments and enter student attendance.</li>
+      <li>Reports, messages, and notices.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Home, Students, Timetable, Exams, Grades, Assignments, Attendance, Reports, Messages, Notices, Security.</p>
+    <p class="menus">Does not register students, manage teachers, edit the timetable, or open fees.</p>
+  </div>
+
+  <h2>Accountant</h2>
+  <div class="role">
+    <div class="tag">School fees</div>
+    <h3>Opens on Home</h3>
+    <ul>
+      <li>Student directory, used for billing.</li>
+      <li>Fee structures, including a different amount for one class.</li>
+      <li>Invoices, generate quarterly invoices, record a payment, give a discount, and the student ledger.</li>
+      <li>Reports, messages, notices, and the school audit.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Home, Students, Finance (Fee structures, Fee structure, Invoices, Generate quarterly invoices, Record payment, Discount, Student Ledger), Reports, Messages, Notices, Audit, Security.</p>
+    <p class="menus">Does not enter marks, edit the timetable, or take attendance.</p>
+  </div>
+
+  <h2>Staff</h2>
+  <div class="role">
+    <div class="tag">School office</div>
+    <h3>Opens on Notices</h3>
+    <ul>
+      <li>Student directory, the timetable, and attendance, to look up the day.</li>
+      <li>Write and read notices.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Students, Timetable, Attendance, Notices, Security.</p>
+    <p class="menus">Does not enter marks, edit the timetable, or manage fees.</p>
+  </div>
+
+  <h2>Invigilator</h2>
+  <div class="role">
+    <div class="tag">Exam room</div>
+    <h3>Opens on Exams</h3>
+    <ul>
+      <li>See the exam list, papers, and the timetable for the sitting.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Timetable, Exams, Security.</p>
+    <p class="menus">Does not create exams, enter marks, or manage people.</p>
+  </div>
+
+  <h2>Parent</h2>
+  <div class="role">
+    <div class="tag">Own children</div>
+    <h3>Opens on Home</h3>
+    <ul>
+      <li>Own children: classes, attendance, assignments, and the report card once results are published.</li>
+      <li>Fees and the student ledger for those children.</li>
+      <li>Messages to the school, and notices.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Home, Assignments, Finance, Messages, Notices, Report, Security.</p>
+  </div>
+
+  <h2>Student</h2>
+  <div class="role">
+    <div class="tag">Own record</div>
+    <h3>Opens on Home</h3>
+    <ul>
+      <li>Own home, including today’s timetable and attendance, assignments to hand in, invoices, notices, and the report card once results are published.</li>
+    </ul>
+    <p class="menus"><strong>Menus:</strong> Home, Invoices, Assignments, Notices, Report, Security.</p>
+  </div>
+
+  <h2>Who can open each part</h2>
+  <p>Manage means create and change. View means open and read. Enter means record marks or attendance. A dash means that menu is not there.</p>
   <table class="matrix">
     <thead>
       <tr>
-        <th>Module</th>
-        <th>SUPER_ADMIN</th>
+        <th>Part</th>
+        <th>Platform admin</th>
+        <th>Organization admin</th>
         <th>Headmaster</th>
-        <th>Academic Master</th>
+        <th>School admin</th>
+        <th>Academic master</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Organizations</td><td>Manage</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Organization profile and schools</td><td>Manage</td><td>Manage</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Organization admins</td><td>Create</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Config</td><td>Manage</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Students, parents, teachers</td><td>—</td><td>—</td><td>Manage</td><td>Manage</td><td>Manage</td></tr>
+      <tr><td>Officers</td><td>Any school</td><td>Own schools</td><td>Own school</td><td>Own school</td><td>—</td></tr>
+      <tr><td>Academics</td><td>—</td><td>—</td><td>Manage</td><td>Manage</td><td>Manage</td></tr>
+      <tr><td>Timetable</td><td>—</td><td>—</td><td>Manage</td><td>View</td><td>Manage</td></tr>
+      <tr><td>Exams</td><td>—</td><td>—</td><td>Approve and publish</td><td>View</td><td>Verify, approve, publish</td></tr>
+      <tr><td>Grades</td><td>—</td><td>—</td><td>Enter</td><td>—</td><td>Enter</td></tr>
+      <tr><td>Attendance</td><td>—</td><td>—</td><td>Staff register</td><td>Staff register</td><td>Enter</td></tr>
+      <tr><td>Finance</td><td>—</td><td>Fees overview</td><td>View</td><td>View</td><td>View</td></tr>
+      <tr><td>Branding</td><td>—</td><td>—</td><td>Manage</td><td>Manage</td><td>—</td></tr>
+      <tr><td>Audit</td><td>Platform</td><td>Organization</td><td>School</td><td>School</td><td>School</td></tr>
+    </tbody>
+  </table>
+  <table class="matrix">
+    <thead>
+      <tr>
+        <th>Part</th>
         <th>Teacher</th>
         <th>Accountant</th>
+        <th>Staff</th>
+        <th>Invigilator</th>
         <th>Parent</th>
         <th>Student</th>
       </tr>
     </thead>
     <tbody>
-      <tr><td>Platform / tenants</td><td class="yes">Manage</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-      <tr><td>Dashboard</td><td>via school</td><td class="yes">Yes</td><td class="yes">Yes</td><td>Own home</td><td class="yes">Yes</td><td>Own home</td><td>Own home</td></tr>
-      <tr><td>Students</td><td>All*</td><td class="yes">All</td><td class="yes">All</td><td>Assigned</td><td>Limited</td><td>Own children</td><td>Self</td></tr>
-      <tr><td>Registration</td><td>All*</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-      <tr><td>Teachers / officers</td><td>All*</td><td class="yes">Manage</td><td class="yes">Manage</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
-      <tr><td>Classes / subjects</td><td>All*</td><td class="yes">Manage</td><td class="yes">Manage</td><td>Assigned</td><td class="no">—</td><td>View child</td><td>View</td></tr>
-      <tr><td>Timetable</td><td>All*</td><td>View</td><td class="yes">Manage</td><td>View</td><td class="no">—</td><td>View</td><td>View</td></tr>
-      <tr><td>Attendance</td><td>All*</td><td>View</td><td class="yes">View/enter</td><td class="yes">Enter</td><td class="no">—</td><td>View</td><td>View</td></tr>
-      <tr><td>Exams / results</td><td>All*</td><td class="yes">Approve</td><td class="yes">Manage / verify</td><td class="yes">Enter</td><td class="no">—</td><td>View</td><td>View</td></tr>
-      <tr><td>Report cards</td><td>All*</td><td class="yes">Approve</td><td class="yes">Prepare</td><td>View/prepare</td><td class="no">—</td><td>View</td><td>Own</td></tr>
-      <tr><td>Fees</td><td>All*</td><td>View</td><td>View</td><td class="no">—</td><td class="yes">Manage</td><td>View/pay</td><td>Own</td></tr>
-      <tr><td>Payments</td><td>All*</td><td>View</td><td class="no">—</td><td class="no">—</td><td class="yes">Manage</td><td>Pay</td><td>Own</td></tr>
-      <tr><td>Notices</td><td>All*</td><td class="yes">School-wide</td><td>Academic</td><td>Class</td><td>Finance</td><td>Receive</td><td>Receive</td></tr>
-      <tr><td>Messages</td><td>All*</td><td class="yes">Everyone</td><td>Teachers</td><td>Parents</td><td>Finance</td><td>School</td><td class="no">—</td></tr>
-      <tr><td>Audit</td><td class="yes">Platform</td><td>School</td><td>Limited</td><td class="no">—</td><td>Finance</td><td class="no">—</td><td class="no">—</td></tr>
-      <tr><td>Branding</td><td>via school</td><td class="yes">Yes</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>Students</td><td>Directory</td><td>Directory</td><td>Directory</td><td>—</td><td>Own children</td><td>Self</td></tr>
+      <tr><td>Timetable</td><td>View</td><td>—</td><td>View</td><td>View</td><td>—</td><td>On home</td></tr>
+      <tr><td>Exams</td><td>Send for checking</td><td>—</td><td>—</td><td>View</td><td>—</td><td>—</td></tr>
+      <tr><td>Grades</td><td>Enter</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Assignments</td><td>Create</td><td>—</td><td>—</td><td>—</td><td>View</td><td>Hand in</td></tr>
+      <tr><td>Attendance</td><td>Enter</td><td>—</td><td>View</td><td>—</td><td>On home</td><td>On home</td></tr>
+      <tr><td>Finance</td><td>—</td><td>Manage</td><td>—</td><td>—</td><td>Own children</td><td>Own invoices</td></tr>
+      <tr><td>Reports / report card</td><td>Reports</td><td>Reports</td><td>—</td><td>—</td><td>Report</td><td>Report</td></tr>
+      <tr><td>Messages</td><td>Yes</td><td>Yes</td><td>—</td><td>—</td><td>Yes</td><td>—</td></tr>
+      <tr><td>Notices</td><td>Yes</td><td>Yes</td><td>Yes</td><td>—</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Audit</td><td>—</td><td>School</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Security</td><td>Own</td><td>Own</td><td>Own</td><td>Own</td><td>Own</td><td>Own</td></tr>
     </tbody>
   </table>
+  <div class="note">
+    On a single-organization install, the Platform admin also sees the Headmaster menus. Students and parents see a report card only after the exam is published.
+  </div>
 
-  <footer>
-    ShuleHub · Chambaka · Roles: SUPER_ADMIN, HEADMASTER, ACADEMIC_MASTER, TEACHER, ACCOUNTANT, PARENT, STUDENT · Legacy ADMIN and TENANT_ADMIN remap to HEADMASTER on API startup.
-  </footer>
+  <footer>ShuleHub · Roles and the parts of the platform each role can open.</footer>
 </body>
 </html>
