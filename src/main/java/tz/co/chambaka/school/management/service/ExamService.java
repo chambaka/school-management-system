@@ -128,10 +128,7 @@ public class ExamService {
         exam.setAcademicTerm(request.academicTermId() == null ? null : academicTermService.require(schoolId, request.academicTermId()));
         exam.setSchoolClass(classService.require(schoolId, request.schoolClassId()));
         exam.setName(request.name());
-        exam.setExamType(request.examType());
-        exam.setAssessmentComponent(request.assessmentComponent() != null
-                ? request.assessmentComponent()
-                : defaultComponent(request.examType()));
+        applyType(exam, request);
         exam.setApprovalStatus(ExamApprovalStatus.DRAFT);
         exam.setStartDate(request.startDate());
         exam.setEndDate(request.endDate());
@@ -150,10 +147,7 @@ public class ExamService {
         exam.setAcademicTerm(request.academicTermId() == null ? null : academicTermService.require(schoolId, request.academicTermId()));
         exam.setSchoolClass(classService.require(schoolId, request.schoolClassId()));
         exam.setName(request.name());
-        exam.setExamType(request.examType());
-        exam.setAssessmentComponent(request.assessmentComponent() != null
-                ? request.assessmentComponent()
-                : defaultComponent(request.examType()));
+        applyType(exam, request);
         exam.setStartDate(request.startDate());
         exam.setEndDate(request.endDate());
         return toExam(exam);
@@ -476,12 +470,29 @@ public class ExamService {
         examRepository.delete(exam);
     }
 
+    private static void applyType(Exam exam, ExamRequest request) {
+        AssessmentComponent component = request.assessmentComponent() != null
+                ? request.assessmentComponent()
+                : defaultComponent(request.examType());
+        exam.setAssessmentComponent(component);
+        exam.setExamType(examTypeFor(component));
+    }
+
     private static AssessmentComponent defaultComponent(ExamType type) {
         return switch (type) {
             case MIDTERM -> AssessmentComponent.MIDTERM;
             case SEMI_TERMINAL -> AssessmentComponent.SEMI_TERMINAL;
             case FINAL -> AssessmentComponent.TERMINAL;
             default -> AssessmentComponent.OTHER;
+        };
+    }
+
+    private static ExamType examTypeFor(AssessmentComponent component) {
+        return switch (component) {
+            case MIDTERM -> ExamType.MIDTERM;
+            case SEMI_TERMINAL -> ExamType.SEMI_TERMINAL;
+            case TERMINAL -> ExamType.FINAL;
+            case OTHER -> ExamType.OTHER;
         };
     }
 

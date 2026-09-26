@@ -9,6 +9,7 @@ import tz.co.chambaka.school.management.model.Exam;
 import tz.co.chambaka.school.management.model.ExamSeat;
 import tz.co.chambaka.school.management.model.ExamSubject;
 import tz.co.chambaka.school.management.model.TeacherSubject;
+import tz.co.chambaka.school.management.model.enums.AssessmentComponent;
 import tz.co.chambaka.school.management.model.enums.ExamApprovalStatus;
 import tz.co.chambaka.school.management.model.enums.ExamType;
 import tz.co.chambaka.school.management.model.enums.Role;
@@ -116,7 +117,9 @@ class ExamServiceTest {
         });
         ExamRequest req = new ExamRequest(1L, 1L, "Final", ExamType.FINAL,
                 LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 10));
-        assertThat(service.create(1L, req).examType()).isEqualTo(ExamType.FINAL);
+        var created = service.create(1L, req);
+        assertThat(created.examType()).isEqualTo(ExamType.FINAL);
+        assertThat(created.assessmentComponent()).isEqualTo(AssessmentComponent.TERMINAL);
 
         when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
         assertThat(service.update(1L, 1L, new ExamRequest(1L, 1L, "Final", ExamType.FINAL,
