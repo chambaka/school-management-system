@@ -6,6 +6,7 @@ import tz.co.chambaka.school.management.model.enums.AuditScope;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.Instant;
+import java.util.Collection;
 
 public final class AuditEventSpecs {
 
@@ -50,5 +51,12 @@ public final class AuditEventSpecs {
             }
             return predicate;
         };
+    }
+
+    public static Specification<AuditEvent> forOrganization(Long tenantId, Collection<String> resourceTypes) {
+        return (root, query, cb) -> cb.and(
+                cb.equal(root.get("tenantId"), tenantId),
+                root.get("resourceType").in(resourceTypes)
+        );
     }
 }

@@ -1,20 +1,28 @@
 package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.security.Access;
+import tz.co.chambaka.school.management.audit.AuditQueryService;
+import tz.co.chambaka.school.management.dto.audit.AuditEventResponse;
+import tz.co.chambaka.school.management.dto.common.PageResponse;
 import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.RenameSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
+import tz.co.chambaka.school.management.dto.school.UpdateSchoolStatusRequest;
 import tz.co.chambaka.school.management.dto.tenant.CreateOrganizationAdminRequest;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
 import tz.co.chambaka.school.management.dto.tenant.OrganizationAdminResponse;
 import tz.co.chambaka.school.management.dto.tenant.RenameOrganizationRequest;
+import tz.co.chambaka.school.management.dto.tenant.SchoolOverviewResponse;
 import tz.co.chambaka.school.management.dto.tenant.TenantResponse;
+import tz.co.chambaka.school.management.dto.tenant.UpdateOrganizationProfileRequest;
 import tz.co.chambaka.school.management.dto.tenant.UpdateTenantRequest;
 import tz.co.chambaka.school.management.service.OrganizationAdminService;
+import tz.co.chambaka.school.management.service.OrganizationOverviewService;
 import tz.co.chambaka.school.management.service.TenantService;
 import tz.co.chambaka.school.management.tenant.TenantResolver;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,15 +44,21 @@ public class TenantController {
 
     private final TenantService tenantService;
     private final OrganizationAdminService organizationAdminService;
+    private final OrganizationOverviewService organizationOverviewService;
+    private final AuditQueryService auditQueryService;
     private final TenantResolver tenantResolver;
 
     public TenantController(
             TenantService tenantService,
             OrganizationAdminService organizationAdminService,
+            OrganizationOverviewService organizationOverviewService,
+            AuditQueryService auditQueryService,
             TenantResolver tenantResolver
     ) {
         this.tenantService = tenantService;
         this.organizationAdminService = organizationAdminService;
+        this.organizationOverviewService = organizationOverviewService;
+        this.auditQueryService = auditQueryService;
         this.tenantResolver = tenantResolver;
     }
 
@@ -134,6 +148,24 @@ public class TenantController {
         return tenantService.rename(tenantResolver.requireTenantId(), request.name());
     }
 
+    @PutMapping("/tenants/current/profile")
+    @PreAuthorize(Access.ORG_RENAME)
+    public TenantResponse updateProfile(@Valid @RequestBody UpdateOrganizationProfileRequest request) {
+        return tenantService.updateProfile(tenantResolver.requireTenantId(), request);
+    }
+
+    @GetMapping("/tenants/current/overview")
+    @PreAuthorize(Access.ORG_SCHOOLS)
+    public List<SchoolOverviewResponse> overview() {
+        return organizationOverviewService.overview(tenantResolver.requireTenantId());
+    }
+
+    @GetMapping("/tenants/current/audit")
+    @PreAuthorize(Access.ORG_SCHOOLS)
+    public PageResponse<AuditEventResponse> organizationAudit(Pageable pageable) {
+        return auditQueryService.organization(tenantResolver.requireTenantId(), pageable);
+    }
+
     @GetMapping("/tenants/current/schools")
     @PreAuthorize(Access.ORG_SCHOOLS)
     public List<SchoolResponse> currentSchools() {
@@ -147,6 +179,15 @@ public class TenantController {
             @Valid @RequestBody RenameSchoolRequest request
     ) {
         return tenantService.renameSchool(tenantResolver.requireTenantId(), schoolId, request.name());
+    }
+
+    @PutMapping("/tenants/current/schools/{schoolId}/status")
+    @PreAuthorize(Access.ORG_SCHOOLS)
+    public SchoolResponse setSchoolStatus(
+            @PathVariable Long schoolId,
+            @Valid @RequestBody UpdateSchoolStatusRequest request
+    ) {
+        return tenantService.setSchoolStatus(tenantResolver.requireTenantId(), schoolId, request.status());
     }
 
     @PostMapping("/tenants/current/schools")

@@ -114,6 +114,7 @@ public class AuditService {
         event.setSchoolId(draft.getSchoolId() != null
                 ? draft.getSchoolId()
                 : principal == null ? null : principal.getSchoolId());
+        event.setTenantId(principal == null ? null : principal.getTenantId());
         event.setActorUserId(draft.getActorUserId() != null
                 ? draft.getActorUserId()
                 : principal == null ? null : principal.getId());

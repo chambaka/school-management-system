@@ -7,12 +7,15 @@ import tz.co.chambaka.school.management.model.AuditEvent;
 import tz.co.chambaka.school.management.model.enums.AuditAction;
 import tz.co.chambaka.school.management.model.enums.AuditScope;
 import tz.co.chambaka.school.management.repository.AuditEventRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class AuditQueryService {
@@ -37,6 +40,15 @@ public class AuditQueryService {
     ) {
         var spec = AuditEventSpecs.matching(scope, schoolId, correctionId, action, resourceType, actorEmail, from, to);
         return PageResponse.of(auditEventRepository.findAll(spec, pageable).map(this::toResponse));
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<AuditEventResponse> organization(Long tenantId, Pageable pageable) {
+        Pageable ordered = pageable.getSort().isSorted()
+                ? pageable
+                : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "createdAt"));
+        var spec = AuditEventSpecs.forOrganization(tenantId, Set.of("Tenant", "School", "SchoolAdmin"));
+        return PageResponse.of(auditEventRepository.findAll(spec, ordered).map(this::toResponse));
     }
 
     @Transactional(readOnly = true)

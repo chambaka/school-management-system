@@ -26,6 +26,9 @@ public class AuditEvent extends BaseEntity {
     @Column(name = "school_id")
     private Long schoolId;
 
+    @Column(name = "tenant_id")
+    private Long tenantId;
+
     @Column(name = "actor_user_id")
     private Long actorUserId;
 

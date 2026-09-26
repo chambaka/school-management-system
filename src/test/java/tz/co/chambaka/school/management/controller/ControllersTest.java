@@ -519,6 +519,8 @@ class ControllersTest {
         TenantController tenants = new TenantController(
                 tenantService,
                 org.mockito.Mockito.mock(tz.co.chambaka.school.management.service.OrganizationAdminService.class),
+                org.mockito.Mockito.mock(tz.co.chambaka.school.management.service.OrganizationOverviewService.class),
+                org.mockito.Mockito.mock(tz.co.chambaka.school.management.audit.AuditQueryService.class),
                 tenantResolver);
         tenants.listAll();
         tenants.create(new CreateTenantRequest("Org", null, null, null, null, null));

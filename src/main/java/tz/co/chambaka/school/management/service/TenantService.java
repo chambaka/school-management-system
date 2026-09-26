@@ -6,6 +6,7 @@ import tz.co.chambaka.school.management.dto.school.CreateSchoolRequest;
 import tz.co.chambaka.school.management.dto.school.SchoolResponse;
 import tz.co.chambaka.school.management.dto.tenant.CreateTenantRequest;
 import tz.co.chambaka.school.management.dto.tenant.TenantResponse;
+import tz.co.chambaka.school.management.dto.tenant.UpdateOrganizationProfileRequest;
 import tz.co.chambaka.school.management.dto.tenant.UpdateTenantRequest;
 import tz.co.chambaka.school.management.exception.ApiException;
 import tz.co.chambaka.school.management.exception.BusinessException;
@@ -160,6 +161,31 @@ public class TenantService {
         return toResponse(tenant);
     }
 
+    @Transactional
+    public TenantResponse updateProfile(Long id, UpdateOrganizationProfileRequest request) {
+        Tenant tenant = require(id);
+        if (request.email() != null) {
+            tenant.setEmail(blankToNull(request.email()));
+        }
+        if (request.phone() != null) {
+            tenant.setPhone(PhoneNumbers.persist(request.phone()));
+        }
+        if (request.country() != null) {
+            tenant.setCountry(blankToNull(request.country()));
+        }
+        if (request.timezone() != null && !request.timezone().isBlank()) {
+            tenant.setTimezone(request.timezone().trim());
+        }
+        if (request.currency() != null && !request.currency().isBlank()) {
+            tenant.setCurrency(request.currency().trim());
+        }
+        if (request.termsPerYear() != null) {
+            tenant.setTermsPerYear(requireTermsPerYear(request.termsPerYear()));
+        }
+        log.info("Updated organization profile tenantId={}", tenant.getId());
+        return toResponse(tenant);
+    }
+
     @Transactional(readOnly = true)
     public List<SchoolResponse> listSchools(Long tenantId) {
         Tenant tenant = require(tenantId);
@@ -176,13 +202,29 @@ public class TenantService {
             throw new BusinessException("School name is required");
         }
         Tenant tenant = require(tenantId);
-        School school = schoolRepository.findById(schoolId)
-                .filter(item -> item.getStatus() != SchoolStatus.ARCHIVED)
-                .filter(item -> tenantId.equals(item.getTenantId()))
-                .orElseThrow(() -> ResourceNotFoundException.of("School", schoolId));
+        School school = schoolInTenant(tenantId, schoolId);
         school.setName(trimmed);
         log.info("Renamed school id={} name={}", school.getId(), school.getName());
         return schoolMapper.toResponse(school).withTenantName(tenant.getName());
+    }
+
+    @Transactional
+    public SchoolResponse setSchoolStatus(Long tenantId, Long schoolId, SchoolStatus status) {
+        if (status != SchoolStatus.ACTIVE && status != SchoolStatus.SUSPENDED) {
+            throw new BusinessException("A school can be active or suspended");
+        }
+        Tenant tenant = require(tenantId);
+        School school = schoolInTenant(tenantId, schoolId);
+        school.setStatus(status);
+        log.info("Set school status id={} status={}", school.getId(), school.getStatus());
+        return schoolMapper.toResponse(school).withTenantName(tenant.getName());
+    }
+
+    private School schoolInTenant(Long tenantId, Long schoolId) {
+        return schoolRepository.findById(schoolId)
+                .filter(item -> item.getStatus() != SchoolStatus.ARCHIVED)
+                .filter(item -> tenantId.equals(item.getTenantId()))
+                .orElseThrow(() -> ResourceNotFoundException.of("School", schoolId));
     }
 
     @Transactional
@@ -379,6 +421,14 @@ public class TenantService {
         if (smsProperties.singleTenant()) {
             throw new BusinessException("Creating organizations is disabled in single-tenant mode");
         }
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private static String blankTo(String value, String fallback) {
