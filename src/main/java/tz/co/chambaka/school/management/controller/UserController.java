@@ -3,6 +3,8 @@ package tz.co.chambaka.school.management.controller;
 import tz.co.chambaka.school.management.dto.admin.RemoveUserLinkRequest;
 import tz.co.chambaka.school.management.dto.admin.RemoveUserResponse;
 import tz.co.chambaka.school.management.dto.admin.SchoolUserResponse;
+import tz.co.chambaka.school.management.dto.admin.SetUserEnabledRequest;
+import tz.co.chambaka.school.management.dto.admin.SetUserEnabledResponse;
 import tz.co.chambaka.school.management.dto.admin.UserLinksResponse;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordResponse;
@@ -110,9 +112,21 @@ public class UserController {
         return authService.resetPassword(id, schoolId, principal, request);
     }
 
+    @PostMapping("/{id}/enabled")
+    @PreAuthorize(Access.ACCOUNT_UNLOCK)
+    @Operation(summary = "Enable or disable a login. Headmaster, school admin, academic master, or platform admin.")
+    public SetUserEnabledResponse setEnabled(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam(required = false) Long schoolId,
+            @RequestBody SetUserEnabledRequest request
+    ) {
+        return authService.setEnabled(id, schoolId, principal, request);
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize(Access.USER_REMOVE)
-    @Operation(summary = "Remove a login. Headmaster only. Linked teacher, student, parent, or other records disable the login instead of deleting it.")
+    @Operation(summary = "Delete a login completely. Headmaster or platform admin. Teacher, student, and parent profiles stay, but the login is removed.")
     public RemoveUserResponse remove(
             @CurrentUser UserPrincipal principal,
             @PathVariable Long id,

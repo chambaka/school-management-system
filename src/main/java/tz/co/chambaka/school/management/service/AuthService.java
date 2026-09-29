@@ -3,6 +3,8 @@ package tz.co.chambaka.school.management.service;
 import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.dto.admin.RemoveUserLinkRequest;
 import tz.co.chambaka.school.management.dto.admin.RemoveUserResponse;
+import tz.co.chambaka.school.management.dto.admin.SetUserEnabledRequest;
+import tz.co.chambaka.school.management.dto.admin.SetUserEnabledResponse;
 import tz.co.chambaka.school.management.dto.admin.SchoolUserResponse;
 import tz.co.chambaka.school.management.dto.admin.UserLinksResponse;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordRequest;
@@ -478,9 +480,8 @@ public class AuthService {
         if (user.getRole() == Role.ORGANIZATION_ADMIN && actor.getRole() != Role.SUPER_ADMIN) {
             throw new ApiException(HttpStatus.FORBIDDEN, "This account cannot be removed here");
         }
-        UserAccountService.Removal removal = userAccountService.removeOrDisable(user);
-        log.info("{} login userId={} email={} by userId={} role={}",
-                removal.deleted() ? "Deleted" : "Disabled",
+        userAccountService.deleteCompletely(user);
+        log.info("Deleted login userId={} email={} by userId={} role={}",
                 user.getId(), user.getEmail(), actor.getId(), actor.getRole());
         auditService.record(new AuditEventDraft()
                 .scope(actor.getRole() == Role.SUPER_ADMIN ? AuditScope.PLATFORM : AuditScope.TENANT)
@@ -488,18 +489,55 @@ public class AuthService {
                 .schoolId(user.getSchoolId())
                 .resourceType("User")
                 .resourceId(String.valueOf(user.getId()))
-                .summary((removal.deleted() ? "Removed login for " : "Disabled linked login for ") + user.getEmail())
+                .summary("Removed login for " + user.getEmail())
                 .details("targetUserId=" + user.getId()
                         + " targetRole=" + user.getRole()
                         + " actorUserId=" + actor.getId()
                         + " actorRole=" + actor.getRole()
-                        + " deleted=" + removal.deleted()
-                        + " disabled=" + removal.disabled())
+                        + " deleted=true")
                 .httpMethod("DELETE")
                 .httpPath("/api/v1/users/" + userId)
                 .statusCode(200));
-        return new RemoveUserResponse(
-                user.getId(), user.getName(), user.getEmail(), removal.deleted(), removal.disabled());
+        return new RemoveUserResponse(user.getId(), user.getName(), user.getEmail(), true, false);
+    }
+
+    @Transactional
+    public SetUserEnabledResponse setEnabled(
+            Long userId, Long schoolId, UserPrincipal actor, SetUserEnabledRequest request
+    ) {
+        if (actor == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Sign in required");
+        }
+        if (request == null) {
+            throw new BusinessException("Choose whether to enable or disable this login");
+        }
+        User user = requireUnlockTarget(userId, schoolId, actor);
+        if (actor.getId().equals(user.getId())) {
+            throw new BusinessException("You cannot enable or disable your own login");
+        }
+        if (user.getRole() == Role.SUPER_ADMIN && actor.getRole() != Role.SUPER_ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "This account cannot be changed here");
+        }
+        userAccountService.setEnabled(user, request.enabled());
+        log.info("{} login userId={} email={} by userId={} role={}",
+                request.enabled() ? "Enabled" : "Disabled",
+                user.getId(), user.getEmail(), actor.getId(), actor.getRole());
+        auditService.record(new AuditEventDraft()
+                .scope(actor.getRole() == Role.SUPER_ADMIN ? AuditScope.PLATFORM : AuditScope.TENANT)
+                .action(AuditAction.UPDATE)
+                .schoolId(user.getSchoolId())
+                .resourceType("User")
+                .resourceId(String.valueOf(user.getId()))
+                .summary((request.enabled() ? "Enabled login for " : "Disabled login for ") + user.getEmail())
+                .details("targetUserId=" + user.getId()
+                        + " targetRole=" + user.getRole()
+                        + " actorUserId=" + actor.getId()
+                        + " actorRole=" + actor.getRole()
+                        + " enabled=" + request.enabled())
+                .httpMethod("POST")
+                .httpPath("/api/v1/users/" + userId + "/enabled")
+                .statusCode(200));
+        return new SetUserEnabledResponse(user.getId(), user.getName(), user.getEmail(), user.isEnabled());
     }
 
     @Transactional(readOnly = true)

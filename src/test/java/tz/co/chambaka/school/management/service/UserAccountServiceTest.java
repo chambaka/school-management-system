@@ -171,41 +171,44 @@ class UserAccountServiceTest {
     }
 
     @Test
-    void removeOrDisableDeletesWhenNotTied() {
-        User staff = Fixtures.user(4L, Role.STAFF);
-        Query update = org.mockito.Mockito.mock(Query.class);
-        Query count = org.mockito.Mockito.mock(Query.class);
-        when(entityManager.createQuery(anyString())).thenReturn(update, update, update, update, update, count);
-        when(update.setParameter(eq("id"), eq(4L))).thenReturn(update);
-        when(update.executeUpdate()).thenReturn(0);
-        when(count.setParameter(eq("id"), eq(4L))).thenReturn(count);
-        when(count.getSingleResult()).thenReturn(0L);
+    void deleteCompletelyDetachesAndDeletesLogin() {
+        User teacher = Fixtures.user(4L, Role.TEACHER);
+        Query query = org.mockito.Mockito.mock(Query.class);
+        when(entityManager.createQuery(anyString())).thenReturn(query);
+        when(query.setParameter(eq("id"), eq(4L))).thenReturn(query);
+        when(query.setParameter(eq("ids"), any())).thenReturn(query);
+        when(query.executeUpdate()).thenReturn(0);
 
-        var result = service.removeOrDisable(staff);
+        service.deleteCompletely(teacher);
 
-        assertThat(result.deleted()).isTrue();
-        assertThat(result.disabled()).isFalse();
-        assertThat(staff.isEnabled()).isTrue();
-        verify(userRepository).delete(staff);
+        verify(userRepository).delete(teacher);
+        verify(entityManager, times(15)).createQuery(anyString());
     }
 
     @Test
-    void removeOrDisableDisablesWhenTiedToTeacher() {
+    void setEnabledDisablesAndClearsSessions() {
         User teacher = Fixtures.user(4L, Role.TEACHER);
-        Query update = org.mockito.Mockito.mock(Query.class);
-        Query count = org.mockito.Mockito.mock(Query.class);
-        when(entityManager.createQuery(anyString())).thenReturn(update, update, update, update, update, count);
-        when(update.setParameter(eq("id"), eq(4L))).thenReturn(update);
-        when(update.executeUpdate()).thenReturn(0);
-        when(count.setParameter(eq("id"), eq(4L))).thenReturn(count);
-        when(count.getSingleResult()).thenReturn(1L);
+        Query query = org.mockito.Mockito.mock(Query.class);
+        when(entityManager.createQuery(anyString())).thenReturn(query);
+        when(query.setParameter(eq("id"), eq(4L))).thenReturn(query);
+        when(query.executeUpdate()).thenReturn(0);
 
-        var result = service.removeOrDisable(teacher);
+        service.setEnabled(teacher, false);
 
-        assertThat(result.deleted()).isFalse();
-        assertThat(result.disabled()).isTrue();
         assertThat(teacher.isEnabled()).isFalse();
+        verify(entityManager, times(5)).createQuery(anyString());
         verify(userRepository, never()).delete(any());
+    }
+
+    @Test
+    void setEnabledTurnsLoginBackOn() {
+        User teacher = Fixtures.user(4L, Role.TEACHER);
+        teacher.setEnabled(false);
+
+        service.setEnabled(teacher, true);
+
+        assertThat(teacher.isEnabled()).isTrue();
+        verify(entityManager, never()).createQuery(anyString());
     }
 
     @Test
