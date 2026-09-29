@@ -21,6 +21,7 @@ import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.support.Fixtures;
 
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -198,7 +199,7 @@ class AssignmentServiceTest {
         when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(draft));
         MockMultipartFile file = new MockMultipartFile("file", "work.pdf", "application/pdf", new byte[]{1});
         assertThat(service.attach(1L, teacher, 1L, file).attachmentName()).isEqualTo("work.pdf");
-        verify(photoStorageService).storeStudentPhoto(1L, 900001L, file);
+        verify(photoStorageService).storeAssignmentFile(1L, 1L, file);
 
         Assignment locked = assignment(2L, Fixtures.schoolClass(), AssignmentStatus.LOCKED);
         when(assignmentRepository.findByIdAndSchoolId(2L, 1L)).thenReturn(Optional.of(locked));
@@ -209,6 +210,38 @@ class AssignmentServiceTest {
 
         when(assignmentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.attach(1L, teacher, 9L, file)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void servesAssignmentAndSubmissionFilesByRole() {
+        Assignment draft = assignment(1L, Fixtures.schoolClass(), AssignmentStatus.DRAFT);
+        when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(draft));
+        StoredPhoto stored = new StoredPhoto(Path.of("1.pdf"), "application/pdf");
+        when(photoStorageService.findAssignmentFile(1L, 1L)).thenReturn(Optional.of(stored));
+        assertThat(service.file(1L, teacher, 1L)).isEqualTo(stored);
+        assertThatThrownBy(() -> service.file(1L, Fixtures.principal(Role.STUDENT), 1L))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        Assignment published = assignment(1L, Fixtures.schoolClass(), AssignmentStatus.PUBLISHED);
+        when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(published));
+        assertThat(service.file(1L, Fixtures.principal(Role.PARENT), 1L)).isEqualTo(stored);
+        assertThat(service.file(1L, Fixtures.principal(Role.STUDENT), 1L)).isEqualTo(stored);
+        when(photoStorageService.findAssignmentFile(1L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.file(1L, teacher, 1L)).isInstanceOf(ResourceNotFoundException.class);
+
+        when(photoStorageService.findSubmissionFile(1L, 1L, 1L)).thenReturn(Optional.of(stored));
+        when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
+        assertThat(service.submissionFile(1L, Fixtures.principal(Role.STUDENT), 1L, 1L)).isEqualTo(stored);
+        assertThatThrownBy(() -> service.submissionFile(1L, Fixtures.principal(Role.STUDENT), 1L, 9L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Not allowed");
+        assertThat(service.submissionFile(1L, academic, 1L, 1L)).isEqualTo(stored);
+        assertThatThrownBy(() -> service.submissionFile(1L, Fixtures.principal(Role.PARENT), 1L, 1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Not allowed");
+        when(photoStorageService.findSubmissionFile(1L, 1L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.submissionFile(1L, academic, 1L, 1L))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -231,6 +264,7 @@ class AssignmentServiceTest {
         });
         var submitted = service.submitWork(1L, 10L, 1L, "ready", file);
         assertThat(submitted.attachmentName()).isEqualTo("essay.pdf");
+        verify(photoStorageService).storeSubmissionFile(1L, 1L, 1L, file);
         verify(alertService).notifyParentsOfStudent(eq(1L), any(Student.class), eq("Assignment submitted"), any(), eq("ASSIGNMENT"), eq(false));
 
         AssignmentSubmission existing = new AssignmentSubmission();

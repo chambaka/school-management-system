@@ -588,6 +588,12 @@ class ControllersTest {
         assignments.lock(teacher, 1L);
         assignments.publish(teacher, 1L);
         assignments.attach(teacher, 1L, file);
+        when(assignmentService.file(eq(1L), eq(teacher), eq(1L)))
+                .thenReturn(new tz.co.chambaka.school.management.service.StoredPhoto(java.nio.file.Path.of("work.pdf"), "application/pdf"));
+        when(assignmentService.submissionFile(eq(1L), eq(teacher), eq(1L), eq(1L)))
+                .thenReturn(new tz.co.chambaka.school.management.service.StoredPhoto(java.nio.file.Path.of("essay.pdf"), "application/pdf"));
+        assignments.file(teacher, 1L);
+        assignments.submissionFile(teacher, 1L, 1L);
         assignments.marks(teacher, 1L, 1L, BigDecimal.TEN);
         assignments.submit(teacher, 1L, "done", file);
         assignments.submissions(1L);

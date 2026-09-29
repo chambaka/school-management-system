@@ -126,6 +126,73 @@ class PhotoStorageServiceTest {
     }
 
     @Test
+    void storesDocumentsAndImagesForAssignments() throws IOException {
+        MockMultipartFile pdf = new MockMultipartFile("file", "work.pdf", "application/pdf", new byte[]{1, 2});
+        Path stored = service.storeAssignmentFile(1L, 8L, pdf);
+        assertThat(stored.getFileName().toString()).isEqualTo("8.pdf");
+        assertThat(service.findAssignmentFile(1L, 8L)).hasValueSatisfying(file ->
+                assertThat(file.contentType()).isEqualTo("application/pdf"));
+
+        MockMultipartFile png = new MockMultipartFile("file", "sheet.png", "image/png", new byte[]{3});
+        Path image = service.storeAssignmentFile(1L, 8L, png);
+        assertThat(image.getFileName().toString()).isEqualTo("8.png");
+        assertThat(Files.exists(stored)).isFalse();
+
+        MockMultipartFile docx = new MockMultipartFile(
+                "file", "notes.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                new byte[]{4});
+        assertThat(service.storeSubmissionFile(1L, 8L, 3L, docx).getFileName().toString()).isEqualTo("8-3.docx");
+        assertThat(service.findSubmissionFile(1L, 8L, 3L)).isPresent();
+
+        MockMultipartFile byName = new MockMultipartFile("file", "scan.GIF", "application/octet-stream", new byte[]{5});
+        assertThat(service.storeAssignmentFile(2L, 1L, byName).getFileName().toString()).isEqualTo("1.gif");
+
+        MockMultipartFile jpegAlias = new MockMultipartFile("file", "pic.jpeg", "", new byte[]{6});
+        assertThat(service.storeAssignmentFile(2L, 2L, jpegAlias).getFileName().toString()).isEqualTo("2.jpg");
+
+        assertThatThrownBy(() -> service.storeAssignmentFile(1L, 1L, null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Please choose a document or image");
+        assertThatThrownBy(() -> service.storeAssignmentFile(1L, 1L,
+                new MockMultipartFile("file", "x.exe", "application/x-msdownload", new byte[]{1})))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("document");
+        byte[] tooBig = new byte[(int) PhotoStorageService.MAX_DOCUMENT_BYTES + 1];
+        Arrays.fill(tooBig, (byte) 1);
+        assertThatThrownBy(() -> service.storeAssignmentFile(1L, 1L,
+                new MockMultipartFile("file", "big.pdf", "application/pdf", tooBig)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("File must be 10 MB or smaller");
+        assertThat(service.findAssignmentFile(9L, 9L)).isEmpty();
+        assertThat(PhotoStorageService.normalizeDocumentType("application/x-pdf", null)).isEqualTo("application/pdf");
+        assertThat(PhotoStorageService.normalizeDocumentType("image/jpg", "x")).isEqualTo("image/jpeg");
+        assertThat(PhotoStorageService.contentTypeForDocument(".pdf")).isEqualTo("application/pdf");
+        assertThat(PhotoStorageService.contentTypeForDocument(".unknown")).isEqualTo("application/octet-stream");
+    }
+
+    @Test
+    void assignmentReplaceFailsWhenExistingFileCannotBeRemoved() throws IOException {
+        Path blocker = tempDir.resolve("schools").resolve("5").resolve("assignments").resolve("1.pdf").resolve("nested");
+        Files.createDirectories(blocker);
+        assertThatThrownBy(() -> service.storeAssignmentFile(5L, 1L,
+                new MockMultipartFile("file", "work.pdf", "application/pdf", new byte[]{1})))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Could not replace file");
+    }
+
+    @Test
+    void assignmentSaveFailsWhenPathIsNotADirectory() throws IOException {
+        Path blocker = tempDir.resolve("schools").resolve("6").resolve("assignments");
+        Files.createDirectories(blocker.getParent());
+        Files.writeString(blocker, "not-a-dir");
+        assertThatThrownBy(() -> service.storeAssignmentFile(6L, 1L,
+                new MockMultipartFile("file", "work.pdf", "application/pdf", new byte[]{1})))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Could not save file");
+    }
+
+    @Test
     void typeHelpers() {
         assertThat(PhotoStorageService.normalizeType("image/png", null)).isEqualTo("image/png");
         assertThat(PhotoStorageService.extension("image/png")).isEqualTo(".png");

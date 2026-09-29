@@ -10,7 +10,12 @@ import tz.co.chambaka.school.management.service.AssignmentService;
 import tz.co.chambaka.school.management.tenant.TenantResolver;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +28,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import tz.co.chambaka.school.management.service.StoredPhoto;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -92,6 +99,22 @@ public class AssignmentController {
         return assignmentService.attach(tenantResolver.requireSchoolId(), principal, id, file);
     }
 
+    @GetMapping("/{id}/file")
+    @PreAuthorize(Access.ASSIGNMENT)
+    public ResponseEntity<Resource> file(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
+        return toFileResponse(assignmentService.file(tenantResolver.requireSchoolId(), principal, id));
+    }
+
+    @GetMapping("/{id}/submissions/{studentId}/file")
+    @PreAuthorize(Access.ASSIGNMENT)
+    public ResponseEntity<Resource> submissionFile(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @PathVariable Long studentId
+    ) {
+        return toFileResponse(assignmentService.submissionFile(tenantResolver.requireSchoolId(), principal, id, studentId));
+    }
+
     @PostMapping("/{id}/marks")
     @PreAuthorize(Access.ASSIGNMENT_WRITE)
     public void marks(
@@ -118,5 +141,14 @@ public class AssignmentController {
     @PreAuthorize(Access.ASSIGNMENT_WRITE)
     public List<AssignmentSubmissionResponse> submissions(@PathVariable Long id) {
         return assignmentService.submissions(tenantResolver.requireSchoolId(), id);
+    }
+
+    private static ResponseEntity<Resource> toFileResponse(StoredPhoto file) {
+        String filename = file.path().getFileName().toString().replace("\"", "");
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "private, no-cache")
+                .body(new FileSystemResource(file.path()));
     }
 }

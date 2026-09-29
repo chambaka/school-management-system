@@ -72,7 +72,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException ex, HttpServletRequest request) {
         log.warn("Upload too large path={}", request.getRequestURI());
-        return build(HttpStatus.BAD_REQUEST, "Photo must be 2 MB or smaller", request.getRequestURI(), null);
+        String path = request.getRequestURI() == null ? "" : request.getRequestURI();
+        String message = path.contains("/assignments")
+                ? "File must be 10 MB or smaller"
+                : "Photo must be 2 MB or smaller";
+        return build(HttpStatus.BAD_REQUEST, message, request.getRequestURI(), null);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)

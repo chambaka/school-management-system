@@ -80,6 +80,9 @@ class GlobalExceptionHandlerTest {
                 .isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(handler.handleUploadTooLarge(new MaxUploadSizeExceededException(2), request).getBody().message())
                 .isEqualTo("Photo must be 2 MB or smaller");
+        assertThat(handler.handleUploadTooLarge(new MaxUploadSizeExceededException(2), request("/api/v1/assignments/1/file"))
+                .getBody().message())
+                .isEqualTo("File must be 10 MB or smaller");
         assertThat(handler.handleGeneric(new RuntimeException("boom"), request).getStatusCode())
                 .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         var missing = handler.handleMissingParam(

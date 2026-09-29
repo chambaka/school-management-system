@@ -10,7 +10,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -18,8 +20,11 @@ import java.util.Set;
 public class PhotoStorageService {
 
     static final long MAX_BYTES = 2 * 1024 * 1024;
+    static final long MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
     private static final Set<String> ALLOWED = Set.of("image/jpeg", "image/png", "image/webp");
     private static final List<String> EXTENSIONS = List.of(".jpg", ".png", ".webp");
+    private static final Map<String, String> DOCUMENT_TYPES = documentTypes();
+    private static final List<String> DOCUMENT_EXTENSIONS = List.copyOf(DOCUMENT_TYPES.values());
 
     private final Path root;
 
@@ -49,6 +54,22 @@ public class PhotoStorageService {
 
     public void deleteTeacherPhoto(Long schoolId, Long teacherId) {
         deleteExisting(schoolId, "teachers", teacherId);
+    }
+
+    public Path storeAssignmentFile(Long schoolId, Long assignmentId, MultipartFile file) {
+        return storeDocument(schoolId, "assignments", String.valueOf(assignmentId), file);
+    }
+
+    public Optional<StoredPhoto> findAssignmentFile(Long schoolId, Long assignmentId) {
+        return findDocument(schoolId, "assignments", String.valueOf(assignmentId));
+    }
+
+    public Path storeSubmissionFile(Long schoolId, Long assignmentId, Long studentId, MultipartFile file) {
+        return storeDocument(schoolId, "assignment-submissions", assignmentId + "-" + studentId, file);
+    }
+
+    public Optional<StoredPhoto> findSubmissionFile(Long schoolId, Long assignmentId, Long studentId) {
+        return findDocument(schoolId, "assignment-submissions", assignmentId + "-" + studentId);
     }
 
     private Path storePhoto(Long schoolId, String kind, Long personId, MultipartFile file) {
@@ -137,5 +158,105 @@ public class PhotoStorageService {
             case ".webp" -> "image/webp";
             default -> "image/jpeg";
         };
+    }
+
+    private Path storeDocument(Long schoolId, String kind, String fileKey, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("Please choose a document or image");
+        }
+        if (file.getSize() > MAX_DOCUMENT_BYTES) {
+            throw new BusinessException("File must be 10 MB or smaller");
+        }
+        String contentType = normalizeDocumentType(file.getContentType(), file.getOriginalFilename());
+        Path dir = personDir(schoolId, kind);
+        Path dest = dir.resolve(fileKey + DOCUMENT_TYPES.get(contentType));
+        try {
+            Files.createDirectories(dir);
+            deleteDocumentExisting(dir, fileKey);
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, dest, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return dest;
+        } catch (IOException ex) {
+            throw new BusinessException("Could not save file");
+        }
+    }
+
+    private Optional<StoredPhoto> findDocument(Long schoolId, String kind, String fileKey) {
+        Path dir = personDir(schoolId, kind);
+        for (String ext : DOCUMENT_EXTENSIONS) {
+            Path path = dir.resolve(fileKey + ext);
+            if (Files.isRegularFile(path)) {
+                return Optional.of(new StoredPhoto(path, contentTypeForDocument(ext)));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private void deleteDocumentExisting(Path dir, String fileKey) {
+        for (String ext : DOCUMENT_EXTENSIONS) {
+            try {
+                Files.deleteIfExists(dir.resolve(fileKey + ext));
+            } catch (IOException ex) {
+                throw new BusinessException("Could not replace file");
+            }
+        }
+    }
+
+    static String normalizeDocumentType(String contentType, String filename) {
+        String type = contentType == null ? "" : contentType.toLowerCase().split(";")[0].trim();
+        if ("image/jpg".equals(type)) {
+            type = "image/jpeg";
+        }
+        if ("application/x-pdf".equals(type)) {
+            type = "application/pdf";
+        }
+        if (!type.isBlank()) {
+            if (DOCUMENT_TYPES.containsKey(type)) {
+                return type;
+            }
+            if (!"application/octet-stream".equals(type)) {
+                throw new BusinessException(documentTypeMessage());
+            }
+        }
+        String name = filename == null ? "" : filename.toLowerCase();
+        for (Map.Entry<String, String> entry : DOCUMENT_TYPES.entrySet()) {
+            if (name.endsWith(entry.getValue()) || (".jpg".equals(entry.getValue()) && name.endsWith(".jpeg"))) {
+                return entry.getKey();
+            }
+        }
+        throw new BusinessException(documentTypeMessage());
+    }
+
+    static String contentTypeForDocument(String extension) {
+        for (Map.Entry<String, String> entry : DOCUMENT_TYPES.entrySet()) {
+            if (entry.getValue().equals(extension)) {
+                return entry.getKey();
+            }
+        }
+        return "application/octet-stream";
+    }
+
+    private static String documentTypeMessage() {
+        return "Attach a document (PDF, Word, Excel, PowerPoint, text) or an image (JPEG, PNG, WebP, GIF)";
+    }
+
+    private static Map<String, String> documentTypes() {
+        Map<String, String> types = new LinkedHashMap<>();
+        types.put("image/jpeg", ".jpg");
+        types.put("image/png", ".png");
+        types.put("image/webp", ".webp");
+        types.put("image/gif", ".gif");
+        types.put("application/pdf", ".pdf");
+        types.put("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx");
+        types.put("application/msword", ".doc");
+        types.put("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx");
+        types.put("application/vnd.ms-excel", ".xls");
+        types.put("application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx");
+        types.put("application/vnd.ms-powerpoint", ".ppt");
+        types.put("text/plain", ".txt");
+        types.put("application/rtf", ".rtf");
+        types.put("application/vnd.oasis.opendocument.text", ".odt");
+        return Map.copyOf(types);
     }
 }

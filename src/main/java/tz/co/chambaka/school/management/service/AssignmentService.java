@@ -141,7 +141,7 @@ public class AssignmentService {
         if (!principal.getRole().managesAssignments()) {
             assertTeachesExisting(schoolId, principal.getId(), assignment, "create assignments");
         }
-        photoStorageService.storeStudentPhoto(schoolId, id + 900000, file);
+        photoStorageService.storeAssignmentFile(schoolId, id, file);
         assignment.setAttachmentName(file.getOriginalFilename());
         assignment.setAttachmentPath("/api/v1/assignments/" + id + "/file");
         return toResponse(assignment);
@@ -181,7 +181,7 @@ public class AssignmentService {
         submission.setNotes(notes);
         submission.setSubmittedAt(Instant.now());
         if (file != null && !file.isEmpty()) {
-            photoStorageService.storeStudentPhoto(schoolId, assignmentId + student.getId() + 800000, file);
+            photoStorageService.storeSubmissionFile(schoolId, assignmentId, student.getId(), file);
             submission.setAttachmentName(file.getOriginalFilename());
             submission.setAttachmentPath("/api/v1/assignments/" + assignmentId + "/submissions/" + student.getId() + "/file");
         }
@@ -195,6 +195,35 @@ public class AssignmentService {
     public List<AssignmentSubmissionResponse> submissions(Long schoolId, Long assignmentId) {
         require(schoolId, assignmentId);
         return submissionRepository.findByAssignmentId(assignmentId).stream().map(this::toSubmission).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public StoredPhoto file(Long schoolId, UserPrincipal principal, Long id) {
+        Assignment assignment = require(schoolId, id);
+        if ((principal.getRole() == Role.STUDENT || principal.getRole() == Role.PARENT)
+                && statusOf(assignment) != AssignmentStatus.PUBLISHED) {
+            throw ResourceNotFoundException.of("Assignment", id);
+        }
+        return photoStorageService.findAssignmentFile(schoolId, id)
+                .orElseThrow(() -> ResourceNotFoundException.of("Assignment file", id));
+    }
+
+    @Transactional(readOnly = true)
+    public StoredPhoto submissionFile(Long schoolId, UserPrincipal principal, Long assignmentId, Long studentId) {
+        require(schoolId, assignmentId);
+        if (principal.getRole() == Role.STUDENT) {
+            Long me = studentService.requireByUser(principal.getId()).getId();
+            if (!me.equals(studentId)) {
+                throw new BusinessException("Not allowed to view this file");
+            }
+        } else if (principal.getRole() != Role.HEADMASTER
+                && principal.getRole() != Role.ACADEMIC_MASTER
+                && principal.getRole() != Role.TEACHER
+                && principal.getRole() != Role.SCHOOL_ADMIN) {
+            throw new BusinessException("Not allowed to view this file");
+        }
+        return photoStorageService.findSubmissionFile(schoolId, assignmentId, studentId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Assignment file", assignmentId));
     }
 
     @Transactional
