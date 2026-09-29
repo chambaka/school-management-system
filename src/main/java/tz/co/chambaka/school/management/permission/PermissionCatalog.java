@@ -40,7 +40,7 @@ public final class PermissionCatalog {
         return switch (role) {
             case SUPER_ADMIN -> List.copyOf(definitions().keySet());
             case ORGANIZATION_ADMIN -> List.of();
-            case HEADMASTER -> List.of(PEOPLE_MANAGE, EXAM_APPROVE, EXAM_INVIGILATE, REPORT_EXPORT);
+            case HEADMASTER -> List.of(PEOPLE_MANAGE, EXAM_APPROVE, EXAM_VERIFY, EXAM_INVIGILATE, REPORT_EXPORT);
             case SCHOOL_ADMIN -> List.of(PEOPLE_MANAGE, EXAM_INVIGILATE, REPORT_EXPORT);
             case ACADEMIC_MASTER -> List.of(PEOPLE_MANAGE, EXAM_APPROVE, EXAM_VERIFY, EXAM_INVIGILATE, ATTENDANCE_ENTER, TIMETABLE_MANAGE, REPORT_EXPORT);
             case TEACHER -> List.of(EXAM_INVIGILATE, ATTENDANCE_ENTER, REPORT_EXPORT);

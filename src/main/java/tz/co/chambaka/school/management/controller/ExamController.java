@@ -98,25 +98,34 @@ public class ExamController {
     @PostMapping("/{id}/subjects")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize(Access.GRADE_ENTER)
-    public ExamSubjectResponse addSubject(@PathVariable Long id, @Valid @RequestBody ExamSubjectRequest request) {
-        return examService.addSubject(tenantResolver.requireSchoolId(), id, request);
+    public ExamSubjectResponse addSubject(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody ExamSubjectRequest request
+    ) {
+        return examService.addSubject(tenantResolver.requireSchoolId(), id, request, principal.getId());
     }
 
     @PutMapping("/{id}/subjects/{paperId}")
     @PreAuthorize(Access.GRADE_ENTER)
     public ExamSubjectResponse updateSubject(
+            @CurrentUser UserPrincipal principal,
             @PathVariable Long id,
             @PathVariable Long paperId,
             @Valid @RequestBody ExamSubjectRequest request
     ) {
-        return examService.updateSubject(tenantResolver.requireSchoolId(), id, paperId, request);
+        return examService.updateSubject(tenantResolver.requireSchoolId(), id, paperId, request, principal.getId());
     }
 
     @DeleteMapping("/{id}/subjects/{paperId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize(Access.GRADE_ENTER)
-    public void deleteSubject(@PathVariable Long id, @PathVariable Long paperId) {
-        examService.deleteSubject(tenantResolver.requireSchoolId(), id, paperId);
+    public void deleteSubject(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @PathVariable Long paperId
+    ) {
+        examService.deleteSubject(tenantResolver.requireSchoolId(), id, paperId, principal.getId());
     }
 
     @PostMapping("/{id}/schedule")

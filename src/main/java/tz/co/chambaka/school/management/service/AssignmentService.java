@@ -7,6 +7,7 @@ import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Assignment;
 import tz.co.chambaka.school.management.model.AssignmentSubmission;
+import tz.co.chambaka.school.management.model.SchoolClass;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.Teacher;
 import tz.co.chambaka.school.management.model.enums.Role;
@@ -35,6 +36,7 @@ public class AssignmentService {
     private final StudentRepository studentRepository;
     private final PhotoStorageService photoStorageService;
     private final AlertService alertService;
+    private final AllocationService allocationService;
 
     public AssignmentService(
             AssignmentRepository assignmentRepository,
@@ -46,7 +48,8 @@ public class AssignmentService {
             StudentService studentService,
             StudentRepository studentRepository,
             PhotoStorageService photoStorageService,
-            AlertService alertService
+            AlertService alertService,
+            AllocationService allocationService
     ) {
         this.assignmentRepository = assignmentRepository;
         this.submissionRepository = submissionRepository;
@@ -58,15 +61,20 @@ public class AssignmentService {
         this.studentRepository = studentRepository;
         this.photoStorageService = photoStorageService;
         this.alertService = alertService;
+        this.allocationService = allocationService;
     }
 
     @Transactional
     public AssignmentResponse create(Long schoolId, Long userId, AssignmentRequest request) {
+        SchoolClass schoolClass = classService.require(schoolId, request.schoolClassId());
+        assertTeachesAssignment(
+                schoolId, userId, schoolClass, request.subjectId(), request.sectionId(),
+                "create assignments");
         Teacher teacher = teacherService.requireByUser(userId);
         Assignment assignment = new Assignment();
         assignment.setSchoolId(schoolId);
         assignment.setTeacher(teacher);
-        assignment.setSchoolClass(classService.require(schoolId, request.schoolClassId()));
+        assignment.setSchoolClass(schoolClass);
         assignment.setSection(request.sectionId() == null ? null : sectionService.require(schoolId, request.sectionId()));
         assignment.setSubject(subjectService.require(schoolId, request.subjectId()));
         assignment.setTitle(request.title());
@@ -81,9 +89,10 @@ public class AssignmentService {
     }
 
     @Transactional
-    public AssignmentResponse attach(Long schoolId, Long id, MultipartFile file) {
+    public AssignmentResponse attach(Long schoolId, Long userId, Long id, MultipartFile file) {
         Assignment assignment = assignmentRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Assignment", id));
+        assertTeachesExisting(schoolId, userId, assignment, "create assignments");
         photoStorageService.storeStudentPhoto(schoolId, id + 900000, file);
         assignment.setAttachmentName(file.getOriginalFilename());
         assignment.setAttachmentPath("/api/v1/assignments/" + id + "/file");
@@ -133,9 +142,10 @@ public class AssignmentService {
     }
 
     @Transactional
-    public void submitMarks(Long schoolId, Long assignmentId, Long studentId, BigDecimal marks) {
+    public void submitMarks(Long schoolId, Long userId, Long assignmentId, Long studentId, BigDecimal marks) {
         Assignment assignment = assignmentRepository.findByIdAndSchoolId(assignmentId, schoolId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Assignment", assignmentId));
+        assertTeachesExisting(schoolId, userId, assignment, "submit marks");
         Student student = studentService.require(schoolId, studentId);
         AssignmentSubmission submission = submissionRepository.findByAssignmentIdAndStudentId(assignmentId, studentId)
                 .orElseGet(AssignmentSubmission::new);
@@ -145,6 +155,27 @@ public class AssignmentService {
         submission.setMarksObtained(marks);
         submission.setSubmittedAt(Instant.now());
         submissionRepository.save(submission);
+    }
+
+    private void assertTeachesExisting(Long schoolId, Long userId, Assignment assignment, String action) {
+        Long sectionId = assignment.getSection() == null ? null : assignment.getSection().getId();
+        Long subjectId = assignment.getSubject() == null ? null : assignment.getSubject().getId();
+        assertTeachesAssignment(schoolId, userId, assignment.getSchoolClass(), subjectId, sectionId, action);
+    }
+
+    private void assertTeachesAssignment(
+            Long schoolId,
+            Long userId,
+            SchoolClass schoolClass,
+            Long subjectId,
+            Long sectionId,
+            String action
+    ) {
+        Long classId = schoolClass == null ? null : schoolClass.getId();
+        Long yearId = schoolClass == null || schoolClass.getAcademicYear() == null
+                ? null
+                : schoolClass.getAcademicYear().getId();
+        allocationService.requireTeachesForUser(schoolId, userId, yearId, classId, subjectId, sectionId, action);
     }
 
     private AssignmentResponse toResponse(Assignment assignment) {

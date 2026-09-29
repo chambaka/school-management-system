@@ -43,6 +43,7 @@ class AssignmentServiceTest {
     @Mock StudentRepository studentRepository;
     @Mock PhotoStorageService photoStorageService;
     @Mock AlertService alertService;
+    @Mock AllocationService allocationService;
     @InjectMocks AssignmentService service;
 
     @Test
@@ -100,11 +101,11 @@ class AssignmentServiceTest {
         Assignment assignment = assignment(1L, Fixtures.schoolClass());
         when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(assignment));
         MockMultipartFile file = new MockMultipartFile("file", "work.pdf", "application/pdf", new byte[]{1});
-        assertThat(service.attach(1L, 1L, file).attachmentName()).isEqualTo("work.pdf");
+        assertThat(service.attach(1L, 3L, 1L, file).attachmentName()).isEqualTo("work.pdf");
         verify(photoStorageService).storeStudentPhoto(1L, 900001L, file);
 
         when(assignmentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.attach(1L, 9L, file)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.attach(1L, 3L, 9L, file)).isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -141,17 +142,31 @@ class AssignmentServiceTest {
         when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(assignment));
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
         when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.empty());
-        service.submitMarks(1L, 1L, 1L, BigDecimal.valueOf(75));
+        service.submitMarks(1L, 3L, 1L, 1L, BigDecimal.valueOf(75));
         verify(submissionRepository).save(any(AssignmentSubmission.class));
 
         AssignmentSubmission existing = new AssignmentSubmission();
         when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.of(existing));
-        service.submitMarks(1L, 1L, 1L, BigDecimal.valueOf(80));
+        service.submitMarks(1L, 3L, 1L, 1L, BigDecimal.valueOf(80));
         assertThat(existing.getMarksObtained()).isEqualByComparingTo("80");
 
         when(assignmentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.submitMarks(1L, 9L, 1L, BigDecimal.ONE))
+        assertThatThrownBy(() -> service.submitMarks(1L, 3L, 9L, 1L, BigDecimal.ONE))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void createRequiresAllocatedTeacher() {
+        when(teacherService.requireByUser(3L)).thenReturn(Fixtures.teacher());
+        when(classService.require(1L, 1L)).thenReturn(Fixtures.schoolClass());
+        org.mockito.Mockito.doThrow(new tz.co.chambaka.school.management.exception.BusinessException(
+                        "Only the allocated teacher of this subject for this class can create assignments."))
+                .when(allocationService)
+                .requireTeachesForUser(1L, 3L, 1L, 1L, 1L, 1L, "create assignments");
+        assertThatThrownBy(() -> service.create(1L, 3L, new AssignmentRequest(
+                1L, 1L, 1L, "Algebra", "Questions 1-5", LocalDate.of(2026, 9, 20))))
+                .isInstanceOf(tz.co.chambaka.school.management.exception.BusinessException.class)
+                .hasMessageContaining("allocated teacher");
     }
 
     private Assignment assignment(Long id, tz.co.chambaka.school.management.model.SchoolClass schoolClass) {

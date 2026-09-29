@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub Grades menu — Headmaster guide</title>
+  <style>
+    @page { size: A4; margin: 12mm 12mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10pt;
+      line-height: 1.4;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 20px 22px 18px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    header.cover h1 {
+      margin: 0 0 6px;
+      font-size: 20pt;
+      letter-spacing: 0.02em;
+    }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 3px; color: #c9d4e3; font-size: 10.5pt; }
+    header.cover .tagline {
+      margin-top: 10px;
+      color: #F5C451;
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    h2 {
+      margin: 16px 0 8px;
+      font-size: 13pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 {
+      margin: 10px 0 4px;
+      font-size: 11pt;
+      color: #06101F;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 8px; }
+    ol, ul { margin: 0 0 10px; padding-left: 18px; }
+    li { margin: 2px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 10px; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 5px 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 8.5pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      font-size: 9.5pt;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+    .step {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 8px 10px;
+      page-break-inside: avoid;
+    }
+    .step .n {
+      display: inline-block;
+      width: 20px; height: 20px; line-height: 20px;
+      text-align: center;
+      background: #06101F;
+      color: #F5C451;
+      border-radius: 50%;
+      font-size: 9pt;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    .step strong { color: #06101F; }
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .card {
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      padding: 9px 11px;
+      page-break-inside: avoid;
+    }
+    .card h3 { margin: 0 0 4px; }
+    .chip {
+      display: inline-block;
+      background: #06101F;
+      color: #F5C451;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 99px;
+      margin-right: 4px;
+    }
+    .muted { color: #3d4d5e; font-size: 9.5pt; }
+    footer {
+      margin-top: 12px;
+      font-size: 8.5pt;
+      color: #5b6b7c;
+    }
+    .page-break { page-break-before: always; }
+    .toc li { margin: 3px 0; }
+    .flow {
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: #06101F;
+    }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">Grades menu</span></h1>
+    <p>Headmaster guide · How to enter exam marks, freeze them, and read term results</p>
+    <p>Sign in as Headmaster → left menu → <strong>Grades</strong></p>
+    <p class="tagline">Exam grid · Save · Excel import · Freeze at Verify · Term results</p>
+  </header>
+
+  <h2>Who this is for</h2>
+  <p>Headmaster, Academic master, and Teacher can open Grades and enter marks while the exam is unlocked. School admin, students, and parents do not see this menu. Students and parents see published results on report cards and their home, not this grid.</p>
+  <div class="note">
+    Grades is the mark book. Exams is where you create the sitting, send marks for checking, verify, reject, approve, and publish. You cannot create an exam here. You cannot verify an exam here.
+  </div>
+
+  <h2>Contents</h2>
+  <ol class="toc">
+    <li>How this page fits with Exams</li>
+    <li>Open the page and pick a paper</li>
+    <li>The marks grid</li>
+    <li>Save, delete, and search</li>
+    <li>Excel template and import</li>
+    <li>When marks freeze</li>
+    <li>Term results</li>
+    <li>Letters and pass marks</li>
+    <li>Typical jobs</li>
+    <li>If something fails</li>
+  </ol>
+
+  <h2>How this page fits with Exams</h2>
+  <p class="flow">Academics (year, class, subject, grading bands) → Exams (exam + papers) → Grades (marks) → Exams (check / verify / approve / publish) → Report card</p>
+  <table>
+    <thead>
+      <tr><th>You want to…</th><th>Menu</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Create the exam, add papers, schedule seats</td><td>Exams</td></tr>
+      <tr><td>Type or import marks for one paper</td><td>Grades</td></tr>
+      <tr><td>Send for checking, Verify, Reject, Approve, Publish</td><td>Exams</td></tr>
+      <tr><td>See a combined midterm / semi / terminal score</td><td>Grades → Term Results</td></tr>
+      <tr><td>Change A–F bands or result weights</td><td>Academics → Grading / Results</td></tr>
+    </tbody>
+  </table>
+  <p>Each exam paper (subject) has its own grid. Form 1 Midterm Maths is not the same grid as Form 1 Midterm English.</p>
+
+  <h2>Open the page and pick a paper</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Sign in. Open the correct school if you can switch schools.</div>
+    <div class="step"><span class="n">2</span> Click <strong>Grades</strong>. The heading is Grades. The subtitle is “Exam marks”.</div>
+    <div class="step"><span class="n">3</span> Choose an <strong>Exam</strong>. The list shows name, class, and status (DRAFT, ENTERED, VERIFIED…).</div>
+    <div class="step"><span class="n">4</span> Choose a <strong>Subject</strong>. The subject must be a paper on that exam. If you pick a subject that is not on the exam, the grid fails.</div>
+  </div>
+  <p>Until both boxes are set, the card says “Pick an exam and subject.” The grid lists active students in that exam’s class, not one section.</p>
+
+  <h2>The marks grid</h2>
+  <p>Above the table: subject average, max marks, and pass marks from the paper. Search filters the rows by student name, admission number, or letter.</p>
+  <table>
+    <thead>
+      <tr><th>Column</th><th>What you see</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Adm</td><td>Admission number.</td></tr>
+      <tr><td>Student</td><td>Name.</td></tr>
+      <tr><td>Marks</td><td>While unlocked: a number box. While frozen: a bold label (or — if empty). No box to click.</td></tr>
+      <tr><td>Grade</td><td>Letter from this school’s grading bands, from the percentage of max marks.</td></tr>
+      <tr><td>Pos</td><td>Class position among students who have a mark. Empty rows have no position.</td></tr>
+      <tr><td>Trash</td><td>Shown only when that student has a saved mark and the exam is not frozen. Confirms before delete.</td></tr>
+    </tbody>
+  </table>
+  <p>Typing in a box does not save yet. Position and average update after <strong>Save grid</strong> or a successful import.</p>
+
+  <h2>Save, delete, and search</h2>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Type marks. A mark must be from 0 up to that paper’s max (usually 100).</div>
+    <div class="step"><span class="n">2</span> Click <strong>Save grid</strong> and confirm. Only rows with a number are sent. Empty boxes stay empty.</div>
+    <div class="step"><span class="n">3</span> To remove one student’s marks, use trash on that row. Confirm “Delete marks for …?”.</div>
+  </div>
+  <p>Save needs at least one number. The success line is “Marks saved. Positions and averages updated.”</p>
+  <div class="note">Leave a cell blank if that student has not sat yet. Do not type 0 unless they scored zero.</div>
+
+  <h2 class="page-break">Excel template and import</h2>
+  <p>Use this when you already have marks in a spreadsheet. Download the template from this same exam and subject so admission numbers match the class.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Pick exam and subject.</div>
+    <div class="step"><span class="n">2</span> Click <strong>Download Excel template</strong>. Columns are Admission number, Student name, Marks.</div>
+    <div class="step"><span class="n">3</span> Fill the Marks column. Keep admission numbers as they are.</div>
+    <div class="step"><span class="n">4</span> Click <strong>Import Excel</strong>, choose the .xlsx file, and confirm. Marks in the file replace saved marks for those students. Blank mark cells are left unchanged.</div>
+  </div>
+  <p>Import is refused while frozen, if the file is not Excel, if the sheet is empty, or if the header is not Admission number and Marks. A row whose admission number is not in this class is reported as a problem.</p>
+
+  <h2>When marks freeze</h2>
+  <p>Marks freeze the moment Headmaster or Academic master clicks <strong>Verify</strong> on Exams. They stay frozen through Approve and Publish. They do not freeze at Send for checking.</p>
+  <table>
+    <thead>
+      <tr><th>Exam status</th><th>On this page</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>DRAFT</td><td>Number boxes. Save, import, and trash work.</td></tr>
+      <tr><td>ENTERED</td><td>Still boxes. You can still correct marks before Verify.</td></tr>
+      <tr><td>VERIFIED, APPROVED, PUBLISHED</td><td>Gold note: “Marks are frozen after verification.” Each mark is a label, not a box. Trash is hidden. Import and Save grid are grey. The server also refuses those actions.</td></tr>
+      <tr><td>REJECTED</td><td>Boxes come back. Fix marks, save, then Send for checking again on Exams.</td></tr>
+    </tbody>
+  </table>
+  <p>To unlock: Exams → <strong>Reject</strong> (Headmaster or Academic master). Then reload Grades. Unpublish hides results from families but does <strong>not</strong> unlock the grid.</p>
+  <p>Download Excel template still works while frozen, so you can keep a copy. Import does not.</p>
+
+  <h2>Term results</h2>
+  <p>The gold <strong>Term Results</strong> button (top right) is not the exam grid. It opens a form, then a second table of combined scores for a class and subject.</p>
+  <div class="steps">
+    <div class="step"><span class="n">1</span> Click <strong>Term Results</strong>.</div>
+    <div class="step"><span class="n">2</span> Year defaults to the current year. Term can stay <strong>Whole year</strong>, or pick one term.</div>
+    <div class="step"><span class="n">3</span> Pick class and subject. Click Term Results in the form.</div>
+  </div>
+  <p>Default math (change weights on Academics → Results):</p>
+  <ul>
+    <li>Semi-terminal result = midterm × 10% + semi exam × 90%.</li>
+    <li>Term result = that semi-terminal result × 50% + terminal exam × 50%.</li>
+  </ul>
+  <p>An exam not yet taken is left out of that student’s mix. The table columns are Midterm, Semi exam, Semi result, Terminal exam, Term result, Grade. Search works on this table too. This view is read-only. You do not type marks here.</p>
+  <p class="muted">Assignments are not in this math. Official term results come from exam components only.</p>
+
+  <h2>Letters and pass marks</h2>
+  <p>The letter on the grid is this school’s grading bands (Academics → Grading), from the student’s mark as a percentage of the paper max. Pass / fail on the paper uses the paper’s pass mark (set when you added the paper on Exams). Those two ideas can differ: a school can give a D that still “passes” the paper, or the other way around, depending on bands and pass mark.</p>
+
+  <h2 class="page-break">Typical jobs</h2>
+  <table>
+    <thead>
+      <tr><th>Job</th><th>Clicks</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Enter one paper by hand</td><td>Grades → exam → subject → type marks → Save grid</td></tr>
+      <tr><td>Enter a class from Excel</td><td>Download Excel template → fill Marks → Import Excel</td></tr>
+      <tr><td>Correct one student before checking</td><td>Change the box → Save grid</td></tr>
+      <tr><td>Remove one student’s marks</td><td>Trash on the row → confirm</td></tr>
+      <tr><td>Send the paper for checking</td><td>Exams → Send for checking (needs at least one saved mark)</td></tr>
+      <tr><td>Lock the mark book</td><td>Exams → Verify. Reload Grades. Boxes become labels.</td></tr>
+      <tr><td>Unlock after a mistake</td><td>Exams → Reject → Grades → edit → Save → Exams → Send for checking → Verify</td></tr>
+      <tr><td>See combined term scores</td><td>Term Results → year, class, subject</td></tr>
+    </tbody>
+  </table>
+
+  <h2>If something fails</h2>
+  <table>
+    <thead>
+      <tr><th>What you see</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Pick an exam and subject</td><td>Choose both dropdowns. The grid will not load on exam alone.</td></tr>
+      <tr><td>Subject is not part of this exam</td><td>Add that subject as a paper on Exams, or pick a subject that is already a paper.</td></tr>
+      <tr><td>Enter at least one mark</td><td>Save grid ignores empty boxes. Type a number first.</td></tr>
+      <tr><td>Marks must be between 0 and …</td><td>Do not exceed the paper max. Check the Max line above the table.</td></tr>
+      <tr><td>Marks are frozen after verification</td><td>Expected after Verify. Reject the exam on Exams to unlock.</td></tr>
+      <tr><td>Save / Import grey, marks are labels</td><td>The exam is Verified, Approved, or Published. That is the freeze.</td></tr>
+      <tr><td>No students match that search</td><td>Clear the search box.</td></tr>
+      <tr><td>The spreadsheet needs columns Admission number and Marks</td><td>Use the downloaded template. Do not rename those headers.</td></tr>
+      <tr><td>Admission number … is not in this class</td><td>That row is not an active student on this exam’s class. Fix the number or skip the row.</td></tr>
+      <tr><td>Choose an Excel file / spreadsheet is empty</td><td>Use a .xlsx file with at least a header and one data row.</td></tr>
+      <tr><td>Term Results asks for year, class, and subject</td><td>Those three are required. Term can stay Whole year.</td></tr>
+      <tr><td>Grades menu is missing</td><td>Only Headmaster, Academic master, and Teacher see it.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Icons and confirms</h2>
+  <ul>
+    <li>Trash = delete one student’s marks (unlocked exams only).</li>
+    <li>Save grid, Import Excel, and delete ask you to confirm.</li>
+    <li>Frozen marks are labels, not disabled boxes. That is deliberate so the page does not look editable.</li>
+  </ul>
+
+  <footer>
+    ShuleHub · Headmaster · Grades menu · Enter marks here · Freeze happens on Exams → Verify · Unlock with Reject · Term results are combined exam scores, not assignments
+  </footer>
+</body>
+</html>

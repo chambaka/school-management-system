@@ -150,6 +150,8 @@
   <h2>Contents</h2>
   <ol class="toc">
     <li>How the pieces fit together</li>
+    <li>Period versus slot (the two words people mix up)</li>
+    <li>What this menu is not</li>
     <li>Open the page and read the screen</li>
     <li>Who can do what</li>
     <li>What must exist first</li>
@@ -187,6 +189,46 @@
     </tbody>
   </table>
   <div class="note">The week is Monday to Friday only. There is no Saturday or Sunday column.</div>
+
+  <h2>Period versus slot (the two words people mix up)</h2>
+  <table>
+    <thead>
+      <tr><th>Word</th><th>What it means here</th><th>Example</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Period (bell)</td>
+        <td>A named slice of the school day, set once for the whole school on Bell times. A lesson period becomes a row on every class week. A break is rest and is not a row.</td>
+        <td>P1 · 07:30–08:10 · Lesson</td>
+      </tr>
+      <tr>
+        <td>Slot (lesson)</td>
+        <td>One filled cell: this subject, this teacher, this section, this day, this start and end, optional room. That is the lesson you add, edit, generate, or delete.</td>
+        <td>Mathematics · Asha · Form 1 A · Mon · 07:30–08:10 · Lab 1</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>How many teaching rows you see is how many <strong>lesson</strong> bells the school has saved (or the default P1–P8 until someone saves). Breaks do not add rows. How many lessons sit in those rows is a separate count — the lesson chip in the toolbar.</p>
+
+  <h2>What this menu is not</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>Not the exam timetable</h3>
+      <p>Exam dates and papers live on the Exams menu. This page is the repeating Monday–Friday class week only.</p>
+    </div>
+    <div class="card">
+      <h3>Not Academics → Teachers</h3>
+      <p>Who teaches which subject to which class is an allocation. Generate reads those links. You create them on Academics, not here.</p>
+    </div>
+    <div class="card">
+      <h3>Not the Teachers directory</h3>
+      <p>People (name, employee ID, qualification) are on the Teachers menu. This page only places those people on the week.</p>
+    </div>
+    <div class="card">
+      <h3>Not a dated calendar</h3>
+      <p>Teacher hours are weekday windows (every Monday 08:00–16:00), not “Monday 12 October”. There is no date picker on this page.</p>
+    </div>
+  </div>
 
   <h2>Open the page and read the screen</h2>
   <div class="steps">
@@ -298,7 +340,7 @@
     Confirming deletes every lesson already on this section, then writes a new week. If some lessons cannot be placed, they are simply missing. Unlock is not enough to get the old week back. Copy anything you must keep, or add it again by hand after generate.
   </div>
   <p>Generate looks at allocations for this year and this class. An allocation for the whole class is included. An allocation for this section is included. An allocation for a different section of the same class is skipped.</p>
-  <p>For each allocation it tries to place five lessons across Monday–Friday, using lesson bell periods only (not breaks). It walks days and periods in order and skips a candidate when:</p>
+  <p>For each allocation it tries to place that allocation’s weekly lesson count. If the allocation does not set a count, ShuleHub uses <strong>5</strong> (one lesson on each weekday when the week allows it). The Academics allocation form does not always show this number — treat five as the default. It uses lesson bell periods only (not breaks). It walks days and periods in order and skips a candidate when:</p>
   <ul>
     <li>The teacher has teacher hours, and this period is not fully inside a window on that day. A teacher with no hours is treated as free all day.</li>
     <li>The same subject would sit in the period immediately before or after on that same day. Back-to-back doubles are avoided. A gap is allowed.</li>

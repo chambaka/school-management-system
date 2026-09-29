@@ -91,6 +91,6 @@ class GradeImportServiceTest {
                 BigDecimal.ZERO, List.of(
                 new GradeGridResponse.Row(11L, "Amina", "ADM-001", new BigDecimal("78"), "B", true, 1),
                 new GradeGridResponse.Row(12L, "Baraka", "ADM-002", null, "", false, null)
-        ));
+        ), true);
     }
 }

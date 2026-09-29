@@ -92,6 +92,38 @@ class AllocationServiceTest {
         assertThatThrownBy(() -> service.delete(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
     }
 
+    @Test
+    void listMineAndRequireTeachesForUser() {
+        when(teacherService.requireByUserSafe(3L)).thenReturn(Fixtures.teacher());
+        when(teacherSubjectRepository.findBySchoolIdAndTeacherId(1L, 1L)).thenReturn(List.of(allocation(false)));
+        assertThat(service.listMine(1L, 3L)).hasSize(1);
+        service.requireTeachesForUser(1L, 3L, 1L, 1L, 1L, null, "submit marks");
+
+        when(teacherService.requireByUserSafe(9L)).thenReturn(null);
+        assertThat(service.listMine(1L, 9L)).isEmpty();
+        assertThatThrownBy(() -> service.requireTeachesForUser(1L, 9L, 1L, 1L, 1L, null, "submit marks"))
+                .isInstanceOf(tz.co.chambaka.school.management.exception.BusinessException.class)
+                .hasMessageContaining("allocated teacher");
+
+        when(teacherService.requireByUserSafe(3L)).thenReturn(Fixtures.teacher());
+        when(teacherSubjectRepository.findBySchoolIdAndTeacherId(1L, 1L)).thenReturn(List.of(allocation(true)));
+        service.requireTeachesForUser(1L, 3L, 1L, 1L, 1L, 1L, "create assignments");
+        service.requireTeachesForUser(1L, 3L, 1L, 1L, 1L, null, "create or change exam papers");
+        assertThatThrownBy(() -> service.requireTeachesForUser(1L, 3L, 1L, 1L, 2L, null, "submit marks"))
+                .isInstanceOf(tz.co.chambaka.school.management.exception.BusinessException.class);
+        assertThatThrownBy(() -> service.requireTeachesForUser(1L, 3L, 2L, 1L, 1L, null, "submit marks"))
+                .isInstanceOf(tz.co.chambaka.school.management.exception.BusinessException.class);
+
+        TeacherSubject otherSection = allocation(true);
+        otherSection.getSection().setId(9L);
+        when(teacherSubjectRepository.findBySchoolIdAndTeacherId(1L, 1L)).thenReturn(List.of(otherSection));
+        assertThatThrownBy(() -> service.requireTeachesForUser(1L, 3L, 1L, 1L, 1L, 1L, "create assignments"))
+                .isInstanceOf(tz.co.chambaka.school.management.exception.BusinessException.class);
+        TeacherSubject wholeClass = allocation(false);
+        when(teacherSubjectRepository.findBySchoolIdAndTeacherId(1L, 1L)).thenReturn(List.of(wholeClass));
+        service.requireTeachesForUser(1L, 3L, 1L, 1L, 1L, 1L, "create assignments");
+    }
+
     private TeacherSubject allocation(boolean withSection) {
         TeacherSubject allocation = new TeacherSubject();
         allocation.setId(1L);

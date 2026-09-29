@@ -443,6 +443,7 @@ class ControllersTest {
     void examsAttendanceFinanceNotices() {
         AllocationController allocations = new AllocationController(allocationService, tenantResolver);
         allocations.list(1L, null);
+        allocations.mine(Fixtures.principal(Role.TEACHER));
         allocations.create(new AllocationRequest(1L, 1L, 1L, 1L, 1L));
         allocations.update(1L, new AllocationRequest(1L, 1L, 1L, 1L, 1L));
         allocations.delete(1L);
@@ -462,15 +463,15 @@ class ControllersTest {
         exams.update(1L, new ExamRequest(1L, 1L, "Mid", ExamType.MIDTERM, LocalDate.now(), LocalDate.now().plusDays(1)));
         exams.publish(1L, true);
         exams.subjects(1L);
-        exams.addSubject(1L, new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null));
-        exams.updateSubject(1L, 1L, new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null));
-        exams.deleteSubject(1L, 1L);
+        exams.addSubject(Fixtures.principal(Role.TEACHER), 1L, new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null));
+        exams.updateSubject(Fixtures.principal(Role.TEACHER), 1L, 1L, new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null));
+        exams.deleteSubject(Fixtures.principal(Role.TEACHER), 1L, 1L);
         exams.delete(1L);
 
         GradeController grades = new GradeController(gradeService, gradeImportService, tenantResolver);
         grades.byExam(1L);
         grades.record(Fixtures.principal(Role.TEACHER), new GradeRequest(1L, 1L, 1L, BigDecimal.TEN, null));
-        grades.delete(1L, 1L, 1L);
+        grades.delete(Fixtures.principal(Role.TEACHER), 1L, 1L, 1L);
 
         AttendanceController attendance = new AttendanceController(attendanceService, studentService, tenantResolver);
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
@@ -575,8 +576,8 @@ class ControllersTest {
         var file = new MockMultipartFile("file", "work.pdf", "application/pdf", new byte[]{1});
         assignments.list(teacher);
         assignments.create(teacher, assignment);
-        assignments.attach(1L, file);
-        assignments.marks(1L, 1L, BigDecimal.TEN);
+        assignments.attach(teacher, 1L, file);
+        assignments.marks(teacher, 1L, 1L, BigDecimal.TEN);
         assignments.submit(teacher, 1L, "done", file);
         assignments.submissions(1L);
 

@@ -15,7 +15,7 @@ public final class Access {
     public static final String ATTENDANCE_MANAGE = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER')";
     public static final String ATTENDANCE_VIEW = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER','TEACHER','STAFF','PARENT','STUDENT')";
     public static final String EXAM_MANAGE = "hasAnyRole('HEADMASTER','ACADEMIC_MASTER')";
-    public static final String EXAM_VERIFY = "hasRole('ACADEMIC_MASTER')";
+    public static final String EXAM_VERIFY = "hasAnyRole('HEADMASTER','ACADEMIC_MASTER')";
     public static final String EXAM_APPROVE = "hasAnyRole('HEADMASTER','ACADEMIC_MASTER')";
     public static final String EXAM_REJECT = "hasAnyRole('HEADMASTER','ACADEMIC_MASTER')";
     public static final String EXAM_INVIGILATE = "hasAnyRole('HEADMASTER','SCHOOL_ADMIN','ACADEMIC_MASTER','TEACHER','INVIGILATOR')";

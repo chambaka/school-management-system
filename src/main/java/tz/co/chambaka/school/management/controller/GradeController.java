@@ -134,10 +134,11 @@ public class GradeController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize(Access.GRADE_ENTER)
     public void delete(
+            @CurrentUser UserPrincipal principal,
             @RequestParam Long examId,
             @RequestParam Long studentId,
             @RequestParam Long subjectId
     ) {
-        gradeService.delete(tenantResolver.requireSchoolId(), examId, studentId, subjectId);
+        gradeService.delete(tenantResolver.requireSchoolId(), examId, studentId, subjectId, principal.getId());
     }
 }

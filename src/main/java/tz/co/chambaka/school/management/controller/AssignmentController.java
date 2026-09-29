@@ -53,14 +53,23 @@ public class AssignmentController {
 
     @PostMapping(value = "/{id}/file", consumes = "multipart/form-data")
     @PreAuthorize(Access.ASSIGNMENT_WRITE)
-    public AssignmentResponse attach(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
-        return assignmentService.attach(tenantResolver.requireSchoolId(), id, file);
+    public AssignmentResponse attach(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return assignmentService.attach(tenantResolver.requireSchoolId(), principal.getId(), id, file);
     }
 
     @PostMapping("/{id}/marks")
     @PreAuthorize(Access.ASSIGNMENT_WRITE)
-    public void marks(@PathVariable Long id, @RequestParam Long studentId, @RequestParam BigDecimal marks) {
-        assignmentService.submitMarks(tenantResolver.requireSchoolId(), id, studentId, marks);
+    public void marks(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam Long studentId,
+            @RequestParam BigDecimal marks
+    ) {
+        assignmentService.submitMarks(tenantResolver.requireSchoolId(), principal.getId(), id, studentId, marks);
     }
 
     @PostMapping(value = "/{id}/submit", consumes = "multipart/form-data")

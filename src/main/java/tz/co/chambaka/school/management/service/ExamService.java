@@ -63,6 +63,7 @@ public class ExamService {
     private final AlertService alertService;
     private final GradeRepository gradeRepository;
     private final TeacherSubjectRepository teacherSubjectRepository;
+    private final AllocationService allocationService;
 
     public ExamService(
             ExamRepository examRepository,
@@ -78,7 +79,8 @@ public class ExamService {
             StudentRepository studentRepository,
             AlertService alertService,
             GradeRepository gradeRepository,
-            TeacherSubjectRepository teacherSubjectRepository
+            TeacherSubjectRepository teacherSubjectRepository,
+            AllocationService allocationService
     ) {
         this.examRepository = examRepository;
         this.examSubjectRepository = examSubjectRepository;
@@ -94,6 +96,7 @@ public class ExamService {
         this.alertService = alertService;
         this.gradeRepository = gradeRepository;
         this.teacherSubjectRepository = teacherSubjectRepository;
+        this.allocationService = allocationService;
     }
 
     @Transactional(readOnly = true)
@@ -191,7 +194,7 @@ public class ExamService {
     public ExamResponse verify(Long schoolId, Long id) {
         Exam exam = require(schoolId, id);
         if (exam.getApprovalStatus() != ExamApprovalStatus.ENTERED) {
-            throw new BusinessException("Academic Master can only verify entered marks");
+            throw new BusinessException("Only entered marks can be verified");
         }
         exam.setApprovalStatus(ExamApprovalStatus.VERIFIED);
         exam.setVerifiedAt(Instant.now());
@@ -234,12 +237,16 @@ public class ExamService {
         return toExam(exam);
     }
 
-    public void assertMarksEditable(Exam exam) {
+    public boolean marksEditable(Exam exam) {
         ExamApprovalStatus status = exam.getApprovalStatus() == null ? ExamApprovalStatus.DRAFT : exam.getApprovalStatus();
-        if (status != ExamApprovalStatus.DRAFT
-                && status != ExamApprovalStatus.ENTERED
-                && status != ExamApprovalStatus.REJECTED) {
-            throw new BusinessException("Marks are frozen after Academic Master verification");
+        return status == ExamApprovalStatus.DRAFT
+                || status == ExamApprovalStatus.ENTERED
+                || status == ExamApprovalStatus.REJECTED;
+    }
+
+    public void assertMarksEditable(Exam exam) {
+        if (!marksEditable(exam)) {
+            throw new BusinessException("Marks are frozen after verification. Reject the exam to unlock them.");
         }
     }
 
@@ -250,11 +257,12 @@ public class ExamService {
     }
 
     @Transactional
-    public ExamSubjectResponse addSubject(Long schoolId, Long examId, ExamSubjectRequest request) {
+    public ExamSubjectResponse addSubject(Long schoolId, Long examId, ExamSubjectRequest request, Long userId) {
         Exam exam = require(schoolId, examId);
         if (exam.isScheduleLocked()) {
             throw new BusinessException("This exam timetable is locked");
         }
+        assertTeachesPaper(schoolId, userId, exam, request.subjectId());
         if (examSubjectRepository.existsByExamIdAndSubjectId(examId, request.subjectId())) {
             throw new DuplicateResourceException("Subject is already added to this exam");
         }
@@ -277,10 +285,16 @@ public class ExamService {
     }
 
     @Transactional
-    public ExamSubjectResponse updateSubject(Long schoolId, Long examId, Long paperId, ExamSubjectRequest request) {
+    public ExamSubjectResponse updateSubject(
+            Long schoolId, Long examId, Long paperId, ExamSubjectRequest request, Long userId
+    ) {
         Exam exam = require(schoolId, examId);
         ExamSubject paper = requirePaper(schoolId, examId, paperId);
         assertPaperWritable(exam);
+        assertTeachesPaper(schoolId, userId, exam, paper.getSubject().getId());
+        if (!paper.getSubject().getId().equals(request.subjectId())) {
+            assertTeachesPaper(schoolId, userId, exam, request.subjectId());
+        }
         if (request.passMarks().compareTo(request.maxMarks()) > 0) {
             throw new BusinessException("Pass marks cannot exceed max marks");
         }
@@ -299,9 +313,10 @@ public class ExamService {
     }
 
     @Transactional
-    public void deleteSubject(Long schoolId, Long examId, Long paperId) {
+    public void deleteSubject(Long schoolId, Long examId, Long paperId, Long userId) {
         Exam exam = require(schoolId, examId);
         ExamSubject paper = requirePaper(schoolId, examId, paperId);
+        assertTeachesPaper(schoolId, userId, exam, paper.getSubject().getId());
         if (exam.isPublished()) {
             throw new BusinessException("Unpublish this exam first");
         }
@@ -435,6 +450,13 @@ public class ExamService {
         if (exam.isScheduleLocked()) {
             throw new BusinessException("This exam timetable is locked");
         }
+    }
+
+    private void assertTeachesPaper(Long schoolId, Long userId, Exam exam, Long subjectId) {
+        Long yearId = exam.getAcademicYear() == null ? null : exam.getAcademicYear().getId();
+        Long classId = exam.getSchoolClass() == null ? null : exam.getSchoolClass().getId();
+        allocationService.requireTeachesForUser(
+                schoolId, userId, yearId, classId, subjectId, null, "create or change exam papers");
     }
 
     private void applyPaper(Long schoolId, ExamSubject paper, ExamSubjectRequest request) {

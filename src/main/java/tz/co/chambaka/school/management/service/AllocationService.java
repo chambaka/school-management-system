@@ -2,9 +2,11 @@ package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.academic.AllocationRequest;
 import tz.co.chambaka.school.management.dto.academic.AllocationResponse;
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.DuplicateResourceException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Section;
+import tz.co.chambaka.school.management.model.Teacher;
 import tz.co.chambaka.school.management.model.TeacherSubject;
 import tz.co.chambaka.school.management.repository.TeacherSubjectRepository;
 import org.springframework.stereotype.Service;
@@ -50,6 +52,51 @@ public class AllocationService {
             allocations = teacherSubjectRepository.findBySchoolId(schoolId);
         }
         return allocations.stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AllocationResponse> listMine(Long schoolId, Long userId) {
+        Teacher teacher = teacherService.requireByUserSafe(userId);
+        if (teacher == null) {
+            return List.of();
+        }
+        return teacherSubjectRepository.findBySchoolIdAndTeacherId(schoolId, teacher.getId())
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public void requireTeachesForUser(
+            Long schoolId,
+            Long userId,
+            Long academicYearId,
+            Long classId,
+            Long subjectId,
+            Long sectionId,
+            String action
+    ) {
+        if (!teachesForUser(schoolId, userId, academicYearId, classId, subjectId, sectionId)) {
+            throw new BusinessException(
+                    "Only the allocated teacher of this subject for this class can " + action + ".");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public boolean teachesForUser(
+            Long schoolId,
+            Long userId,
+            Long academicYearId,
+            Long classId,
+            Long subjectId,
+            Long sectionId
+    ) {
+        Teacher teacher = teacherService.requireByUserSafe(userId);
+        if (teacher == null || classId == null || subjectId == null) {
+            return false;
+        }
+        return teacherSubjectRepository.findBySchoolIdAndTeacherId(schoolId, teacher.getId()).stream()
+                .anyMatch(allocation -> matches(allocation, academicYearId, classId, subjectId, sectionId));
     }
 
     @Transactional
@@ -110,6 +157,30 @@ public class AllocationService {
         allocation.setSection(request.sectionId() == null ? null : sectionService.require(schoolId, request.sectionId()));
         allocation.setAcademicYear(academicYearService.require(schoolId, request.academicYearId()));
         allocation.setWeeklyLessons(request.weeklyLessons() == null || request.weeklyLessons() < 1 ? 5 : request.weeklyLessons());
+    }
+
+    static boolean matches(
+            TeacherSubject allocation,
+            Long academicYearId,
+            Long classId,
+            Long subjectId,
+            Long sectionId
+    ) {
+        if (allocation.getSubject() == null || !subjectId.equals(allocation.getSubject().getId())) {
+            return false;
+        }
+        if (allocation.getSchoolClass() == null || !classId.equals(allocation.getSchoolClass().getId())) {
+            return false;
+        }
+        if (academicYearId != null
+                && allocation.getAcademicYear() != null
+                && !academicYearId.equals(allocation.getAcademicYear().getId())) {
+            return false;
+        }
+        if (sectionId == null) {
+            return true;
+        }
+        return allocation.getSection() == null || sectionId.equals(allocation.getSection().getId());
     }
 
     private static boolean changed(TeacherSubject allocation, AllocationRequest request) {

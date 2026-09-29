@@ -1,6 +1,8 @@
 package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.security.Access;
+import tz.co.chambaka.school.management.security.CurrentUser;
+import tz.co.chambaka.school.management.security.UserPrincipal;
 import tz.co.chambaka.school.management.dto.academic.AllocationRequest;
 import tz.co.chambaka.school.management.dto.academic.AllocationResponse;
 import tz.co.chambaka.school.management.service.AllocationService;
@@ -42,6 +44,12 @@ public class AllocationController {
             @RequestParam(required = false) Long teacherId
     ) {
         return allocationService.list(tenantResolver.requireSchoolId(), academicYearId, teacherId);
+    }
+
+    @GetMapping("/mine")
+    @PreAuthorize(Access.ACADEMIC_STAFF)
+    public List<AllocationResponse> mine(@CurrentUser UserPrincipal principal) {
+        return allocationService.listMine(tenantResolver.requireSchoolId(), principal.getId());
     }
 
     @PostMapping

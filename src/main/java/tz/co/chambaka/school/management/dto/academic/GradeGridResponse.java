@@ -11,7 +11,8 @@ public record GradeGridResponse(
         BigDecimal maxMarks,
         BigDecimal passMarks,
         BigDecimal subjectAverage,
-        List<Row> rows
+        List<Row> rows,
+        boolean marksEditable
 ) {
     public record Row(
             Long studentId,

@@ -50,6 +50,8 @@ class GradeServiceTest {
     private ExamRepository examRepository;
     @Mock
     private StudentRepository studentRepository;
+    @Mock
+    private AllocationService allocationService;
     @InjectMocks
     private GradeService service;
 
@@ -129,16 +131,17 @@ class GradeServiceTest {
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
         Grade existing = grade(new BigDecimal("40"));
         when(gradeRepository.findByExamIdAndStudentIdAndSubjectId(1L, 1L, 1L)).thenReturn(Optional.of(existing));
-        service.delete(1L, 1L, 1L, 1L);
+        service.delete(1L, 1L, 1L, 1L, 3L);
         org.mockito.Mockito.verify(gradeRepository).delete(existing);
         when(gradeRepository.findByExamIdAndStudentIdAndSubjectId(1L, 1L, 1L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.delete(1L, 1L, 1L, 1L)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.delete(1L, 1L, 1L, 1L, 3L)).isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     void gridRanksActiveStudentsAndComputesAverage() {
         Exam exam = Fixtures.exam();
         when(examService.require(1L, 1L)).thenReturn(exam);
+        when(examService.marksEditable(exam)).thenReturn(true);
         when(examSubjectRepository.findByExamIdAndSubjectId(1L, 1L)).thenReturn(Optional.of(Fixtures.examSubject()));
         Student first = Fixtures.student();
         first.getUser().setName("Alice");
@@ -156,6 +159,7 @@ class GradeServiceTest {
 
         var grid = service.grid(1L, 1L, 1L);
 
+        assertThat(grid.marksEditable()).isTrue();
         assertThat(grid.subjectAverage()).isEqualByComparingTo("80");
         assertThat(grid.rows()).hasSize(2);
         assertThat(grid.rows().getFirst().classPosition()).isEqualTo(1);
@@ -246,6 +250,17 @@ class GradeServiceTest {
                 .isNull();
         assertThat(service.classTermResults(1L, 1L, null, 1L, 99L, tz.co.chambaka.school.management.model.enums.Role.TEACHER)
                 .getFirst().subjectName()).isEqualTo("Subject");
+    }
+
+    @Test
+    void recordRequiresAllocatedTeacher() {
+        when(examService.require(1L, 1L)).thenReturn(Fixtures.exam());
+        org.mockito.Mockito.doThrow(new BusinessException("Only the allocated teacher of this subject for this class can submit marks."))
+                .when(allocationService)
+                .requireTeachesForUser(1L, 3L, 1L, 1L, 1L, null, "submit marks");
+        assertThatThrownBy(() -> service.record(1L, new GradeRequest(1L, 1L, 1L, BigDecimal.TEN, null), 3L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("allocated teacher");
     }
 
     private tz.co.chambaka.school.management.dto.academic.ReportCardResponse card(BigDecimal marks) {

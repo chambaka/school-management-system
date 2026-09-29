@@ -71,6 +71,8 @@ class ExamServiceTest {
     private GradeRepository gradeRepository;
     @Mock
     private TeacherSubjectRepository teacherSubjectRepository;
+    @Mock
+    private AllocationService allocationService;
     @InjectMocks
     private ExamService service;
 
@@ -143,8 +145,8 @@ class ExamServiceTest {
         when(teacherService.require(1L, 1L)).thenReturn(Fixtures.teacher());
         ExamSubjectRequest paper = new ExamSubjectRequest(1L, new BigDecimal("100"), new BigDecimal("40"),
                 LocalDate.of(2026, 6, 2), null, null, null, 1L);
-        assertThat(service.addSubject(1L, 1L, paper).subjectName()).isEqualTo("Mathematics");
-        assertThat(service.addSubject(1L, 1L, paper).invigilatorName()).isEqualTo(Fixtures.teacher().getUser().getName());
+        assertThat(service.addSubject(1L, 1L, paper, 3L).subjectName()).isEqualTo("Mathematics");
+        assertThat(service.addSubject(1L, 1L, paper, 3L).invigilatorName()).isEqualTo(Fixtures.teacher().getUser().getName());
 
         when(examSubjectRepository.findByExamId(1L)).thenReturn(List.of(Fixtures.examSubject()));
         assertThat(service.listSubjects(1L, 1L)).hasSize(1);
@@ -158,15 +160,15 @@ class ExamServiceTest {
         when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(Fixtures.exam()));
         when(examSubjectRepository.existsByExamIdAndSubjectId(1L, 1L)).thenReturn(true);
         assertThatThrownBy(() -> service.addSubject(1L, 1L,
-                new ExamSubjectRequest(1L, new BigDecimal("100"), new BigDecimal("40"), null)))
+                new ExamSubjectRequest(1L, new BigDecimal("100"), new BigDecimal("40"), null), 3L))
                 .isInstanceOf(DuplicateResourceException.class);
         when(examSubjectRepository.existsByExamIdAndSubjectId(1L, 2L)).thenReturn(false);
         assertThatThrownBy(() -> service.addSubject(1L, 1L,
-                new ExamSubjectRequest(2L, new BigDecimal("40"), new BigDecimal("50"), null)))
+                new ExamSubjectRequest(2L, new BigDecimal("40"), new BigDecimal("50"), null), 3L))
                 .isInstanceOf(BusinessException.class);
         when(examSubjectRepository.existsByExamIdAndSubjectId(1L, 3L)).thenReturn(false);
         assertThatThrownBy(() -> service.addSubject(1L, 1L,
-                new ExamSubjectRequest(3L, new BigDecimal("100"), new BigDecimal("40"), null)))
+                new ExamSubjectRequest(3L, new BigDecimal("100"), new BigDecimal("40"), null), 3L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("invigilator");
         when(examRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
@@ -200,6 +202,7 @@ class ExamServiceTest {
         exam.setApprovalStatus(ExamApprovalStatus.DRAFT);
         assertThatThrownBy(() -> service.reject(1L, 1L, "no")).isInstanceOf(BusinessException.class);
         exam.setApprovalStatus(ExamApprovalStatus.VERIFIED);
+        assertThat(service.marksEditable(exam)).isFalse();
         assertThatThrownBy(() -> service.submit(1L, 1L)).isInstanceOf(BusinessException.class);
 
         assertThatThrownBy(() -> service.publish(1L, 1L, true)).isInstanceOf(BusinessException.class);
@@ -293,7 +296,7 @@ class ExamServiceTest {
 
         exam.setScheduleLocked(true);
         assertThatThrownBy(() -> service.addSubject(1L, 1L,
-                new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null)))
+                new ExamSubjectRequest(1L, BigDecimal.TEN, BigDecimal.ONE, null), 3L))
                 .isInstanceOf(BusinessException.class);
     }
 
@@ -338,10 +341,10 @@ class ExamServiceTest {
         ExamSubjectRequest update = new ExamSubjectRequest(
                 1L, new BigDecimal("80"), new BigDecimal("30"), LocalDate.of(2026, 3, 3),
                 java.time.LocalTime.of(8, 0), java.time.LocalTime.of(10, 0), "Hall A", 1L);
-        assertThat(service.updateSubject(1L, 1L, 1L, update).maxMarks()).isEqualByComparingTo("80");
-        assertThat(service.updateSubject(1L, 1L, 1L, update).invigilatorName()).isEqualTo(Fixtures.teacher().getUser().getName());
+        assertThat(service.updateSubject(1L, 1L, 1L, update, 3L).maxMarks()).isEqualByComparingTo("80");
+        assertThat(service.updateSubject(1L, 1L, 1L, update, 3L).invigilatorName()).isEqualTo(Fixtures.teacher().getUser().getName());
         assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, new ExamSubjectRequest(
-                1L, new BigDecimal("80"), new BigDecimal("30"), null)))
+                1L, new BigDecimal("80"), new BigDecimal("30"), null), 3L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("invigilator");
 
@@ -352,9 +355,9 @@ class ExamServiceTest {
         when(examSubjectRepository.existsByExamIdAndSubjectId(1L, 2L)).thenReturn(false);
         ExamSubjectRequest renamed = new ExamSubjectRequest(
                 2L, new BigDecimal("80"), new BigDecimal("30"), null, null, null, null, 1L);
-        assertThat(service.updateSubject(1L, 1L, 1L, renamed).subjectName()).isEqualTo("English");
+        assertThat(service.updateSubject(1L, 1L, 1L, renamed, 3L).subjectName()).isEqualTo("English");
 
-        service.deleteSubject(1L, 1L, 1L);
+        service.deleteSubject(1L, 1L, 1L, 3L);
         verify(examSeatRepository).deleteByExamSubjectId(1L);
         verify(examSubjectRepository).delete(paper);
     }
@@ -366,34 +369,47 @@ class ExamServiceTest {
         when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(exam));
         when(examSubjectRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(paper));
         ExamSubjectRequest req = new ExamSubjectRequest(1L, new BigDecimal("40"), new BigDecimal("50"), null);
-        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, req)).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, req, 3L)).isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Pass marks");
 
         ExamSubjectRequest ok = new ExamSubjectRequest(
                 2L, new BigDecimal("80"), new BigDecimal("30"), null, null, null, null, 1L);
         when(gradeRepository.existsByExamSubjectId(1L)).thenReturn(true);
-        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok)).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok, 3L)).isInstanceOf(BusinessException.class)
                 .hasMessageContaining("marks");
-        assertThatThrownBy(() -> service.deleteSubject(1L, 1L, 1L)).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> service.deleteSubject(1L, 1L, 1L, 3L)).isInstanceOf(BusinessException.class)
                 .hasMessageContaining("marks");
 
         when(gradeRepository.existsByExamSubjectId(1L)).thenReturn(false);
         when(examSubjectRepository.existsByExamIdAndSubjectId(1L, 2L)).thenReturn(true);
-        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok))
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok, 3L))
                 .isInstanceOf(DuplicateResourceException.class);
 
         exam.setScheduleLocked(true);
-        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok)).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok, 3L)).isInstanceOf(BusinessException.class)
                 .hasMessageContaining("locked");
 
         exam.setScheduleLocked(false);
         exam.setPublished(true);
-        assertThatThrownBy(() -> service.deleteSubject(1L, 1L, 1L)).isInstanceOf(BusinessException.class)
+        assertThatThrownBy(() -> service.deleteSubject(1L, 1L, 1L, 3L)).isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Unpublish");
 
         paper.getExam().setId(9L);
-        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.updateSubject(1L, 1L, 1L, ok, 3L)).isInstanceOf(ResourceNotFoundException.class);
         when(examSubjectRepository.findByIdAndSchoolId(8L, 1L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.deleteSubject(1L, 1L, 8L)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.deleteSubject(1L, 1L, 8L, 3L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void paperWritesRequireAllocatedTeacher() {
+        when(examRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(Fixtures.exam()));
+        org.mockito.Mockito.doThrow(new BusinessException("Only the allocated teacher of this subject for this class can create or change exam papers."))
+                .when(allocationService)
+                .requireTeachesForUser(1L, 3L, 1L, 1L, 1L, null, "create or change exam papers");
+        ExamSubjectRequest paper = new ExamSubjectRequest(1L, new BigDecimal("100"), new BigDecimal("40"),
+                LocalDate.of(2026, 6, 2), null, null, null, 1L);
+        assertThatThrownBy(() -> service.addSubject(1L, 1L, paper, 3L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("allocated teacher");
     }
 }

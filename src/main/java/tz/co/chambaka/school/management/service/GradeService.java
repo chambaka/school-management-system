@@ -52,6 +52,7 @@ public class GradeService {
     private final ResultConfigService resultConfigService;
     private final ExamRepository examRepository;
     private final StudentRepository studentRepository;
+    private final AllocationService allocationService;
 
     public GradeService(
             GradeRepository gradeRepository,
@@ -61,7 +62,8 @@ public class GradeService {
             TeacherService teacherService,
             ResultConfigService resultConfigService,
             ExamRepository examRepository,
-            StudentRepository studentRepository
+            StudentRepository studentRepository,
+            AllocationService allocationService
     ) {
         this.gradeRepository = gradeRepository;
         this.examSubjectRepository = examSubjectRepository;
@@ -71,12 +73,14 @@ public class GradeService {
         this.resultConfigService = resultConfigService;
         this.examRepository = examRepository;
         this.studentRepository = studentRepository;
+        this.allocationService = allocationService;
     }
 
     @Transactional
     public GradeResponse record(Long schoolId, GradeRequest request, Long currentUserId) {
         Exam exam = examService.require(schoolId, request.examId());
         examService.assertMarksEditable(exam);
+        assertTeachesExamSubject(schoolId, currentUserId, exam, request.subjectId());
         Student student = studentService.require(schoolId, request.studentId());
         ExamSubject examSubject = examSubjectRepository.findByExamIdAndSubjectId(request.examId(), request.subjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Subject is not part of this exam"));
@@ -114,9 +118,10 @@ public class GradeService {
     }
 
     @Transactional
-    public void delete(Long schoolId, Long examId, Long studentId, Long subjectId) {
+    public void delete(Long schoolId, Long examId, Long studentId, Long subjectId, Long userId) {
         Exam exam = examService.require(schoolId, examId);
         examService.assertMarksEditable(exam);
+        assertTeachesExamSubject(schoolId, userId, exam, subjectId);
         studentService.require(schoolId, studentId);
         Grade grade = gradeRepository
                 .findByExamIdAndStudentIdAndSubjectId(examId, studentId, subjectId)
@@ -170,7 +175,7 @@ public class GradeService {
         BigDecimal subjectAverage = counted == 0 ? BigDecimal.ZERO
                 : avg.divide(BigDecimal.valueOf(counted), 2, RoundingMode.HALF_UP);
         return new GradeGridResponse(exam.getId(), exam.getName(), paper.getSubject().getId(), paper.getSubject().getName(),
-                paper.getMaxMarks(), paper.getPassMarks(), subjectAverage, withPos);
+                paper.getMaxMarks(), paper.getPassMarks(), subjectAverage, withPos, examService.marksEditable(exam));
     }
 
     @Transactional(readOnly = true)
@@ -456,6 +461,13 @@ public class GradeService {
         config.setSemiResultWeight(ResultMath.DEFAULT_SEMI_RESULT_WEIGHT);
         config.setTerminalExamWeight(ResultMath.DEFAULT_TERMINAL_EXAM_WEIGHT);
         return config;
+    }
+
+    private void assertTeachesExamSubject(Long schoolId, Long userId, Exam exam, Long subjectId) {
+        Long yearId = exam.getAcademicYear() == null ? null : exam.getAcademicYear().getId();
+        Long classId = exam.getSchoolClass() == null ? null : exam.getSchoolClass().getId();
+        allocationService.requireTeachesForUser(
+                schoolId, userId, yearId, classId, subjectId, null, "submit marks");
     }
 
     private GradeResponse toResponse(Grade grade) {

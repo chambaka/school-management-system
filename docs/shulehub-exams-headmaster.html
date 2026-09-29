@@ -132,12 +132,12 @@
     <h1>ShuleHub <span class="gold">Exams menu</span></h1>
     <p>Headmaster guide · How to set papers, the sitting plan, and results</p>
     <p>Sign in as Headmaster → left menu → <strong>Exams</strong></p>
-    <p class="tagline">Create · Papers · Schedule · Lock · Check · Publish</p>
+    <p class="tagline">Create · Papers · Schedule · Lock · Verify · Approve · Publish</p>
   </header>
 
   <h2>Who this is for</h2>
-  <p>You and the Academic master create exams, schedule them, lock the plan, approve, and publish. Teachers can add papers and enter marks. The Academic master is the one who verifies marks. School admin and invigilators can open the list, papers, and seats. They do not create exams or publish results.</p>
-  <div class="note">Set up the academic year, classes, subjects, rooms, and teachers before exam week. Marks are entered on <strong>Grades</strong>, not on this page. This page builds the exam and releases the results.</div>
+  <p>You and the Academic master create exams, schedule them, lock the plan, <strong>verify</strong>, reject, approve, and publish. Teachers can add papers and enter marks. They cannot verify, reject, approve, or publish. School admin and invigilators can open the list, papers, and seats. They do not create exams or publish results.</p>
+  <div class="note">Set up the academic year, classes, subjects, rooms, and teachers before exam week. Marks are entered on <strong>Grades</strong>, not on this page. This page builds the exam and releases the results. After Verify, Grades locks the mark boxes. See the Grades menu guide for how to type, import, and unlock marks.</div>
 
   <h2>Open the page</h2>
   <div class="steps">
@@ -239,21 +239,39 @@
   </div>
   <p class="muted">You can lock a draft. Lock does not publish results. It only freezes the sitting plan.</p>
 
+  <h2>What Draft means</h2>
+  <p>A new exam starts as <strong>Draft</strong>. The sitting can still be set up, and marks can still be typed on Grades. Students and parents do not see results. Draft is the marks pipeline, not the sitting lock. You can lock the schedule while the exam is still Draft.</p>
+  <table>
+    <thead>
+      <tr><th>Status</th><th>What it means</th><th>Marks on Grades</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>DRAFT</td><td>Just created, or not yet sent for checking.</td><td>Editable (number boxes)</td></tr>
+      <tr><td>ENTERED</td><td>Someone clicked Send for checking. At least one mark exists.</td><td>Still editable until Verify</td></tr>
+      <tr><td>VERIFIED</td><td>Headmaster or Academic master confirmed the marks.</td><td>Frozen. Boxes become plain labels.</td></tr>
+      <tr><td>APPROVED</td><td>Ready to publish. Students still cannot see results.</td><td>Still frozen</td></tr>
+      <tr><td>PUBLISHED</td><td>Students and parents can see results. Parents are notified.</td><td>Still frozen</td></tr>
+      <tr><td>REJECTED</td><td>Returned for correction. The note shows under the exam row.</td><td>Editable again</td></tr>
+    </tbody>
+  </table>
+
   <h2>Marks, checking, and publish</h2>
   <p>Do this after the papers exist. Schedule and lock can come before or after marks. The result steps themselves follow this order. A later button is hidden until the exam reaches that status. It is not a grey button you are meant to force.</p>
   <div class="steps">
     <div class="step"><span class="n">1</span> On <strong>Grades</strong>, enter marks for the exam. Send for checking stays grey until at least one mark exists. Hover says “Enter marks on Grades before sending for checking”.</div>
-    <div class="step"><span class="n">2</span> Click <strong>Send for checking</strong>. This does not save marks. It asks the Academic master to look. Marks can still be changed until the exam is verified. The status becomes Entered.</div>
-    <div class="step"><span class="n">3</span> The Academic master clicks <strong>Verify</strong>. You do not see Verify. After that, marks are frozen and the status is Verified.</div>
+    <div class="step"><span class="n">2</span> Click <strong>Send for checking</strong>. This does not save marks. It asks Headmaster or Academic master to look. Marks can still be changed. The status becomes Entered.</div>
+    <div class="step"><span class="n">3</span> Headmaster or Academic master clicks <strong>Verify</strong> (shown when the status is Entered). Status becomes Verified. Marks freeze immediately: Grades replaces each number box with a label, hides trash, and greys Save and Import. The server also refuses any save, import, or delete.</div>
     <div class="step"><span class="n">4</span> Click <strong>Approve</strong>. It appears only when the status is Verified.</div>
     <div class="step"><span class="n">5</span> Click <strong>Publish</strong>. It appears only when the status is Approved. Students and parents can then see the results.</div>
   </div>
-  <p><strong>Reject</strong> appears once the exam has been sent for checking. It returns the exam to the teacher. If results were published, Reject also hides them. The note “Returned for correction” shows under the row. Send for checking is available again after new marks, labelled as sending again.</p>
-  <p><strong>Unpublish</strong> hides results from students and parents without returning the exam to the teacher. The status stays Approved until you publish again.</p>
+  <p><strong>Reject</strong> is available to Headmaster and Academic master once the exam has been sent for checking (Entered, Verified, Approved, or Published). It returns the exam to the teacher, unfreezes marks, and if results were published it hides them. The note “Returned for correction” shows under the row. Send for checking is available again after new marks, labelled as sending again.</p>
+  <p><strong>Unpublish</strong> hides results from students and parents without unlocking marks. The status stays Approved until you publish again. Use Reject if someone must change the marks.</p>
+  <div class="note">Verify is what freezes grades. Approve and Publish do not freeze them a second time — they stay frozen from Verify onward. Restart the server after a permission change if Headmaster still sees “You do not have permission” on Verify.</div>
 
   <h2>Delete an exam</h2>
   <ol>
     <li>If it is published, click <strong>Unpublish</strong> first.</li>
+    <li>If marks are frozen (Verified or later), click <strong>Reject</strong> first so Grades will let you delete marks.</li>
     <li>Remove marks for that exam on Grades.</li>
     <li>Click the trash icon and confirm.</li>
   </ol>
@@ -272,8 +290,10 @@
       <tr><td>Stop changes to the plan</td><td>Lock</td></tr>
       <tr><td>Change a locked plan</td><td>Unlock → edit the paper or Schedule again</td></tr>
       <tr><td>Ask for a check</td><td>Grades (enter marks) → Send for checking</td></tr>
-      <tr><td>Release results</td><td>After the Academic master verifies → Approve → Publish</td></tr>
-      <tr><td>Hide results</td><td>Unpublish, or Reject if the teacher must correct them</td></tr>
+      <tr><td>Check and freeze marks</td><td>Headmaster or Academic master → Verify</td></tr>
+      <tr><td>Unlock marks after a mistake</td><td>Reject → teacher fixes on Grades → Send for checking → Verify again</td></tr>
+      <tr><td>Release results</td><td>Verify → Approve → Publish</td></tr>
+      <tr><td>Hide results</td><td>Unpublish (marks stay frozen), or Reject if the teacher must correct them</td></tr>
     </tbody>
   </table>
 
@@ -291,13 +311,15 @@
       <tr><td>Schedule does nothing useful</td><td>Open Papers. The Schedule table is there. Seats shows numbers only after Schedule has run.</td></tr>
       <tr><td>Seats lists students but no S-01</td><td>Those are the active students in the class. Run Schedule to save seat numbers.</td></tr>
       <tr><td>Cannot lock</td><td>Every paper needs a date and a start time. Run Schedule, or type them on each paper.</td></tr>
-      <tr><td>Approve or Publish is missing</td><td>That is expected until the previous step is done. Verify (Academic master), then Approve, then Publish.</td></tr>
-      <tr><td>Cannot delete</td><td>Unpublish first if it is published. Remove marks, then delete.</td></tr>
+      <tr><td>Approve or Publish is missing</td><td>That is expected until the previous step is done. Verify, then Approve, then Publish.</td></tr>
+      <tr><td>You do not have permission (Verify)</td><td>Headmaster and Academic master are allowed. Restart the Java app if the button appeared after a recent change.</td></tr>
+      <tr><td>Marks still look editable after Verify</td><td>Reload Grades. Frozen marks show as labels, not boxes. If Save still works, reject is not needed — the server should refuse with a freeze message.</td></tr>
+      <tr><td>Cannot delete</td><td>Unpublish first if it is published. Reject if marks are frozen. Remove marks, then delete.</td></tr>
     </tbody>
   </table>
 
   <footer>
-    ShuleHub · Headmaster · Exams menu · Confirm before you schedule, lock, publish, or delete · Marks are entered on Grades
+    ShuleHub · Headmaster · Exams menu · Headmaster and Academic master verify and reject · Marks freeze at Verify · Unlock with Reject · Marks are entered on Grades
   </footer>
 </body>
 </html>
