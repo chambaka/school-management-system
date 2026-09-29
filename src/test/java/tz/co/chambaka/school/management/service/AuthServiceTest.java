@@ -90,6 +90,8 @@ class AuthServiceTest {
     private CredentialSmsService credentialSms;
     @Mock
     private tz.co.chambaka.school.management.ratelimit.LoginRateLimitService loginRateLimitService;
+    @Mock
+    private UserAccountService userAccountService;
 
     @InjectMocks
     private AuthService authService;
@@ -696,6 +698,50 @@ class AuthServiceTest {
         verify(userRepository).findById(4L);
         verify(userRepository, never()).findByIdAndSchoolId(any(), any());
         verify(refreshTokenRepository).deleteByUserId(4L);
+    }
+
+    @Test
+    void headmasterDeletesUnusedStaffLogin() {
+        User staff = Fixtures.user(4L, Role.STAFF);
+        when(userRepository.findByIdAndSchoolId(4L, 1L)).thenReturn(Optional.of(staff));
+        when(userAccountService.removeOrDisable(staff)).thenReturn(new UserAccountService.Removal(true, false));
+
+        var result = authService.remove(4L, null, Fixtures.principal(Role.HEADMASTER));
+
+        assertThat(result.deleted()).isTrue();
+        assertThat(result.disabled()).isFalse();
+        assertThat(result.userId()).isEqualTo(4L);
+        verify(auditService).record(any());
+    }
+
+    @Test
+    void headmasterDisablesLinkedTeacherLogin() {
+        User teacher = Fixtures.user(4L, Role.TEACHER);
+        when(userRepository.findByIdAndSchoolId(4L, 1L)).thenReturn(Optional.of(teacher));
+        when(userAccountService.removeOrDisable(teacher)).thenReturn(new UserAccountService.Removal(false, true));
+
+        var result = authService.remove(4L, null, Fixtures.principal(Role.HEADMASTER));
+
+        assertThat(result.deleted()).isFalse();
+        assertThat(result.disabled()).isTrue();
+    }
+
+    @Test
+    void headmasterCannotRemoveOwnLogin() {
+        User self = Fixtures.user(10L, Role.HEADMASTER);
+        when(userRepository.findByIdAndSchoolId(10L, 1L)).thenReturn(Optional.of(self));
+        assertThatThrownBy(() -> authService.remove(10L, null, Fixtures.principal(Role.HEADMASTER)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("your own login");
+        verify(userAccountService, never()).removeOrDisable(any());
+    }
+
+    @Test
+    void schoolAdminCannotRemoveUsers() {
+        assertThatThrownBy(() -> authService.remove(4L, 1L, Fixtures.principal(Role.SCHOOL_ADMIN)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("headmaster");
+        verify(userAccountService, never()).removeOrDisable(any());
     }
 
     private void stubActiveTenant() {

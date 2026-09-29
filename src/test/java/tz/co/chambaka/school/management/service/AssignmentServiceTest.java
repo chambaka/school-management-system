@@ -157,7 +157,6 @@ class AssignmentServiceTest {
 
     @Test
     void createRequiresAllocatedTeacher() {
-        when(teacherService.requireByUser(3L)).thenReturn(Fixtures.teacher());
         when(classService.require(1L, 1L)).thenReturn(Fixtures.schoolClass());
         org.mockito.Mockito.doThrow(new tz.co.chambaka.school.management.exception.BusinessException(
                         "Only the allocated teacher of this subject for this class can create assignments."))

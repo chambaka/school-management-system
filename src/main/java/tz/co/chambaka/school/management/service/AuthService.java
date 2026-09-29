@@ -1,6 +1,7 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.config.SmsProperties;
+import tz.co.chambaka.school.management.dto.admin.RemoveUserResponse;
 import tz.co.chambaka.school.management.dto.admin.SchoolUserResponse;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordResponse;
@@ -87,6 +88,7 @@ public class AuthService {
     private final TwoFactorService twoFactorService;
     private final CredentialSmsService credentialSms;
     private final LoginRateLimitService loginRateLimitService;
+    private final UserAccountService userAccountService;
 
     public AuthService(
             AuthenticationManager authenticationManager,
@@ -103,7 +105,8 @@ public class AuthService {
             SmsProperties smsProperties,
             TwoFactorService twoFactorService,
             CredentialSmsService credentialSms,
-            LoginRateLimitService loginRateLimitService
+            LoginRateLimitService loginRateLimitService,
+            UserAccountService userAccountService
     ) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
@@ -120,6 +123,7 @@ public class AuthService {
         this.twoFactorService = twoFactorService;
         this.credentialSms = credentialSms;
         this.loginRateLimitService = loginRateLimitService;
+        this.userAccountService = userAccountService;
     }
 
     @Transactional
@@ -449,6 +453,48 @@ public class AuthService {
                 .httpPath("/api/v1/users/" + userId + "/reset-password")
                 .statusCode(200));
         return new AdminResetPasswordResponse(user.getId(), user.getName(), user.getEmail(), smsSent);
+    }
+
+    @Transactional
+    public RemoveUserResponse remove(Long userId, Long schoolId, UserPrincipal actor) {
+        if (actor == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Sign in required");
+        }
+        if (actor.getRole() != Role.HEADMASTER && actor.getRole() != Role.SUPER_ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Only a headmaster can remove school users");
+        }
+        User user = requireUnlockTarget(userId, schoolId, actor);
+        if (actor.getId().equals(user.getId())) {
+            throw new BusinessException("You cannot remove your own login");
+        }
+        if (user.getRole() == Role.SUPER_ADMIN && actor.getRole() != Role.SUPER_ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "This account cannot be removed here");
+        }
+        if (user.getRole() == Role.ORGANIZATION_ADMIN && actor.getRole() != Role.SUPER_ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "This account cannot be removed here");
+        }
+        UserAccountService.Removal removal = userAccountService.removeOrDisable(user);
+        log.info("{} login userId={} email={} by userId={} role={}",
+                removal.deleted() ? "Deleted" : "Disabled",
+                user.getId(), user.getEmail(), actor.getId(), actor.getRole());
+        auditService.record(new AuditEventDraft()
+                .scope(actor.getRole() == Role.SUPER_ADMIN ? AuditScope.PLATFORM : AuditScope.TENANT)
+                .action(AuditAction.DELETE)
+                .schoolId(user.getSchoolId())
+                .resourceType("User")
+                .resourceId(String.valueOf(user.getId()))
+                .summary((removal.deleted() ? "Removed login for " : "Disabled linked login for ") + user.getEmail())
+                .details("targetUserId=" + user.getId()
+                        + " targetRole=" + user.getRole()
+                        + " actorUserId=" + actor.getId()
+                        + " actorRole=" + actor.getRole()
+                        + " deleted=" + removal.deleted()
+                        + " disabled=" + removal.disabled())
+                .httpMethod("DELETE")
+                .httpPath("/api/v1/users/" + userId)
+                .statusCode(200));
+        return new RemoveUserResponse(
+                user.getId(), user.getName(), user.getEmail(), removal.deleted(), removal.disabled());
     }
 
     private SchoolUserResponse toSchoolUser(User user, Map<Long, String> schoolNames, Map<Long, String> tenantNames) {

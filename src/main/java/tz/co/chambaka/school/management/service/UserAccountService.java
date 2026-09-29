@@ -30,6 +30,25 @@ public class UserAccountService {
 
     private static final Logger log = LoggerFactory.getLogger(UserAccountService.class);
 
+    private static final List<String> TIED_COUNTS = List.of(
+            "select count(s) from Student s where s.user.id = :id",
+            "select count(t) from Teacher t where t.user.id = :id",
+            "select count(p) from Parent p where p.user.id = :id",
+            "select count(n) from Notice n where n.createdBy.id = :id",
+            "select count(p) from Payment p where p.recordedBy.id = :id",
+            "select count(a) from StudentAttendance a where a.markedBy.id = :id",
+            "select count(a) from TeacherAttendance a where a.markedBy.id = :id",
+            "select count(c) from StudentCommunication c where c.author.id = :id"
+    );
+
+    private static final List<String> CLEAR_SESSIONS = List.of(
+            "delete from RefreshToken r where r.user.id = :id",
+            "delete from PasswordResetToken t where t.user.id = :id",
+            "delete from TwoFactorChallenge c where c.user.id = :id",
+            "delete from PushSubscription p where p.user.id = :id",
+            "delete from NotificationPreference n where n.user.id = :id"
+    );
+
     private static final List<String> DETACH_THEN_DELETE = List.of(
             "update Student s set s.user = null where s.user.id in :ids",
             "update Teacher t set t.user = null where t.user.id in :ids",
@@ -112,6 +131,43 @@ public class UserAccountService {
             candidate = base + n++;
         }
         return candidate;
+    }
+
+    public record Removal(boolean deleted, boolean disabled) {
+    }
+
+    @Transactional
+    public Removal removeOrDisable(User user) {
+        Long id = user.getId();
+        executeById(CLEAR_SESSIONS, id);
+        if (isTied(id)) {
+            user.setEnabled(false);
+            log.info("Disabled linked login userId={} email={}", id, user.getEmail());
+            return new Removal(false, true);
+        }
+        userRepository.delete(user);
+        log.info("Deleted unused login userId={} email={}", id, user.getEmail());
+        return new Removal(true, false);
+    }
+
+    private boolean isTied(Long id) {
+        for (String jpql : TIED_COUNTS) {
+            Query query = entityManager.createQuery(jpql);
+            query.setParameter("id", id);
+            Number count = (Number) query.getSingleResult();
+            if (count != null && count.longValue() > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void executeById(List<String> statements, Long id) {
+        for (String jpql : statements) {
+            Query query = entityManager.createQuery(jpql);
+            query.setParameter("id", id);
+            query.executeUpdate();
+        }
     }
 
     @Transactional

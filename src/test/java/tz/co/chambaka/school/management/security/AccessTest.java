@@ -22,6 +22,7 @@ class AccessTest {
         assertThat(Access.BUILDING_MANAGE).doesNotContain("ACADEMIC_MASTER");
         assertThat(Access.EXAM_INVIGILATE).contains("INVIGILATOR");
         assertThat(Access.ACCOUNT_UNLOCK).contains("HEADMASTER").contains("ACADEMIC_MASTER");
+        assertThat(Access.USER_REMOVE).contains("HEADMASTER").contains("SUPER_ADMIN").doesNotContain("SCHOOL_ADMIN");
         assertThat(Access.STAFF_OFFICERS).contains("SUPER_ADMIN").contains("HEADMASTER");
         assertThat(Access.ORG_RENAME).contains("SUPER_ADMIN").contains("ORGANIZATION_ADMIN");
         assertThat(Access.ORG_RENAME).doesNotContain("HEADMASTER").doesNotContain("SCHOOL_ADMIN");

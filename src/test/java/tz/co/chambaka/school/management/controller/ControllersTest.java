@@ -214,6 +214,8 @@ class ControllersTest {
         verify(authService).resetPassword(eq(4L), eq(1L), eq(admin), any());
         users.list(admin, 1L, null, org.springframework.data.domain.PageRequest.of(0, 20));
         verify(authService).listSchoolUsers(eq(1L), org.mockito.ArgumentMatchers.isNull(), eq(admin), any());
+        users.remove(admin, 4L, 1L);
+        verify(authService).remove(4L, 1L, admin);
         auth.resetOwnTwoFactor(admin);
         verify(authService).resetOwnTwoFactor(10L);
         when(passwordResetService.requestReset(org.mockito.ArgumentMatchers.any()))

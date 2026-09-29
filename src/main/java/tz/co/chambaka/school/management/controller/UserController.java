@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.dto.admin.RemoveUserResponse;
 import tz.co.chambaka.school.management.dto.admin.SchoolUserResponse;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordResponse;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -78,5 +80,16 @@ public class UserController {
             @RequestBody(required = false) @Valid AdminResetPasswordRequest request
     ) {
         return authService.resetPassword(id, schoolId, principal, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize(Access.USER_REMOVE)
+    @Operation(summary = "Remove a login. Headmaster only. Linked teacher, student, parent, or other records disable the login instead of deleting it.")
+    public RemoveUserResponse remove(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam(required = false) Long schoolId
+    ) {
+        return authService.remove(id, schoolId, principal);
     }
 }

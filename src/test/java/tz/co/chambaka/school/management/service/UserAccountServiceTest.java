@@ -171,6 +171,44 @@ class UserAccountServiceTest {
     }
 
     @Test
+    void removeOrDisableDeletesWhenNotTied() {
+        User staff = Fixtures.user(4L, Role.STAFF);
+        Query update = org.mockito.Mockito.mock(Query.class);
+        Query count = org.mockito.Mockito.mock(Query.class);
+        when(entityManager.createQuery(anyString())).thenReturn(update, update, update, update, update, count);
+        when(update.setParameter(eq("id"), eq(4L))).thenReturn(update);
+        when(update.executeUpdate()).thenReturn(0);
+        when(count.setParameter(eq("id"), eq(4L))).thenReturn(count);
+        when(count.getSingleResult()).thenReturn(0L);
+
+        var result = service.removeOrDisable(staff);
+
+        assertThat(result.deleted()).isTrue();
+        assertThat(result.disabled()).isFalse();
+        assertThat(staff.isEnabled()).isTrue();
+        verify(userRepository).delete(staff);
+    }
+
+    @Test
+    void removeOrDisableDisablesWhenTiedToTeacher() {
+        User teacher = Fixtures.user(4L, Role.TEACHER);
+        Query update = org.mockito.Mockito.mock(Query.class);
+        Query count = org.mockito.Mockito.mock(Query.class);
+        when(entityManager.createQuery(anyString())).thenReturn(update, update, update, update, update, count);
+        when(update.setParameter(eq("id"), eq(4L))).thenReturn(update);
+        when(update.executeUpdate()).thenReturn(0);
+        when(count.setParameter(eq("id"), eq(4L))).thenReturn(count);
+        when(count.getSingleResult()).thenReturn(1L);
+
+        var result = service.removeOrDisable(teacher);
+
+        assertThat(result.deleted()).isFalse();
+        assertThat(result.disabled()).isTrue();
+        assertThat(teacher.isEnabled()).isFalse();
+        verify(userRepository, never()).delete(any());
+    }
+
+    @Test
     void deleteDoesNothingWhenOnlyPlatformAdminRemains() {
         when(userRepository.findBySchoolId(1L)).thenReturn(List.of(Fixtures.user(1L, Role.SUPER_ADMIN)));
 
