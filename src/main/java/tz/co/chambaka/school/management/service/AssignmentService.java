@@ -77,7 +77,7 @@ public class AssignmentService {
         assignment.setTeacher(teacher);
         applyDetails(schoolId, assignment, schoolClass, request);
         assignment.setStatus(AssignmentStatus.DRAFT);
-        assignment.setPublishedAt(null);
+        assignment.setPublishedAt(Instant.now());
         Assignment saved = assignmentRepository.save(assignment);
         return toResponse(saved);
     }
@@ -286,7 +286,7 @@ public class AssignmentService {
                 assignment.getDueDate(),
                 assignment.getAttachmentName(),
                 statusOf(assignment),
-                assignment.getPublishedAt()
+                statusOf(assignment) == AssignmentStatus.PUBLISHED ? assignment.getPublishedAt() : null
         );
     }
 

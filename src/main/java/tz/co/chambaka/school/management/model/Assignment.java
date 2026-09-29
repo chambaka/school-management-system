@@ -58,5 +58,6 @@ public class Assignment extends TenantEntity {
     @ColumnDefault("'PUBLISHED'")
     private AssignmentStatus status = AssignmentStatus.DRAFT;
 
-    private Instant publishedAt;
+    @Column(nullable = false)
+    private Instant publishedAt = Instant.now();
 }

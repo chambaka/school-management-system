@@ -74,6 +74,8 @@ class AssignmentServiceTest {
         assertThat(response.sectionName()).isEqualTo("A");
         assertThat(response.status()).isEqualTo(AssignmentStatus.DRAFT);
         assertThat(response.publishedAt()).isNull();
+        verify(assignmentRepository).save(org.mockito.ArgumentMatchers.argThat(saved ->
+                saved.getStatus() == AssignmentStatus.DRAFT && saved.getPublishedAt() != null));
         verify(alertService, never()).notifyParentsOfStudent(any(), any(), any(), any(), any(), anyBoolean());
     }
 
