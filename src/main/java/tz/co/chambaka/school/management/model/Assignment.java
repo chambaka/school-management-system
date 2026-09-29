@@ -2,12 +2,16 @@ package tz.co.chambaka.school.management.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
+import tz.co.chambaka.school.management.model.enums.AssignmentStatus;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -49,6 +53,10 @@ public class Assignment extends TenantEntity {
     @Column(length = 400)
     private String attachmentPath;
 
-    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @ColumnDefault("'PUBLISHED'")
+    private AssignmentStatus status = AssignmentStatus.DRAFT;
+
     private Instant publishedAt;
 }

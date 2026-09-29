@@ -126,7 +126,7 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize(Access.USER_REMOVE)
-    @Operation(summary = "Delete a login completely. Headmaster or platform admin. Teacher, student, and parent profiles stay, but the login is removed.")
+    @Operation(summary = "Delete a login and its allocations and parent or student links. Headmaster or platform admin. Teacher, student, and parent profiles stay.")
     public RemoveUserResponse remove(
             @CurrentUser UserPrincipal principal,
             @PathVariable Long id,

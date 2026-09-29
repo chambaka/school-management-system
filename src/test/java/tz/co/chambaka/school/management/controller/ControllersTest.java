@@ -584,10 +584,14 @@ class ControllersTest {
         var file = new MockMultipartFile("file", "work.pdf", "application/pdf", new byte[]{1});
         assignments.list(teacher);
         assignments.create(teacher, assignment);
+        assignments.update(teacher, 1L, assignment);
+        assignments.lock(teacher, 1L);
+        assignments.publish(teacher, 1L);
         assignments.attach(teacher, 1L, file);
         assignments.marks(teacher, 1L, 1L, BigDecimal.TEN);
         assignments.submit(teacher, 1L, "done", file);
         assignments.submissions(1L);
+        assignments.delete(teacher, 1L);
 
         LessonLogController lessons = new LessonLogController(lessonLogService, tenantResolver);
         var lesson = new tz.co.chambaka.school.management.dto.academic.LessonLogRequest(

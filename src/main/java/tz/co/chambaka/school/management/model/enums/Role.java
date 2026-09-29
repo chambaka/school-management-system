@@ -23,6 +23,10 @@ public enum Role {
         return this == HEADMASTER || this == ACADEMIC_MASTER || this == TEACHER;
     }
 
+    public boolean managesAssignments() {
+        return this == HEADMASTER || this == ACADEMIC_MASTER;
+    }
+
     public boolean managesFinance() {
         return this == ACCOUNTANT;
     }

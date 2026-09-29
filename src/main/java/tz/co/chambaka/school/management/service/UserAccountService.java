@@ -38,6 +38,12 @@ public class UserAccountService {
             "delete from NotificationPreference n where n.user.id = :id"
     );
 
+    private static final List<String> DELETE_LINKS = List.of(
+            "delete from TeacherSubject a where a.teacher.user.id in :ids",
+            "delete from StudentParent l where l.student.user.id in :ids",
+            "delete from StudentParent l where l.parent.user.id in :ids"
+    );
+
     private static final List<String> DETACH_THEN_DELETE = List.of(
             "update Student s set s.user = null where s.user.id in :ids",
             "update Teacher t set t.user = null where t.user.id in :ids",
@@ -137,6 +143,7 @@ public class UserAccountService {
     public void deleteCompletely(User user) {
         Long id = user.getId();
         executeById(CLEAR_SESSIONS, id);
+        executeByIds(DELETE_LINKS, List.of(id));
         executeByIds(DETACH_THEN_DELETE, List.of(id));
         userRepository.delete(user);
         log.info("Deleted login userId={} email={}", id, user.getEmail());
@@ -183,6 +190,7 @@ public class UserAccountService {
         if (ids.isEmpty()) {
             return;
         }
+        executeByIds(DELETE_LINKS, ids);
         executeByIds(DETACH_THEN_DELETE, ids);
         userRepository.deleteAllById(ids);
         log.info("Deleted {} user accounts from live", ids.size());

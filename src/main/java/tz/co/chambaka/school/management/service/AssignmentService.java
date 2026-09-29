@@ -10,6 +10,7 @@ import tz.co.chambaka.school.management.model.AssignmentSubmission;
 import tz.co.chambaka.school.management.model.SchoolClass;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.Teacher;
+import tz.co.chambaka.school.management.model.enums.AssignmentStatus;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.AssignmentRepository;
 import tz.co.chambaka.school.management.repository.AssignmentSubmissionRepository;
@@ -74,25 +75,72 @@ public class AssignmentService {
         Assignment assignment = new Assignment();
         assignment.setSchoolId(schoolId);
         assignment.setTeacher(teacher);
-        assignment.setSchoolClass(schoolClass);
-        assignment.setSection(request.sectionId() == null ? null : sectionService.require(schoolId, request.sectionId()));
-        assignment.setSubject(subjectService.require(schoolId, request.subjectId()));
-        assignment.setTitle(request.title());
-        assignment.setInstructions(request.instructions());
-        assignment.setDueDate(request.dueDate());
+        applyDetails(schoolId, assignment, schoolClass, request);
+        assignment.setStatus(AssignmentStatus.DRAFT);
+        assignment.setPublishedAt(null);
+        Assignment saved = assignmentRepository.save(assignment);
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public AssignmentResponse update(Long schoolId, UserPrincipal principal, Long id, AssignmentRequest request) {
+        Assignment assignment = require(schoolId, id);
+        assertMutable(principal, assignment);
+        SchoolClass schoolClass = classService.require(schoolId, request.schoolClassId());
+        if (!principal.getRole().managesAssignments()) {
+            assertTeachesAssignment(
+                    schoolId, principal.getId(), schoolClass, request.subjectId(), request.sectionId(),
+                    "edit this assignment");
+        }
+        applyDetails(schoolId, assignment, schoolClass, request);
+        return toResponse(assignment);
+    }
+
+    @Transactional
+    public void delete(Long schoolId, UserPrincipal principal, Long id) {
+        Assignment assignment = require(schoolId, id);
+        assertMutable(principal, assignment);
+        if (!principal.getRole().managesAssignments()) {
+            assertTeachesExisting(schoolId, principal.getId(), assignment, "delete this assignment");
+        }
+        submissionRepository.findByAssignmentId(id).forEach(submissionRepository::delete);
+        assignmentRepository.delete(assignment);
+    }
+
+    @Transactional
+    public AssignmentResponse lock(Long schoolId, UserPrincipal principal, Long id) {
+        Assignment assignment = require(schoolId, id);
+        assertCanManageWorkflow(schoolId, principal, assignment, "lock this assignment");
+        if (statusOf(assignment) != AssignmentStatus.DRAFT) {
+            throw new BusinessException("Only a draft assignment can be locked.");
+        }
+        assignment.setStatus(AssignmentStatus.LOCKED);
+        return toResponse(assignment);
+    }
+
+    @Transactional
+    public AssignmentResponse publish(Long schoolId, UserPrincipal principal, Long id) {
+        Assignment assignment = require(schoolId, id);
+        assertCanManageWorkflow(schoolId, principal, assignment, "publish this assignment");
+        if (statusOf(assignment) != AssignmentStatus.LOCKED) {
+            throw new BusinessException("Lock this assignment before publishing it.");
+        }
+        assignment.setStatus(AssignmentStatus.PUBLISHED);
         assignment.setPublishedAt(Instant.now());
         Assignment saved = assignmentRepository.save(assignment);
-        studentRepository.findBySchoolIdAndSchoolClassId(schoolId, request.schoolClassId()).forEach(student ->
+        studentRepository.findBySchoolIdAndSchoolClassId(schoolId, saved.getSchoolClass().getId()).forEach(student ->
                 alertService.notifyParentsOfStudent(schoolId, student, "New assignment",
                         saved.getTitle() + " is due " + saved.getDueDate(), "ASSIGNMENT", true));
         return toResponse(saved);
     }
 
     @Transactional
-    public AssignmentResponse attach(Long schoolId, Long userId, Long id, MultipartFile file) {
-        Assignment assignment = assignmentRepository.findByIdAndSchoolId(id, schoolId)
-                .orElseThrow(() -> ResourceNotFoundException.of("Assignment", id));
-        assertTeachesExisting(schoolId, userId, assignment, "create assignments");
+    public AssignmentResponse attach(Long schoolId, UserPrincipal principal, Long id, MultipartFile file) {
+        Assignment assignment = require(schoolId, id);
+        assertMutable(principal, assignment);
+        if (!principal.getRole().managesAssignments()) {
+            assertTeachesExisting(schoolId, principal.getId(), assignment, "create assignments");
+        }
         photoStorageService.storeStudentPhoto(schoolId, id + 900000, file);
         assignment.setAttachmentName(file.getOriginalFilename());
         assignment.setAttachmentPath("/api/v1/assignments/" + id + "/file");
@@ -104,17 +152,26 @@ public class AssignmentService {
         List<Assignment> all = assignmentRepository.findBySchoolIdOrderByDueDateDesc(schoolId);
         if (principal.getRole() == Role.STUDENT) {
             Student me = studentService.requireByUser(principal.getId());
+            Long classId = me.getSchoolClass() != null ? me.getSchoolClass().getId() : -1L;
             return all.stream()
-                    .filter(a -> a.getSchoolClass().getId().equals(me.getSchoolClass() != null ? me.getSchoolClass().getId() : -1L))
-                    .map(this::toResponse).toList();
+                    .filter(assignment -> statusOf(assignment) == AssignmentStatus.PUBLISHED)
+                    .filter(assignment -> assignment.getSchoolClass().getId().equals(classId))
+                    .map(this::toResponse)
+                    .toList();
+        }
+        if (principal.getRole() == Role.PARENT) {
+            return all.stream()
+                    .filter(assignment -> statusOf(assignment) == AssignmentStatus.PUBLISHED)
+                    .map(this::toResponse)
+                    .toList();
         }
         return all.stream().map(this::toResponse).toList();
     }
 
     @Transactional
     public AssignmentSubmissionResponse submitWork(Long schoolId, Long userId, Long assignmentId, String notes, MultipartFile file) {
-        Assignment assignment = assignmentRepository.findByIdAndSchoolId(assignmentId, schoolId)
-                .orElseThrow(() -> ResourceNotFoundException.of("Assignment", assignmentId));
+        Assignment assignment = require(schoolId, assignmentId);
+        requirePublished(assignment);
         Student student = studentService.requireByUser(userId);
         AssignmentSubmission submission = submissionRepository.findByAssignmentIdAndStudentId(assignmentId, student.getId())
                 .orElseGet(AssignmentSubmission::new);
@@ -136,15 +193,14 @@ public class AssignmentService {
 
     @Transactional(readOnly = true)
     public List<AssignmentSubmissionResponse> submissions(Long schoolId, Long assignmentId) {
-        assignmentRepository.findByIdAndSchoolId(assignmentId, schoolId)
-                .orElseThrow(() -> ResourceNotFoundException.of("Assignment", assignmentId));
+        require(schoolId, assignmentId);
         return submissionRepository.findByAssignmentId(assignmentId).stream().map(this::toSubmission).toList();
     }
 
     @Transactional
     public void submitMarks(Long schoolId, Long userId, Long assignmentId, Long studentId, BigDecimal marks) {
-        Assignment assignment = assignmentRepository.findByIdAndSchoolId(assignmentId, schoolId)
-                .orElseThrow(() -> ResourceNotFoundException.of("Assignment", assignmentId));
+        Assignment assignment = require(schoolId, assignmentId);
+        requirePublished(assignment);
         assertTeachesExisting(schoolId, userId, assignment, "submit marks");
         Student student = studentService.require(schoolId, studentId);
         AssignmentSubmission submission = submissionRepository.findByAssignmentIdAndStudentId(assignmentId, studentId)
@@ -155,6 +211,38 @@ public class AssignmentService {
         submission.setMarksObtained(marks);
         submission.setSubmittedAt(Instant.now());
         submissionRepository.save(submission);
+    }
+
+    private void applyDetails(Long schoolId, Assignment assignment, SchoolClass schoolClass, AssignmentRequest request) {
+        assignment.setSchoolClass(schoolClass);
+        assignment.setSection(request.sectionId() == null ? null : sectionService.require(schoolId, request.sectionId()));
+        assignment.setSubject(subjectService.require(schoolId, request.subjectId()));
+        assignment.setTitle(request.title());
+        assignment.setInstructions(request.instructions());
+        assignment.setDueDate(request.dueDate());
+    }
+
+    private Assignment require(Long schoolId, Long id) {
+        return assignmentRepository.findByIdAndSchoolId(id, schoolId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Assignment", id));
+    }
+
+    private void requirePublished(Assignment assignment) {
+        if (statusOf(assignment) != AssignmentStatus.PUBLISHED) {
+            throw new BusinessException("This assignment is not published yet.");
+        }
+    }
+
+    private void assertMutable(UserPrincipal principal, Assignment assignment) {
+        if (statusOf(assignment) != AssignmentStatus.DRAFT && !principal.getRole().managesAssignments()) {
+            throw new BusinessException("Only the academic master can edit or delete a locked or published assignment.");
+        }
+    }
+
+    private void assertCanManageWorkflow(Long schoolId, UserPrincipal principal, Assignment assignment, String action) {
+        if (!principal.getRole().managesAssignments()) {
+            assertTeachesExisting(schoolId, principal.getId(), assignment, action);
+        }
     }
 
     private void assertTeachesExisting(Long schoolId, Long userId, Assignment assignment, String action) {
@@ -178,6 +266,10 @@ public class AssignmentService {
         allocationService.requireTeachesForUser(schoolId, userId, yearId, classId, subjectId, sectionId, action);
     }
 
+    private AssignmentStatus statusOf(Assignment assignment) {
+        return assignment.getStatus() == null ? AssignmentStatus.PUBLISHED : assignment.getStatus();
+    }
+
     private AssignmentResponse toResponse(Assignment assignment) {
         return new AssignmentResponse(
                 assignment.getId(),
@@ -193,6 +285,7 @@ public class AssignmentService {
                 assignment.getInstructions(),
                 assignment.getDueDate(),
                 assignment.getAttachmentName(),
+                statusOf(assignment),
                 assignment.getPublishedAt()
         );
     }

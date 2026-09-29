@@ -12,9 +12,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -51,6 +53,35 @@ public class AssignmentController {
         return assignmentService.create(tenantResolver.requireSchoolId(), principal.getId(), request);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize(Access.ASSIGNMENT_WRITE)
+    public AssignmentResponse update(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody AssignmentRequest request
+    ) {
+        return assignmentService.update(tenantResolver.requireSchoolId(), principal, id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize(Access.ASSIGNMENT_WRITE)
+    public void delete(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
+        assignmentService.delete(tenantResolver.requireSchoolId(), principal, id);
+    }
+
+    @PostMapping("/{id}/lock")
+    @PreAuthorize(Access.ASSIGNMENT_WRITE)
+    public AssignmentResponse lock(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
+        return assignmentService.lock(tenantResolver.requireSchoolId(), principal, id);
+    }
+
+    @PostMapping("/{id}/publish")
+    @PreAuthorize(Access.ASSIGNMENT_WRITE)
+    public AssignmentResponse publish(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
+        return assignmentService.publish(tenantResolver.requireSchoolId(), principal, id);
+    }
+
     @PostMapping(value = "/{id}/file", consumes = "multipart/form-data")
     @PreAuthorize(Access.ASSIGNMENT_WRITE)
     public AssignmentResponse attach(
@@ -58,7 +89,7 @@ public class AssignmentController {
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file
     ) {
-        return assignmentService.attach(tenantResolver.requireSchoolId(), principal.getId(), id, file);
+        return assignmentService.attach(tenantResolver.requireSchoolId(), principal, id, file);
     }
 
     @PostMapping("/{id}/marks")

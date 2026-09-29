@@ -10,6 +10,9 @@ class RoleTest {
     void schoolGuideAccess() {
         assertThat(Role.HEADMASTER.managesPeople()).isTrue();
         assertThat(Role.ACADEMIC_MASTER.academicStaff()).isTrue();
+        assertThat(Role.HEADMASTER.managesAssignments()).isTrue();
+        assertThat(Role.ACADEMIC_MASTER.managesAssignments()).isTrue();
+        assertThat(Role.TEACHER.managesAssignments()).isFalse();
         assertThat(Role.TEACHER.academicStaff()).isTrue();
         assertThat(Role.ACCOUNTANT.managesFinance()).isTrue();
         assertThat(Role.HEADMASTER.viewsStudentFinance()).isTrue();

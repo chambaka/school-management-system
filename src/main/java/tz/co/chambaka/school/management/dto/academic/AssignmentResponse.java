@@ -1,5 +1,7 @@
 package tz.co.chambaka.school.management.dto.academic;
 
+import tz.co.chambaka.school.management.model.enums.AssignmentStatus;
+
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -17,6 +19,7 @@ public record AssignmentResponse(
         String instructions,
         LocalDate dueDate,
         String attachmentName,
+        AssignmentStatus status,
         Instant publishedAt
 ) {
 }
