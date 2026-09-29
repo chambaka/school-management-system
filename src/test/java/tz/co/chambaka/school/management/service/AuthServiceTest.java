@@ -92,6 +92,8 @@ class AuthServiceTest {
     private tz.co.chambaka.school.management.ratelimit.LoginRateLimitService loginRateLimitService;
     @Mock
     private UserAccountService userAccountService;
+    @Mock
+    private UserLinkService userLinkService;
 
     @InjectMocks
     private AuthService authService;
@@ -561,6 +563,21 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.unlock(4L, 1L, Fixtures.principal(Role.TEACHER)))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("headmaster or school admin");
+    }
+
+    @Test
+    void headmasterListsUserLinks() {
+        User student = Fixtures.user(4L, Role.STUDENT);
+        var expected = new tz.co.chambaka.school.management.dto.admin.UserLinksResponse(
+                4L, student.getName(), Role.STUDENT, List.of());
+        when(userRepository.findByIdAndSchoolId(4L, 1L)).thenReturn(Optional.of(student));
+        when(userLinkService.forUser(student)).thenReturn(expected);
+
+        var response = authService.links(4L, null, Fixtures.principal(Role.HEADMASTER));
+
+        assertThat(response.userId()).isEqualTo(4L);
+        assertThat(response.links()).isEmpty();
+        verify(userLinkService).forUser(student);
     }
 
     @Test

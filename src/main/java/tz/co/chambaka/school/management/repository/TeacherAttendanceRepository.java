@@ -15,4 +15,6 @@ public interface TeacherAttendanceRepository extends JpaRepository<TeacherAttend
             Long schoolId, Long teacherId, LocalDate start, LocalDate end);
 
     Optional<TeacherAttendance> findByTeacherIdAndAttendanceDate(Long teacherId, LocalDate date);
+
+    long countByMarkedById(Long markedById);
 }

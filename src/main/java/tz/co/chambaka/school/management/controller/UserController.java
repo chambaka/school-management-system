@@ -2,6 +2,7 @@ package tz.co.chambaka.school.management.controller;
 
 import tz.co.chambaka.school.management.dto.admin.RemoveUserResponse;
 import tz.co.chambaka.school.management.dto.admin.SchoolUserResponse;
+import tz.co.chambaka.school.management.dto.admin.UserLinksResponse;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordResponse;
 import tz.co.chambaka.school.management.dto.auth.ResetTwoFactorResponse;
@@ -47,6 +48,17 @@ public class UserController {
             Pageable pageable
     ) {
         return authService.listSchoolUsers(schoolId, role, principal, pageable);
+    }
+
+    @GetMapping("/{id}/links")
+    @PreAuthorize(Access.ACCOUNT_UNLOCK)
+    @Operation(summary = "Records linked to this login: teacher, student, parent, allocations, and other school activity.")
+    public UserLinksResponse links(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam(required = false) Long schoolId
+    ) {
+        return authService.links(id, schoolId, principal);
     }
 
     @PostMapping("/{id}/unlock")

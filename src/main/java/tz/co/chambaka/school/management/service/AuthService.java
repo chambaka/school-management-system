@@ -3,6 +3,7 @@ package tz.co.chambaka.school.management.service;
 import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.dto.admin.RemoveUserResponse;
 import tz.co.chambaka.school.management.dto.admin.SchoolUserResponse;
+import tz.co.chambaka.school.management.dto.admin.UserLinksResponse;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordRequest;
 import tz.co.chambaka.school.management.dto.auth.AdminResetPasswordResponse;
 import tz.co.chambaka.school.management.dto.auth.AuthResponse;
@@ -89,6 +90,7 @@ public class AuthService {
     private final CredentialSmsService credentialSms;
     private final LoginRateLimitService loginRateLimitService;
     private final UserAccountService userAccountService;
+    private final UserLinkService userLinkService;
 
     public AuthService(
             AuthenticationManager authenticationManager,
@@ -106,7 +108,8 @@ public class AuthService {
             TwoFactorService twoFactorService,
             CredentialSmsService credentialSms,
             LoginRateLimitService loginRateLimitService,
-            UserAccountService userAccountService
+            UserAccountService userAccountService,
+            UserLinkService userLinkService
     ) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
@@ -124,6 +127,7 @@ public class AuthService {
         this.credentialSms = credentialSms;
         this.loginRateLimitService = loginRateLimitService;
         this.userAccountService = userAccountService;
+        this.userLinkService = userLinkService;
     }
 
     @Transactional
@@ -495,6 +499,15 @@ public class AuthService {
                 .statusCode(200));
         return new RemoveUserResponse(
                 user.getId(), user.getName(), user.getEmail(), removal.deleted(), removal.disabled());
+    }
+
+    @Transactional(readOnly = true)
+    public UserLinksResponse links(Long userId, Long schoolId, UserPrincipal actor) {
+        if (actor == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Sign in required");
+        }
+        User user = requireUnlockTarget(userId, schoolId, actor);
+        return userLinkService.forUser(user);
     }
 
     private SchoolUserResponse toSchoolUser(User user, Map<Long, String> schoolNames, Map<Long, String> tenantNames) {

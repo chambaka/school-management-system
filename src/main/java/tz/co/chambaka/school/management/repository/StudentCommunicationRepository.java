@@ -11,4 +11,6 @@ public interface StudentCommunicationRepository extends JpaRepository<StudentCom
     List<StudentCommunication> findBySchoolIdAndStudentIdOrderByCreatedAtAsc(Long schoolId, Long studentId);
 
     List<StudentCommunication> findBySchoolIdAndStudentIdInOrderByCreatedAtDesc(Long schoolId, Collection<Long> studentIds);
+
+    long countByAuthorId(Long authorId);
 }

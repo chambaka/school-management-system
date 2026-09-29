@@ -19,4 +19,6 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     Optional<Notice> findByIdAndSchoolId(Long id, Long schoolId);
 
     List<Notice> findBySchoolClassId(Long schoolClassId);
+
+    long countByCreatedById(Long createdById);
 }

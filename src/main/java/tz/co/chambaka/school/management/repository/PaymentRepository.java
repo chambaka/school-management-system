@@ -18,4 +18,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     long countBySchoolId(Long schoolId);
 
     List<Payment> findBySchoolIdAndPaidAtBetween(Long schoolId, Instant start, Instant end);
+
+    long countByRecordedById(Long recordedById);
 }
