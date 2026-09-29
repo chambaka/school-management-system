@@ -581,6 +581,18 @@ class AuthServiceTest {
     }
 
     @Test
+    void headmasterRemovesUserLink() {
+        User student = Fixtures.user(4L, Role.STUDENT);
+        var request = new tz.co.chambaka.school.management.dto.admin.RemoveUserLinkRequest(
+                "STUDENT_PARENT", null, 1L, 1L);
+        when(userRepository.findByIdAndSchoolId(4L, 1L)).thenReturn(Optional.of(student));
+
+        authService.removeLink(4L, null, Fixtures.principal(Role.HEADMASTER), request);
+
+        verify(userLinkService).remove(student, request);
+    }
+
+    @Test
     void headmasterResetsTwoFactor() {
         User student = Fixtures.user(4L, Role.STUDENT);
         student.setTotpEnabled(true);

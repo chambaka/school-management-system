@@ -216,6 +216,8 @@ class ControllersTest {
         verify(authService).listSchoolUsers(eq(1L), org.mockito.ArgumentMatchers.isNull(), eq(admin), any());
         users.links(admin, 4L, 1L);
         verify(authService).links(4L, 1L, admin);
+        users.removeLink(admin, 4L, 1L, new tz.co.chambaka.school.management.dto.admin.RemoveUserLinkRequest("ALLOCATION", 8L, null, null));
+        verify(authService).removeLink(eq(4L), eq(1L), eq(admin), any());
         users.remove(admin, 4L, 1L);
         verify(authService).remove(4L, 1L, admin);
         auth.resetOwnTwoFactor(admin);

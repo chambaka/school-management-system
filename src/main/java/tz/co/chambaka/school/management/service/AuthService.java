@@ -1,6 +1,7 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.config.SmsProperties;
+import tz.co.chambaka.school.management.dto.admin.RemoveUserLinkRequest;
 import tz.co.chambaka.school.management.dto.admin.RemoveUserResponse;
 import tz.co.chambaka.school.management.dto.admin.SchoolUserResponse;
 import tz.co.chambaka.school.management.dto.admin.UserLinksResponse;
@@ -508,6 +509,15 @@ public class AuthService {
         }
         User user = requireUnlockTarget(userId, schoolId, actor);
         return userLinkService.forUser(user);
+    }
+
+    @Transactional
+    public void removeLink(Long userId, Long schoolId, UserPrincipal actor, RemoveUserLinkRequest request) {
+        if (actor == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Sign in required");
+        }
+        User user = requireUnlockTarget(userId, schoolId, actor);
+        userLinkService.remove(user, request);
     }
 
     private SchoolUserResponse toSchoolUser(User user, Map<Long, String> schoolNames, Map<Long, String> tenantNames) {

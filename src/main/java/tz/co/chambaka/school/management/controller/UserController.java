@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.dto.admin.RemoveUserLinkRequest;
 import tz.co.chambaka.school.management.dto.admin.RemoveUserResponse;
 import tz.co.chambaka.school.management.dto.admin.SchoolUserResponse;
 import tz.co.chambaka.school.management.dto.admin.UserLinksResponse;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -59,6 +62,19 @@ public class UserController {
             @RequestParam(required = false) Long schoolId
     ) {
         return authService.links(id, schoolId, principal);
+    }
+
+    @DeleteMapping("/{id}/links")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize(Access.ACCOUNT_UNLOCK)
+    @Operation(summary = "Remove a subject allocation or parent–student link from this login.")
+    public void removeLink(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam(required = false) Long schoolId,
+            @RequestBody RemoveUserLinkRequest request
+    ) {
+        authService.removeLink(id, schoolId, principal, request);
     }
 
     @PostMapping("/{id}/unlock")
