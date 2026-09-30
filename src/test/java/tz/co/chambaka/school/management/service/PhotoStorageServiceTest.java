@@ -165,6 +165,17 @@ class PhotoStorageServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("File must be 10 MB or smaller");
         assertThat(service.findAssignmentFile(9L, 9L)).isEmpty();
+        Path perFile = service.storeAssignmentFile(1L, 7L, 22L, pdf);
+        assertThat(perFile.getFileName().toString()).isEqualTo("7-22.pdf");
+        assertThat(service.findAssignmentFile(1L, 7L, 22L)).hasValueSatisfying(file ->
+                assertThat(file.path().getFileName().toString()).isEqualTo("7-22.pdf"));
+        service.deleteAssignmentFile(1L, 7L, 22L);
+        assertThat(service.findAssignmentFile(1L, 7L, 22L)).isEmpty();
+        Path legacy = service.storeAssignmentFile(3L, 4L, pdf);
+        assertThat(service.findAssignmentFile(3L, 4L, 99L)).hasValueSatisfying(file ->
+                assertThat(file.path().getFileName().toString()).isEqualTo("4.pdf"));
+        service.deleteLegacyAssignmentFile(3L, 4L);
+        assertThat(service.findAssignmentFile(3L, 4L)).isEmpty();
         assertThat(PhotoStorageService.normalizeDocumentType("application/x-pdf", null)).isEqualTo("application/pdf");
         assertThat(PhotoStorageService.normalizeDocumentType("image/jpg", "x")).isEqualTo("image/jpeg");
         assertThat(PhotoStorageService.contentTypeForDocument(".pdf")).isEqualTo("application/pdf");

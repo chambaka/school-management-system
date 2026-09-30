@@ -105,6 +105,26 @@ public class AssignmentController {
         return toFileResponse(assignmentService.file(tenantResolver.requireSchoolId(), principal, id));
     }
 
+    @GetMapping("/{id}/files/{fileId}")
+    @PreAuthorize(Access.ASSIGNMENT)
+    public ResponseEntity<Resource> file(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @PathVariable Long fileId
+    ) {
+        return toFileResponse(assignmentService.file(tenantResolver.requireSchoolId(), principal, id, fileId));
+    }
+
+    @DeleteMapping("/{id}/files/{fileId}")
+    @PreAuthorize(Access.ASSIGNMENT_WRITE)
+    public AssignmentResponse removeFile(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @PathVariable Long fileId
+    ) {
+        return assignmentService.removeFile(tenantResolver.requireSchoolId(), principal, id, fileId);
+    }
+
     @GetMapping("/{id}/submissions/{studentId}/file")
     @PreAuthorize(Access.ASSIGNMENT)
     public ResponseEntity<Resource> submissionFile(

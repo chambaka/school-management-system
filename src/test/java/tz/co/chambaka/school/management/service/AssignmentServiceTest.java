@@ -10,10 +10,12 @@ import tz.co.chambaka.school.management.dto.academic.AssignmentRequest;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Assignment;
+import tz.co.chambaka.school.management.model.AssignmentAttachment;
 import tz.co.chambaka.school.management.model.AssignmentSubmission;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.enums.AssignmentStatus;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.repository.AssignmentAttachmentRepository;
 import tz.co.chambaka.school.management.repository.AssignmentRepository;
 import tz.co.chambaka.school.management.repository.AssignmentSubmissionRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
@@ -40,6 +42,7 @@ import static org.mockito.Mockito.when;
 class AssignmentServiceTest {
 
     @Mock AssignmentRepository assignmentRepository;
+    @Mock AssignmentAttachmentRepository attachmentRepository;
     @Mock AssignmentSubmissionRepository submissionRepository;
     @Mock TeacherService teacherService;
     @Mock ClassService classService;
@@ -101,7 +104,12 @@ class AssignmentServiceTest {
         Assignment legacy = assignment(4L, Fixtures.schoolClass(), null);
         when(assignmentRepository.findBySchoolIdOrderByDueDateDesc(1L))
                 .thenReturn(List.of(published, draft, other, legacy));
+        when(attachmentRepository.findByAssignment_IdInOrderByIdAsc(org.mockito.ArgumentMatchers.anyCollection()))
+                .thenReturn(List.of(attachment(5L, published, "sheet.pdf", "application/pdf")));
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
+        assertThat(service.list(1L, Fixtures.principal(Role.HEADMASTER)).getFirst().attachments())
+                .extracting(row -> row.fileName())
+                .containsExactly("sheet.pdf");
         assertThat(service.list(1L, Fixtures.principal(Role.STUDENT)))
                 .extracting(row -> row.id())
                 .containsExactly(1L, 4L);
@@ -151,7 +159,12 @@ class AssignmentServiceTest {
         Assignment draft = assignment(1L, Fixtures.schoolClass(), AssignmentStatus.DRAFT);
         when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(draft));
         when(submissionRepository.findByAssignmentId(1L)).thenReturn(List.of());
+        AssignmentAttachment leftover = attachment(21L, draft, "gone.pdf", "application/pdf");
+        when(attachmentRepository.findByAssignment_IdOrderByIdAsc(1L)).thenReturn(List.of(leftover));
         service.delete(1L, teacher, 1L);
+        verify(photoStorageService).deleteAssignmentFile(1L, 1L, 21L);
+        verify(photoStorageService).deleteLegacyAssignmentFile(1L, 1L);
+        verify(attachmentRepository).deleteAll(List.of(leftover));
         verify(assignmentRepository).delete(draft);
 
         Assignment published = assignment(2L, Fixtures.schoolClass(), AssignmentStatus.PUBLISHED);
@@ -197,19 +210,113 @@ class AssignmentServiceTest {
     void attachesFileOnDraftAndRejectsLockedTeacherEdit() {
         Assignment draft = assignment(1L, Fixtures.schoolClass(), AssignmentStatus.DRAFT);
         when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(draft));
+        stubSaveAttachment(11L);
+        draft.setAttachmentName("   ");
         MockMultipartFile file = new MockMultipartFile("file", "work.pdf", "application/pdf", new byte[]{1});
-        assertThat(service.attach(1L, teacher, 1L, file).attachmentName()).isEqualTo("work.pdf");
-        verify(photoStorageService).storeAssignmentFile(1L, 1L, file);
+        var attached = service.attach(1L, teacher, 1L, file);
+        assertThat(attached.attachmentName()).isEqualTo("work.pdf");
+        assertThat(attached.attachments()).extracting(row -> row.fileName()).containsExactly("work.pdf");
+        verify(photoStorageService).storeAssignmentFile(1L, 1L, 11L, file);
 
         Assignment locked = assignment(2L, Fixtures.schoolClass(), AssignmentStatus.LOCKED);
         when(assignmentRepository.findByIdAndSchoolId(2L, 1L)).thenReturn(Optional.of(locked));
         assertThatThrownBy(() -> service.attach(1L, teacher, 2L, file))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("academic master");
+        stubSaveAttachment(12L);
         assertThat(service.attach(1L, academic, 2L, file).attachmentName()).isEqualTo("work.pdf");
 
         when(assignmentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.attach(1L, teacher, 9L, file)).isInstanceOf(ResourceNotFoundException.class);
+
+        Assignment draftAgain = assignment(3L, Fixtures.schoolClass(), AssignmentStatus.DRAFT);
+        when(assignmentRepository.findByIdAndSchoolId(3L, 1L)).thenReturn(Optional.of(draftAgain));
+        stubSaveAttachment(15L);
+        org.mockito.Mockito.doThrow(new BusinessException("Could not save file"))
+                .when(photoStorageService).storeAssignmentFile(1L, 3L, 15L, file);
+        assertThatThrownBy(() -> service.attach(1L, teacher, 3L, file))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Could not save file");
+        verify(attachmentRepository).delete(org.mockito.ArgumentMatchers.any(AssignmentAttachment.class));
+    }
+
+    @Test
+    void keepsZeroOrMoreDocumentsAndRemovesOne() {
+        Assignment draft = assignment(1L, Fixtures.schoolClass(), AssignmentStatus.DRAFT);
+        when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(draft));
+        when(assignmentRepository.findBySchoolIdOrderByDueDateDesc(1L)).thenReturn(List.of());
+        assertThat(service.list(1L, teacher)).isEmpty();
+        when(assignmentRepository.findBySchoolIdOrderByDueDateDesc(1L)).thenReturn(List.of(draft));
+        assertThat(service.list(1L, teacher)).singleElement().satisfies(row -> {
+            assertThat(row.attachments()).isEmpty();
+            assertThat(row.attachmentName()).isNull();
+        });
+        draft.setAttachmentName("old.pdf");
+        assertThat(service.list(1L, teacher).getFirst().attachments())
+                .extracting(tz.co.chambaka.school.management.dto.academic.AssignmentAttachmentResponse::fileName)
+                .containsExactly("old.pdf");
+        draft.setAttachmentName(null);
+
+        AssignmentAttachment first = attachment(11L, draft, "notes.pdf", "application/pdf");
+        AssignmentAttachment second = attachment(12L, draft, "rubric.png", "image/png");
+        when(attachmentRepository.findByAssignment_IdOrderByIdAsc(1L)).thenReturn(List.of(first, second));
+        stubSaveAttachment(13L);
+        MockMultipartFile extra = new MockMultipartFile("file", "extra.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document", new byte[]{3});
+        var afterAdd = service.attach(1L, teacher, 1L, extra);
+        assertThat(afterAdd.attachments()).extracting(row -> row.fileName())
+                .containsExactly("notes.pdf", "rubric.png", "extra.docx");
+
+        when(attachmentRepository.findByIdAndAssignment_IdAndSchoolId(12L, 1L, 1L)).thenReturn(Optional.of(second));
+        when(attachmentRepository.findByAssignment_IdOrderByIdAsc(1L)).thenReturn(List.of(first));
+        var afterRemove = service.removeFile(1L, teacher, 1L, 12L);
+        verify(photoStorageService).deleteAssignmentFile(1L, 1L, 12L);
+        verify(photoStorageService, never()).deleteLegacyAssignmentFile(1L, 1L);
+        assertThat(afterRemove.attachments()).extracting(row -> row.fileName()).containsExactly("notes.pdf");
+        assertThat(afterRemove.attachmentName()).isEqualTo("notes.pdf");
+
+        when(attachmentRepository.findByIdAndAssignment_IdAndSchoolId(11L, 1L, 1L)).thenReturn(Optional.of(first));
+        when(attachmentRepository.findByAssignment_IdOrderByIdAsc(1L)).thenReturn(List.of());
+        var empty = service.removeFile(1L, teacher, 1L, 11L);
+        verify(photoStorageService).deleteLegacyAssignmentFile(1L, 1L);
+        assertThat(empty.attachments()).isEmpty();
+        assertThat(empty.attachmentName()).isNull();
+
+        Assignment locked = assignment(2L, Fixtures.schoolClass(), AssignmentStatus.LOCKED);
+        when(assignmentRepository.findByIdAndSchoolId(2L, 1L)).thenReturn(Optional.of(locked));
+        assertThatThrownBy(() -> service.removeFile(1L, teacher, 2L, 11L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("academic master");
+        when(attachmentRepository.findByIdAndAssignment_IdAndSchoolId(9L, 2L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.removeFile(1L, academic, 2L, 9L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void adoptsLegacySingleFileThenAddsAnotherDocument() {
+        Assignment draft = assignment(1L, Fixtures.schoolClass(), AssignmentStatus.DRAFT);
+        draft.setAttachmentName("old.pdf");
+        when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(draft));
+        stubSaveAttachment(14L);
+        MockMultipartFile firstExtra = new MockMultipartFile("file", "only-new.png", "image/png", new byte[]{4});
+        assertThat(service.attach(1L, teacher, 1L, firstExtra).attachments())
+                .extracting(row -> row.fileName())
+                .containsExactly("only-new.png");
+
+        when(photoStorageService.findAssignmentFile(1L, 1L))
+                .thenReturn(Optional.of(new StoredPhoto(Path.of("1.pdf"), "application/pdf")));
+        when(attachmentRepository.findByAssignment_IdOrderByIdAsc(1L))
+                .thenReturn(List.of())
+                .thenReturn(List.of(attachment(10L, draft, "old.pdf", "application/pdf")));
+        java.util.concurrent.atomic.AtomicLong ids = new java.util.concurrent.atomic.AtomicLong(10);
+        when(attachmentRepository.saveAndFlush(any(AssignmentAttachment.class))).thenAnswer(invocation -> {
+            AssignmentAttachment saved = invocation.getArgument(0);
+            saved.setId(ids.getAndIncrement());
+            return saved;
+        });
+        MockMultipartFile extra = new MockMultipartFile("file", "new.png", "image/png", new byte[]{4});
+        var response = service.attach(1L, teacher, 1L, extra);
+        assertThat(response.attachments()).extracting(row -> row.fileName()).contains("old.pdf", "new.png");
     }
 
     @Test
@@ -226,7 +333,23 @@ class AssignmentServiceTest {
         when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(published));
         assertThat(service.file(1L, Fixtures.principal(Role.PARENT), 1L)).isEqualTo(stored);
         assertThat(service.file(1L, Fixtures.principal(Role.STUDENT), 1L)).isEqualTo(stored);
+        when(attachmentRepository.findByAssignment_IdOrderByIdAsc(1L))
+                .thenReturn(List.of(attachment(11L, published, "a.pdf", "application/pdf")));
+        when(photoStorageService.findAssignmentFile(1L, 1L, 11L)).thenReturn(Optional.of(stored));
+        assertThat(service.file(1L, teacher, 1L)).isEqualTo(stored);
+        when(attachmentRepository.findByAssignment_IdOrderByIdAsc(1L)).thenReturn(List.of());
         when(photoStorageService.findAssignmentFile(1L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.file(1L, teacher, 1L)).isInstanceOf(ResourceNotFoundException.class);
+
+        when(attachmentRepository.findByIdAndAssignment_IdAndSchoolId(11L, 1L, 1L))
+                .thenReturn(Optional.of(attachment(11L, published, "a.pdf", "application/pdf")));
+        when(photoStorageService.findAssignmentFile(1L, 1L, 11L)).thenReturn(Optional.of(stored));
+        assertThat(service.file(1L, teacher, 1L, 11L)).isEqualTo(stored);
+        when(attachmentRepository.findByIdAndAssignment_IdAndSchoolId(9L, 1L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.file(1L, teacher, 1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
+        when(attachmentRepository.findByAssignment_IdOrderByIdAsc(1L))
+                .thenReturn(List.of(attachment(11L, published, "a.pdf", "application/pdf")));
+        when(photoStorageService.findAssignmentFile(1L, 1L, 11L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.file(1L, teacher, 1L)).isInstanceOf(ResourceNotFoundException.class);
 
         when(photoStorageService.findSubmissionFile(1L, 1L, 1L)).thenReturn(Optional.of(stored));
@@ -337,5 +460,23 @@ class AssignmentServiceTest {
         assignment.setStatus(status);
         assignment.setPublishedAt(status == AssignmentStatus.PUBLISHED ? Instant.now() : null);
         return assignment;
+    }
+
+    private void stubSaveAttachment(Long id) {
+        when(attachmentRepository.saveAndFlush(any(AssignmentAttachment.class))).thenAnswer(invocation -> {
+            AssignmentAttachment saved = invocation.getArgument(0);
+            saved.setId(id);
+            return saved;
+        });
+    }
+
+    private AssignmentAttachment attachment(Long id, Assignment assignment, String fileName, String contentType) {
+        AssignmentAttachment row = new AssignmentAttachment();
+        row.setId(id);
+        row.setSchoolId(1L);
+        row.setAssignment(assignment);
+        row.setFileName(fileName);
+        row.setContentType(contentType);
+        return row;
     }
 }

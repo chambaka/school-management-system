@@ -60,8 +60,29 @@ public class PhotoStorageService {
         return storeDocument(schoolId, "assignments", String.valueOf(assignmentId), file);
     }
 
+    public Path storeAssignmentFile(Long schoolId, Long assignmentId, Long attachmentId, MultipartFile file) {
+        return storeDocument(schoolId, "assignments", assignmentId + "-" + attachmentId, file);
+    }
+
     public Optional<StoredPhoto> findAssignmentFile(Long schoolId, Long assignmentId) {
         return findDocument(schoolId, "assignments", String.valueOf(assignmentId));
+    }
+
+    public Optional<StoredPhoto> findAssignmentFile(Long schoolId, Long assignmentId, Long attachmentId) {
+        Optional<StoredPhoto> stored = findDocument(schoolId, "assignments", assignmentId + "-" + attachmentId);
+        if (stored.isPresent()) {
+            return stored;
+        }
+        return findDocument(schoolId, "assignments", String.valueOf(assignmentId));
+    }
+
+    public void deleteAssignmentFile(Long schoolId, Long assignmentId, Long attachmentId) {
+        Path dir = personDir(schoolId, "assignments");
+        deleteDocumentExisting(dir, assignmentId + "-" + attachmentId);
+    }
+
+    public void deleteLegacyAssignmentFile(Long schoolId, Long assignmentId) {
+        deleteDocumentExisting(personDir(schoolId, "assignments"), String.valueOf(assignmentId));
     }
 
     public Path storeSubmissionFile(Long schoolId, Long assignmentId, Long studentId, MultipartFile file) {
