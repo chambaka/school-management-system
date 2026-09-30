@@ -108,6 +108,8 @@ class AssignmentServiceTest {
         when(attachmentRepository.findByAssignment_IdInOrderByIdAsc(org.mockito.ArgumentMatchers.anyCollection()))
                 .thenReturn(List.of(attachment(5L, published, "sheet.pdf", "application/pdf")));
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
+        when(submissionRepository.findByAssignmentIdAndStudentId(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(Optional.empty());
         assertThat(service.list(1L, Fixtures.principal(Role.HEADMASTER)).getFirst().attachments())
                 .extracting(row -> row.fileName())
                 .containsExactly("sheet.pdf");
@@ -121,7 +123,8 @@ class AssignmentServiceTest {
         mine.setNotes("done");
         mine.setAttachmentName("essay.pdf");
         mine.setSubmittedAt(Instant.parse("2026-09-16T10:00:00Z"));
-        when(submissionRepository.findMine(1L)).thenReturn(List.of(mine));
+        when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.of(mine));
+        when(submissionRepository.findByAssignmentIdAndStudentId(4L, 1L)).thenReturn(Optional.empty());
         assertThat(service.list(1L, Fixtures.principal(Role.STUDENT)).getFirst().mySubmission())
                 .extracting(row -> row.notes(), row -> row.attachmentName())
                 .containsExactly("done", "essay.pdf");
@@ -423,6 +426,8 @@ class AssignmentServiceTest {
         assertThat(service.mySubmissions(1L, 10L))
                 .extracting(row -> row.notes(), row -> row.assignmentId())
                 .containsExactly(tuple("ready", 1L));
+        when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.of(existing));
+        assertThat(service.mySubmission(1L, Fixtures.principal(Role.STUDENT), 1L).notes()).isEqualTo("ready");
         existing.setSchoolId(2L);
         assertThat(service.mySubmissions(1L, 10L)).isEmpty();
         when(assignmentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());

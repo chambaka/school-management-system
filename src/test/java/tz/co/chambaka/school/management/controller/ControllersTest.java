@@ -602,6 +602,7 @@ class ControllersTest {
         assignments.submit(teacher, 1L, "done", file);
         assignments.submissions(1L);
         assignments.mySubmissions(Fixtures.principal(Role.STUDENT));
+        assignments.mySubmission(Fixtures.principal(Role.STUDENT), 1L);
         assignments.delete(teacher, 1L);
 
         LessonLogController lessons = new LessonLogController(lessonLogService, tenantResolver);

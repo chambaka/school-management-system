@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -258,6 +259,15 @@ public class AssignmentService {
     }
 
     @Transactional(readOnly = true)
+    public AssignmentSubmissionResponse mySubmission(Long schoolId, UserPrincipal principal, Long assignmentId) {
+        requireVisibleAssignment(schoolId, principal, assignmentId);
+        Student me = studentService.requireByUser(principal.getId());
+        return submissionRepository.findByAssignmentIdAndStudentId(assignmentId, me.getId())
+                .map(this::toSubmission)
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
     public StoredPhoto file(Long schoolId, UserPrincipal principal, Long id) {
         requireVisibleAssignment(schoolId, principal, id);
         List<AssignmentAttachment> files = attachmentsOf(id);
@@ -356,13 +366,12 @@ public class AssignmentService {
     }
 
     private Map<Long, AssignmentSubmission> submissionsByAssignment(Long studentId, List<Assignment> assignments) {
-        var ids = assignments.stream().map(Assignment::getId).collect(Collectors.toSet());
-        if (ids.isEmpty()) {
-            return Map.of();
+        Map<Long, AssignmentSubmission> mine = new HashMap<>();
+        for (Assignment assignment : assignments) {
+            submissionRepository.findByAssignmentIdAndStudentId(assignment.getId(), studentId)
+                    .ifPresent(row -> mine.put(assignment.getId(), row));
         }
-        return submissionRepository.findMine(studentId).stream()
-                .filter(row -> ids.contains(row.getAssignment().getId()))
-                .collect(Collectors.toMap(row -> row.getAssignment().getId(), row -> row, (first, ignored) -> first));
+        return mine;
     }
 
     private Map<Long, List<AssignmentAttachment>> attachmentsByAssignment(List<Assignment> assignments) {
