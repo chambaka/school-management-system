@@ -222,12 +222,16 @@ public class ExamService {
             exam.setApprovalStatus(ExamApprovalStatus.PUBLISHED);
             exam.setPublished(true);
             exam.setPublishedAt(Instant.now());
-            studentRepository.findBySchoolIdAndSchoolClassId(schoolId, exam.getSchoolClass().getId()).forEach(student ->
-                    alertService.notifyParentsOfStudent(schoolId, student,
-                            "Results published",
-                            exam.getName() + " results are now available.",
-                            "RESULTS", true,
-                            AlertService.SUBJECT_EXAM, exam.getId()));
+            alertService.notifyHouseholds(
+                    schoolId,
+                    studentRepository.findBySchoolIdAndSchoolClassId(schoolId, exam.getSchoolClass().getId()),
+                    "Results published",
+                    exam.getName() + " results are now available.",
+                    "RESULTS",
+                    true,
+                    AlertService.SUBJECT_EXAM,
+                    exam.getId(),
+                    true);
         } else {
             exam.setPublished(false);
             if (exam.getApprovalStatus() == ExamApprovalStatus.PUBLISHED) {

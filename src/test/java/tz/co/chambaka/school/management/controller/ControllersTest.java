@@ -607,7 +607,7 @@ class ControllersTest {
         assignments.attachMyFile(Fixtures.principal(Role.STUDENT), 1L, file);
         assignments.marks(teacher, 1L, 1L, BigDecimal.TEN);
         assignments.submit(teacher, 1L, "done", file);
-        assignments.submissions(1L);
+        assignments.submissions(teacher, 1L);
         assignments.mySubmissions(Fixtures.principal(Role.STUDENT));
         assignments.mySubmission(Fixtures.principal(Role.STUDENT), 1L);
         assignments.delete(teacher, 1L);

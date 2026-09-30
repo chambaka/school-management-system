@@ -205,9 +205,9 @@ public class AssignmentController {
     }
 
     @GetMapping("/{id}/submissions")
-    @PreAuthorize(Access.ASSIGNMENT_WRITE)
-    public List<AssignmentSubmissionResponse> submissions(@PathVariable Long id) {
-        return assignmentService.submissions(tenantResolver.requireSchoolId(), id);
+    @PreAuthorize(Access.ASSIGNMENT)
+    public List<AssignmentSubmissionResponse> submissions(@CurrentUser UserPrincipal principal, @PathVariable Long id) {
+        return assignmentService.submissions(tenantResolver.requireSchoolId(), principal, id);
     }
 
     private static ResponseEntity<Resource> toFileResponse(StoredPhoto file) {

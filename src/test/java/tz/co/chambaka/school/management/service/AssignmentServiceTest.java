@@ -53,6 +53,7 @@ class AssignmentServiceTest {
     @Mock SectionService sectionService;
     @Mock SubjectService subjectService;
     @Mock StudentService studentService;
+    @Mock ParentService parentService;
     @Mock StudentRepository studentRepository;
     @Mock PhotoStorageService photoStorageService;
     @Mock AlertService alertService;
@@ -85,6 +86,7 @@ class AssignmentServiceTest {
         verify(assignmentRepository).save(org.mockito.ArgumentMatchers.argThat(saved ->
                 saved.getStatus() == AssignmentStatus.DRAFT && saved.getPublishedAt() != null));
         verify(alertService, never()).notifyParentsOfStudent(any(), any(), any(), any(), any(), anyBoolean());
+        verify(alertService, never()).notifyHouseholds(any(), any(), any(), any(), any(), anyBoolean(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -144,9 +146,17 @@ class AssignmentServiceTest {
                 .extracting(row -> row.attempt(), row -> row.notes())
                 .containsExactly(tuple(2, "done"), tuple(1, "first try"));
         assertThat(service.list(1L, Fixtures.principal(Role.HEADMASTER))).hasSize(4);
+        when(parentService.linkedStudents(10L)).thenReturn(List.of(Fixtures.student()));
         assertThat(service.list(1L, Fixtures.principal(Role.PARENT)))
                 .extracting(row -> row.id())
-                .containsExactly(1L, 2L, 4L);
+                .containsExactly(1L, 4L);
+        assertThat(service.list(1L, Fixtures.principal(Role.PARENT)).getFirst().mySubmission())
+                .extracting(row -> row.notes(), row -> row.studentName())
+                .containsExactly("done", "User STUDENT");
+        Student childWithoutClass = Fixtures.student();
+        childWithoutClass.setSchoolClass(null);
+        when(parentService.linkedStudents(10L)).thenReturn(List.of(childWithoutClass));
+        assertThat(service.list(1L, Fixtures.principal(Role.PARENT))).isEmpty();
 
         Student withoutClass = Fixtures.student();
         withoutClass.setSchoolClass(null);
@@ -235,8 +245,8 @@ class AssignmentServiceTest {
         when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L)).thenReturn(List.of(Fixtures.student()));
         assertThat(service.publish(1L, academic, 1L).status()).isEqualTo(AssignmentStatus.PUBLISHED);
         assertThat(draft.getPublishedAt()).isNotNull();
-        verify(alertService).notifyParentsOfStudent(any(), any(), eq("New assignment"), any(), eq("ASSIGNMENT"), eq(true),
-                eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L));
+        verify(alertService).notifyHouseholds(eq(1L), any(), eq("New assignment"), any(), eq("ASSIGNMENT"), eq(true),
+                eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L), eq(true));
         assertThatThrownBy(() -> service.publish(1L, academic, 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Lock this assignment");
@@ -395,9 +405,11 @@ class AssignmentServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Not allowed");
         assertThat(service.submissionFile(1L, academic, 1L, 1L)).isEqualTo(stored);
-        assertThatThrownBy(() -> service.submissionFile(1L, Fixtures.principal(Role.PARENT), 1L, 1L))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("Not allowed");
+        assertThat(service.submissionFile(1L, Fixtures.principal(Role.PARENT), 1L, 1L)).isEqualTo(stored);
+        org.mockito.Mockito.doThrow(new ResourceNotFoundException("Student is not linked to this parent"))
+                .when(parentService).assertLinked(10L, 9L);
+        assertThatThrownBy(() -> service.submissionFile(1L, Fixtures.principal(Role.PARENT), 1L, 9L))
+                .isInstanceOf(ResourceNotFoundException.class);
         when(photoStorageService.findSubmissionFile(1L, 1L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.submissionFile(1L, academic, 1L, 1L))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -458,6 +470,8 @@ class AssignmentServiceTest {
         assertThat(submitted.attempt()).isEqualTo(1);
         verify(photoStorageService).storeSubmissionFile(1L, 1L, 1L, 3L, 11L, file);
         verify(alertService).notifyParentsOfStudent(eq(1L), any(Student.class), eq("Assignment submitted"), any(), eq("ASSIGNMENT"), eq(false),
+                eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L), eq(false));
+        verify(alertService).notifyUser(eq(1L), eq(3L), eq("Assignment submitted"), any(), eq("ASSIGNMENT"),
                 eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L));
 
         AssignmentSubmission existing = new AssignmentSubmission();
@@ -476,6 +490,14 @@ class AssignmentServiceTest {
 
         when(submissionRepository.findByAssignmentIdOrderBySubmittedAtDescIdDesc(1L)).thenReturn(List.of(existing));
         assertThat(service.submissions(1L, 1L)).hasSize(1);
+        when(parentService.linkedStudents(10L)).thenReturn(List.of(Fixtures.student()));
+        assertThat(service.submissions(1L, Fixtures.principal(Role.PARENT), 1L)).hasSize(1);
+        Student otherChild = Fixtures.student();
+        otherChild.setId(9L);
+        when(parentService.linkedStudents(10L)).thenReturn(List.of(otherChild));
+        assertThat(service.submissions(1L, Fixtures.principal(Role.PARENT), 1L)).isEmpty();
+        when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
+        assertThat(service.submissions(1L, Fixtures.principal(Role.STUDENT), 1L)).hasSize(1);
         existing.setNotes("ready");
         when(submissionRepository.findMine(1L)).thenReturn(List.of(existing));
         assertThat(service.mySubmissions(1L, 10L))

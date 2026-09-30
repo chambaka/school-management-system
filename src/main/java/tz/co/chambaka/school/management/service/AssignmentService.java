@@ -30,8 +30,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,6 +49,7 @@ public class AssignmentService {
     private final SectionService sectionService;
     private final SubjectService subjectService;
     private final StudentService studentService;
+    private final ParentService parentService;
     private final StudentRepository studentRepository;
     private final PhotoStorageService photoStorageService;
     private final AlertService alertService;
@@ -61,6 +65,7 @@ public class AssignmentService {
             SectionService sectionService,
             SubjectService subjectService,
             StudentService studentService,
+            ParentService parentService,
             StudentRepository studentRepository,
             PhotoStorageService photoStorageService,
             AlertService alertService,
@@ -75,6 +80,7 @@ public class AssignmentService {
         this.sectionService = sectionService;
         this.subjectService = subjectService;
         this.studentService = studentService;
+        this.parentService = parentService;
         this.studentRepository = studentRepository;
         this.photoStorageService = photoStorageService;
         this.alertService = alertService;
@@ -164,10 +170,16 @@ public class AssignmentService {
         assignment.setStatus(AssignmentStatus.PUBLISHED);
         assignment.setPublishedAt(Instant.now());
         Assignment saved = assignmentRepository.save(assignment);
-        studentRepository.findBySchoolIdAndSchoolClassId(schoolId, saved.getSchoolClass().getId()).forEach(student ->
-                alertService.notifyParentsOfStudent(schoolId, student, "New assignment",
-                        saved.getTitle() + " is due " + saved.getDueDate(), "ASSIGNMENT", true,
-                        AlertService.SUBJECT_ASSIGNMENT, saved.getId()));
+        alertService.notifyHouseholds(
+                schoolId,
+                audienceOf(schoolId, saved),
+                "New assignment",
+                saved.getTitle() + " is due " + saved.getDueDate(),
+                "ASSIGNMENT",
+                true,
+                AlertService.SUBJECT_ASSIGNMENT,
+                saved.getId(),
+                true);
         return toResponse(saved);
     }
 
@@ -230,9 +242,22 @@ public class AssignmentService {
                     .toList();
         }
         if (principal.getRole() == Role.PARENT) {
-            return all.stream()
+            List<Student> children = parentService.linkedStudents(principal.getId());
+            List<Assignment> visible = all.stream()
                     .filter(assignment -> statusOf(assignment) == AssignmentStatus.PUBLISHED)
-                    .map(assignment -> toResponse(assignment, files.getOrDefault(assignment.getId(), List.of())))
+                    .filter(assignment -> children.stream().anyMatch(child -> visibleToChild(assignment, child)))
+                    .toList();
+            Map<Long, List<AssignmentSubmission>> work = new HashMap<>();
+            for (Student child : children) {
+                for (Map.Entry<Long, List<AssignmentSubmission>> entry : submissionsByAssignment(child.getId(), visible).entrySet()) {
+                    work.computeIfAbsent(entry.getKey(), key -> new ArrayList<>()).addAll(entry.getValue());
+                }
+            }
+            return visible.stream()
+                    .map(assignment -> toResponse(
+                            assignment,
+                            files.getOrDefault(assignment.getId(), List.of()),
+                            work.getOrDefault(assignment.getId(), List.of())))
                     .toList();
         }
         return all.stream()
@@ -255,9 +280,20 @@ public class AssignmentService {
         if (file != null && !file.isEmpty()) {
             addSubmissionFile(schoolId, saved, file);
         }
+        String body = student.getUser().getName() + " submitted " + assignment.getTitle();
         alertService.notifyParentsOfStudent(schoolId, student, "Assignment submitted",
-                student.getUser().getName() + " submitted " + assignment.getTitle(), "ASSIGNMENT", false,
-                AlertService.SUBJECT_ASSIGNMENT, assignmentId);
+                body, "ASSIGNMENT", false,
+                AlertService.SUBJECT_ASSIGNMENT, assignmentId, false);
+        if (assignment.getTeacher() != null && assignment.getTeacher().getUser() != null) {
+            alertService.notifyUser(
+                    schoolId,
+                    assignment.getTeacher().getUser().getId(),
+                    "Assignment submitted",
+                    body,
+                    "ASSIGNMENT",
+                    AlertService.SUBJECT_ASSIGNMENT,
+                    assignmentId);
+        }
         List<AssignmentSubmission> attempts = new ArrayList<>(assignmentAttempts(assignmentId, student.getId()));
         if (attempts.stream().noneMatch(row -> saved.getId() != null && saved.getId().equals(row.getId()))) {
             attempts.add(saved);
@@ -267,8 +303,29 @@ public class AssignmentService {
 
     @Transactional(readOnly = true)
     public List<AssignmentSubmissionResponse> submissions(Long schoolId, Long assignmentId) {
-        require(schoolId, assignmentId);
-        return toSubmissionHistory(submissionRepository.findByAssignmentIdOrderBySubmittedAtDescIdDesc(assignmentId));
+        return submissions(schoolId, null, assignmentId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AssignmentSubmissionResponse> submissions(Long schoolId, UserPrincipal principal, Long assignmentId) {
+        if (principal == null) {
+            require(schoolId, assignmentId);
+        } else {
+            requireVisibleAssignment(schoolId, principal, assignmentId);
+        }
+        List<AssignmentSubmission> rows = submissionRepository.findByAssignmentIdOrderBySubmittedAtDescIdDesc(assignmentId);
+        if (principal != null && principal.getRole() == Role.PARENT) {
+            Set<Long> children = linkedStudentIds(principal.getId());
+            rows = rows.stream()
+                    .filter(row -> row.getStudent() != null && children.contains(row.getStudent().getId()))
+                    .toList();
+        } else if (principal != null && principal.getRole() == Role.STUDENT) {
+            Long me = studentService.requireByUser(principal.getId()).getId();
+            rows = rows.stream()
+                    .filter(row -> row.getStudent() != null && me.equals(row.getStudent().getId()))
+                    .toList();
+        }
+        return toSubmissionHistory(rows);
     }
 
     @Transactional(readOnly = true)
@@ -358,6 +415,8 @@ public class AssignmentService {
             if (!me.equals(studentId)) {
                 throw new BusinessException("Not allowed to view this file");
             }
+        } else if (principal.getRole() == Role.PARENT) {
+            parentService.assertLinked(principal.getId(), studentId);
         } else if (principal.getRole() != Role.HEADMASTER
                 && principal.getRole() != Role.ACADEMIC_MASTER
                 && principal.getRole() != Role.TEACHER
@@ -402,6 +461,38 @@ public class AssignmentService {
     private Assignment require(Long schoolId, Long id) {
         return assignmentRepository.findByIdAndSchoolId(id, schoolId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Assignment", id));
+    }
+
+    private List<Student> audienceOf(Long schoolId, Assignment assignment) {
+        List<Student> students = studentRepository.findBySchoolIdAndSchoolClassId(
+                schoolId, assignment.getSchoolClass().getId());
+        if (assignment.getSection() == null || assignment.getSection().getId() == null) {
+            return students;
+        }
+        Long sectionId = assignment.getSection().getId();
+        return students.stream()
+                .filter(student -> student.getSection() != null && sectionId.equals(student.getSection().getId()))
+                .toList();
+    }
+
+    private boolean visibleToChild(Assignment assignment, Student student) {
+        if (student == null || student.getSchoolClass() == null || assignment.getSchoolClass() == null) {
+            return false;
+        }
+        if (!student.getSchoolClass().getId().equals(assignment.getSchoolClass().getId())) {
+            return false;
+        }
+        if (assignment.getSection() == null || assignment.getSection().getId() == null) {
+            return true;
+        }
+        return student.getSection() != null && assignment.getSection().getId().equals(student.getSection().getId());
+    }
+
+    private Set<Long> linkedStudentIds(Long userId) {
+        return parentService.linkedStudents(userId).stream()
+                .map(Student::getId)
+                .filter(id -> id != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private Assignment requireMutableAssignment(Long schoolId, UserPrincipal principal, Long id, String action) {
@@ -678,14 +769,40 @@ public class AssignmentService {
         if (rows == null || rows.isEmpty()) {
             return List.of();
         }
-        List<AssignmentSubmission> oldestFirst = rows.stream().sorted(ATTEMPT_ORDER).toList();
-        Map<Long, List<AssignmentSubmissionAttachment>> files = submissionFilesBySubmission(oldestFirst);
+        Map<Long, List<AssignmentSubmissionAttachment>> files = submissionFilesBySubmission(rows);
+        Map<Long, List<AssignmentSubmission>> byStudent = new LinkedHashMap<>();
+        List<AssignmentSubmission> unknown = new ArrayList<>();
+        for (AssignmentSubmission row : rows) {
+            Long studentId = row.getStudent() == null ? null : row.getStudent().getId();
+            if (studentId == null) {
+                unknown.add(row);
+                continue;
+            }
+            byStudent.computeIfAbsent(studentId, key -> new ArrayList<>()).add(row);
+        }
+        List<AssignmentSubmissionResponse> history = new ArrayList<>();
+        for (List<AssignmentSubmission> group : byStudent.values()) {
+            history.addAll(numberedAttempts(group, files));
+        }
+        if (!unknown.isEmpty()) {
+            history.addAll(numberedAttempts(unknown, files));
+        }
+        history.sort(Comparator
+                .comparing(AssignmentSubmissionResponse::submittedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(AssignmentSubmissionResponse::id, Comparator.nullsLast(Comparator.reverseOrder())));
+        return history;
+    }
+
+    private List<AssignmentSubmissionResponse> numberedAttempts(
+            List<AssignmentSubmission> group,
+            Map<Long, List<AssignmentSubmissionAttachment>> files
+    ) {
+        List<AssignmentSubmission> oldestFirst = group.stream().sorted(ATTEMPT_ORDER).toList();
         List<AssignmentSubmissionResponse> history = new ArrayList<>();
         for (int index = 0; index < oldestFirst.size(); index++) {
             AssignmentSubmission row = oldestFirst.get(index);
             history.add(toSubmission(row, index + 1, files.getOrDefault(row.getId(), List.of())));
         }
-        history.sort(Comparator.comparing(AssignmentSubmissionResponse::attempt).reversed());
         return history;
     }
 

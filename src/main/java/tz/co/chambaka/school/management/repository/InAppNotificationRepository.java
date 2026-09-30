@@ -12,6 +12,14 @@ public interface InAppNotificationRepository extends JpaRepository<InAppNotifica
 
     Optional<InAppNotification> findByIdAndUserId(Long id, Long userId);
 
+    List<InAppNotification> findBySchoolIdAndUserIdAndEntityTypeAndEntityIdAndTitleAndReadFlagFalseOrderByIdAsc(
+            Long schoolId,
+            Long userId,
+            String entityType,
+            Long entityId,
+            String title
+    );
+
     long countByUserIdAndReadFlagFalse(Long userId);
 
     void deleteBySchoolIdAndEntityTypeAndEntityId(Long schoolId, String entityType, Long entityId);

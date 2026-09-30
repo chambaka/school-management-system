@@ -23,7 +23,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ParentService {
@@ -162,6 +164,19 @@ public class ParentService {
     public Parent requireByUser(Long userId) {
         return parentRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Parent profile not found for current user"));
+    }
+
+    public List<Student> linkedStudents(Long userId) {
+        Parent parent = requireByUser(userId);
+        Map<Long, Student> unique = new LinkedHashMap<>();
+        for (StudentParent link : studentParentRepository.findByParentId(parent.getId())) {
+            Student student = link.getStudent();
+            if (student == null || student.getId() == null) {
+                continue;
+            }
+            unique.putIfAbsent(student.getId(), student);
+        }
+        return List.copyOf(unique.values());
     }
 
     public void assertLinked(Long parentUserId, Long studentId) {

@@ -112,6 +112,7 @@ class ParentServiceTest {
         assertThat(service.list(1L, true, PageRequest.of(0, 10)).content()).isEmpty();
 
         when(parentRepository.findByUserId(5L)).thenReturn(Optional.of(parent));
+        assertThat(service.linkedStudents(5L)).extracting(Student::getId).containsExactly(1L);
         service.assertLinked(5L, 1L);
         assertThat(service.requireByUser(5L)).isSameAs(parent);
     }
@@ -129,6 +130,7 @@ class ParentServiceTest {
         assertThatThrownBy(() -> service.requireByUser(8L)).isInstanceOf(ResourceNotFoundException.class);
         when(parentRepository.findByUserId(5L)).thenReturn(Optional.of(Fixtures.parent()));
         when(studentParentRepository.findByParentId(1L)).thenReturn(List.of());
+        assertThat(service.linkedStudents(5L)).isEmpty();
         assertThatThrownBy(() -> service.assertLinked(5L, 1L)).isInstanceOf(ResourceNotFoundException.class);
         when(studentParentRepository.findByStudentIdAndParentId(1L, 1L)).thenReturn(Optional.empty());
         when(parentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(Fixtures.parent()));

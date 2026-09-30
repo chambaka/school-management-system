@@ -9,6 +9,7 @@ import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.model.InAppNotification;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.StudentParent;
+import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.AssignmentRepository;
 import tz.co.chambaka.school.management.repository.ExamRepository;
 import tz.co.chambaka.school.management.repository.InAppNotificationRepository;
@@ -133,6 +134,69 @@ class AlertServiceTest {
 
         assertThat(service.inbox(1L, 4L)).extracting(row -> row.id()).containsExactly(1L, 4L, 5L);
         verify(notificationRepository).deleteAll(List.of(stale, examAlert));
+    }
+
+    @Test
+    void notifiesEachPersonOnceAndRefreshesUnreadInsteadOfStacking() {
+        Student student = Fixtures.student();
+        Student classmate = Fixtures.student();
+        classmate.setId(2L);
+        classmate.setUser(Fixtures.user(6L, Role.STUDENT));
+        StudentParent first = new StudentParent();
+        first.setParent(Fixtures.parent());
+        StudentParent duplicate = new StudentParent();
+        duplicate.setParent(Fixtures.parent());
+        when(studentParentRepository.findByStudentId(1L)).thenReturn(List.of(first, duplicate));
+        when(studentParentRepository.findByStudentId(2L)).thenReturn(List.of(duplicate));
+
+        service.notifyParentsOfStudent(1L, student, "Assignment submitted", "Done",
+                "ASSIGNMENT", false, AlertService.SUBJECT_ASSIGNMENT, 8L, false);
+        verify(notificationRepository, times(1)).save(any(InAppNotification.class));
+
+        service.notifyHouseholds(1L, List.of(student, classmate), "New assignment", "Due tomorrow",
+                "ASSIGNMENT", false, AlertService.SUBJECT_ASSIGNMENT, 8L, true);
+        verify(notificationRepository, times(4)).save(any(InAppNotification.class));
+
+        InAppNotification existing = notification(9L, false);
+        InAppNotification extra = notification(10L, false);
+        when(notificationRepository.findBySchoolIdAndUserIdAndEntityTypeAndEntityIdAndTitleAndReadFlagFalseOrderByIdAsc(
+                1L, 4L, AlertService.SUBJECT_ASSIGNMENT, 8L, "Assignment submitted"))
+                .thenReturn(List.of(existing, extra));
+        service.notifyUser(1L, 4L, "Assignment submitted", "Latest attempt", "ASSIGNMENT",
+                AlertService.SUBJECT_ASSIGNMENT, 8L);
+        assertThat(existing.getBody()).isEqualTo("Latest attempt");
+        verify(notificationRepository).deleteAll(List.of(extra));
+
+        service.notifyUser(1L, null, "Ignored", "Body", "ASSIGNMENT", AlertService.SUBJECT_ASSIGNMENT, 8L);
+        service.notifyHouseholds(1L, List.of(), "New assignment", "Due", "ASSIGNMENT", false,
+                AlertService.SUBJECT_ASSIGNMENT, 8L, true);
+        service.notifyHouseholds(1L, java.util.Arrays.asList(student, null), "New assignment", "Due", "ASSIGNMENT", false,
+                AlertService.SUBJECT_ASSIGNMENT, 8L, true);
+    }
+
+    @Test
+    void inboxKeepsNewestUnreadAlertForTheSameAssignment() {
+        InAppNotification newest = notification(10L, false);
+        newest.setSchoolId(1L);
+        newest.setEntityType(AlertService.SUBJECT_ASSIGNMENT);
+        newest.setEntityId(8L);
+        newest.setTitle("Assignment submitted");
+        InAppNotification older = notification(11L, false);
+        older.setSchoolId(1L);
+        older.setEntityType(AlertService.SUBJECT_ASSIGNMENT);
+        older.setEntityId(8L);
+        older.setTitle("Assignment submitted");
+        InAppNotification read = notification(12L, true);
+        read.setSchoolId(1L);
+        read.setEntityType(AlertService.SUBJECT_ASSIGNMENT);
+        read.setEntityId(8L);
+        read.setTitle("Assignment submitted");
+        when(notificationRepository.findBySchoolIdAndUserIdOrderByCreatedAtDesc(1L, 4L))
+                .thenReturn(List.of(newest, older, read));
+        when(assignmentRepository.findByIdAndSchoolId(8L, 1L)).thenReturn(Optional.of(new tz.co.chambaka.school.management.model.Assignment()));
+
+        assertThat(service.inbox(1L, 4L)).extracting(row -> row.id()).containsExactly(10L, 12L);
+        verify(notificationRepository).deleteAll(List.of(older));
     }
 
     @Test
