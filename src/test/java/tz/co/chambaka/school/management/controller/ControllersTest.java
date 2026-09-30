@@ -601,6 +601,7 @@ class ControllersTest {
         assignments.marks(teacher, 1L, 1L, BigDecimal.TEN);
         assignments.submit(teacher, 1L, "done", file);
         assignments.submissions(1L);
+        assignments.mySubmissions(Fixtures.principal(Role.STUDENT));
         assignments.delete(teacher, 1L);
 
         LessonLogController lessons = new LessonLogController(lessonLogService, tenantResolver);
