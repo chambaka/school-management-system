@@ -23,6 +23,7 @@ public record AssignmentResponse(
         List<AssignmentAttachmentResponse> attachments,
         AssignmentStatus status,
         Instant publishedAt,
-        AssignmentSubmissionResponse mySubmission
+        AssignmentSubmissionResponse mySubmission,
+        List<AssignmentSubmissionResponse> mySubmissionHistory
 ) {
 }

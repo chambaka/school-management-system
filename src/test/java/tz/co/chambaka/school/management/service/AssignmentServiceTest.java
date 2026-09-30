@@ -12,11 +12,13 @@ import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Assignment;
 import tz.co.chambaka.school.management.model.AssignmentAttachment;
 import tz.co.chambaka.school.management.model.AssignmentSubmission;
+import tz.co.chambaka.school.management.model.AssignmentSubmissionAttachment;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.enums.AssignmentStatus;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.AssignmentAttachmentRepository;
 import tz.co.chambaka.school.management.repository.AssignmentRepository;
+import tz.co.chambaka.school.management.repository.AssignmentSubmissionAttachmentRepository;
 import tz.co.chambaka.school.management.repository.AssignmentSubmissionRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.security.UserPrincipal;
@@ -45,6 +47,7 @@ class AssignmentServiceTest {
     @Mock AssignmentRepository assignmentRepository;
     @Mock AssignmentAttachmentRepository attachmentRepository;
     @Mock AssignmentSubmissionRepository submissionRepository;
+    @Mock AssignmentSubmissionAttachmentRepository submissionAttachmentRepository;
     @Mock TeacherService teacherService;
     @Mock ClassService classService;
     @Mock SectionService sectionService;
@@ -108,14 +111,21 @@ class AssignmentServiceTest {
         when(attachmentRepository.findByAssignment_IdInOrderByIdAsc(org.mockito.ArgumentMatchers.anyCollection()))
                 .thenReturn(List.of(attachment(5L, published, "sheet.pdf", "application/pdf")));
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
-        when(submissionRepository.findByAssignmentIdAndStudentId(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
-                .thenReturn(Optional.empty());
+        when(submissionRepository.findByAssignmentIdAndStudentIdOrderBySubmittedAtDescIdDesc(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
         assertThat(service.list(1L, Fixtures.principal(Role.HEADMASTER)).getFirst().attachments())
                 .extracting(row -> row.fileName())
                 .containsExactly("sheet.pdf");
         assertThat(service.list(1L, Fixtures.principal(Role.STUDENT)))
                 .extracting(row -> row.id())
                 .containsExactly(1L, 4L);
+        AssignmentSubmission older = new AssignmentSubmission();
+        older.setId(6L);
+        older.setAssignment(published);
+        older.setStudent(Fixtures.student());
+        older.setNotes("first try");
+        older.setSubmittedAt(Instant.parse("2026-09-16T09:00:00Z"));
         AssignmentSubmission mine = new AssignmentSubmission();
         mine.setId(7L);
         mine.setAssignment(published);
@@ -123,11 +133,16 @@ class AssignmentServiceTest {
         mine.setNotes("done");
         mine.setAttachmentName("essay.pdf");
         mine.setSubmittedAt(Instant.parse("2026-09-16T10:00:00Z"));
-        when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.of(mine));
-        when(submissionRepository.findByAssignmentIdAndStudentId(4L, 1L)).thenReturn(Optional.empty());
+        when(submissionRepository.findByAssignmentIdAndStudentIdOrderBySubmittedAtDescIdDesc(1L, 1L))
+                .thenReturn(List.of(mine, older));
+        when(submissionRepository.findByAssignmentIdAndStudentIdOrderBySubmittedAtDescIdDesc(4L, 1L))
+                .thenReturn(List.of());
         assertThat(service.list(1L, Fixtures.principal(Role.STUDENT)).getFirst().mySubmission())
-                .extracting(row -> row.notes(), row -> row.attachmentName())
-                .containsExactly("done", "essay.pdf");
+                .extracting(row -> row.notes(), row -> row.attachmentName(), row -> row.attempt())
+                .containsExactly("done", "essay.pdf", 2);
+        assertThat(service.list(1L, Fixtures.principal(Role.STUDENT)).getFirst().mySubmissionHistory())
+                .extracting(row -> row.attempt(), row -> row.notes())
+                .containsExactly(tuple(2, "done"), tuple(1, "first try"));
         assertThat(service.list(1L, Fixtures.principal(Role.HEADMASTER))).hasSize(4);
         assertThat(service.list(1L, Fixtures.principal(Role.PARENT)))
                 .extracting(row -> row.id())
@@ -185,12 +200,16 @@ class AssignmentServiceTest {
 
         Assignment published = assignment(2L, Fixtures.schoolClass(), AssignmentStatus.PUBLISHED);
         AssignmentSubmission submission = new AssignmentSubmission();
+        submission.setId(8L);
+        submission.setStudent(Fixtures.student());
         when(assignmentRepository.findByIdAndSchoolId(2L, 1L)).thenReturn(Optional.of(published));
         when(submissionRepository.findByAssignmentId(2L)).thenReturn(List.of(submission));
         assertThatThrownBy(() -> service.delete(1L, teacher, 2L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("academic master");
         service.delete(1L, academic, 2L);
+        verify(photoStorageService).deleteSubmissionFile(1L, 2L, 1L);
+        verify(photoStorageService).deleteSubmissionFile(1L, 2L, 1L, 8L);
         verify(submissionRepository).delete(submission);
         verify(assignmentRepository).delete(published);
 
@@ -382,6 +401,29 @@ class AssignmentServiceTest {
         when(photoStorageService.findSubmissionFile(1L, 1L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.submissionFile(1L, academic, 1L, 1L))
                 .isInstanceOf(ResourceNotFoundException.class);
+        AssignmentSubmission attempt = new AssignmentSubmission();
+        attempt.setId(3L);
+        attempt.setSchoolId(1L);
+        attempt.setAssignment(published);
+        attempt.setStudent(Fixtures.student());
+        when(submissionRepository.findByIdAndAssignment_IdAndStudent_IdAndSchoolId(3L, 1L, 1L, 1L))
+                .thenReturn(Optional.of(attempt));
+        when(photoStorageService.findSubmissionFile(1L, 1L, 1L, 3L)).thenReturn(Optional.of(stored));
+        when(submissionRepository.findByAssignmentIdAndStudentIdOrderBySubmittedAtDescIdDesc(1L, 1L))
+                .thenReturn(List.of(attempt));
+        assertThat(service.submissionFile(1L, academic, 1L, 1L)).isEqualTo(stored);
+        assertThat(service.submissionFile(1L, academic, 1L, 1L, 3L)).isEqualTo(stored);
+        when(photoStorageService.findSubmissionFile(1L, 1L, 1L, 3L, 12L)).thenReturn(Optional.of(stored));
+        when(submissionAttachmentRepository.findByIdAndSubmission_IdAndSchoolId(12L, 3L, 1L))
+                .thenReturn(Optional.of(new AssignmentSubmissionAttachment()));
+        assertThat(service.submissionFile(1L, academic, 1L, 1L, 3L, 12L)).isEqualTo(stored);
+        when(submissionAttachmentRepository.findByIdAndSubmission_IdAndSchoolId(9L, 3L, 1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.submissionFile(1L, academic, 1L, 1L, 3L, 9L))
+                .isInstanceOf(ResourceNotFoundException.class);
+        when(submissionRepository.findByIdAndAssignment_IdAndStudent_IdAndSchoolId(9L, 1L, 1L, 1L))
+                .thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.submissionFile(1L, academic, 1L, 1L, 9L))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -396,38 +438,67 @@ class AssignmentServiceTest {
         Assignment published = assignment(1L, Fixtures.schoolClass(), AssignmentStatus.PUBLISHED);
         when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(published));
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
-        when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.empty());
-        when(submissionRepository.save(any(AssignmentSubmission.class))).thenAnswer(inv -> {
+        when(submissionRepository.findByAssignmentIdAndStudentIdOrderBySubmittedAtDescIdDesc(1L, 1L))
+                .thenReturn(List.of());
+        org.mockito.stubbing.Answer<AssignmentSubmission> persist = inv -> {
             AssignmentSubmission saved = inv.getArgument(0);
-            saved.setId(3L);
+            if (saved.getId() == null) {
+                saved.setId(saved.getNotes() != null && saved.getNotes().contains("notes") ? 4L : 3L);
+            }
+            return saved;
+        };
+        when(submissionRepository.saveAndFlush(any(AssignmentSubmission.class))).thenAnswer(persist);
+        when(submissionAttachmentRepository.saveAndFlush(any(AssignmentSubmissionAttachment.class))).thenAnswer(inv -> {
+            AssignmentSubmissionAttachment saved = inv.getArgument(0);
+            saved.setId(11L);
             return saved;
         });
         var submitted = service.submitWork(1L, 10L, 1L, "ready", file);
         assertThat(submitted.attachmentName()).isEqualTo("essay.pdf");
-        verify(photoStorageService).storeSubmissionFile(1L, 1L, 1L, file);
+        assertThat(submitted.attempt()).isEqualTo(1);
+        verify(photoStorageService).storeSubmissionFile(1L, 1L, 1L, 3L, 11L, file);
         verify(alertService).notifyParentsOfStudent(eq(1L), any(Student.class), eq("Assignment submitted"), any(), eq("ASSIGNMENT"), eq(false),
                 eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L));
 
         AssignmentSubmission existing = new AssignmentSubmission();
         existing.setId(3L);
+        existing.setSchoolId(1L);
         existing.setAssignment(published);
         existing.setStudent(Fixtures.student());
         existing.setNotes("ready");
-        existing.setSubmittedAt(Instant.now());
-        when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.of(existing));
-        service.submitWork(1L, 10L, 1L, "notes only", null);
+        existing.setSubmittedAt(Instant.parse("2026-09-16T10:00:00Z"));
+        when(submissionRepository.findByAssignmentIdAndStudentIdOrderBySubmittedAtDescIdDesc(1L, 1L))
+                .thenReturn(List.of(existing));
+        var second = service.submitWork(1L, 10L, 1L, "notes only", null);
+        assertThat(second.attempt()).isEqualTo(2);
+        assertThat(existing.getNotes()).isEqualTo("ready");
         service.submitWork(1L, 10L, 1L, "empty", new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]));
 
-        when(submissionRepository.findByAssignmentId(1L)).thenReturn(List.of(existing));
+        when(submissionRepository.findByAssignmentIdOrderBySubmittedAtDescIdDesc(1L)).thenReturn(List.of(existing));
         assertThat(service.submissions(1L, 1L)).hasSize(1);
-        existing.setSchoolId(1L);
         existing.setNotes("ready");
         when(submissionRepository.findMine(1L)).thenReturn(List.of(existing));
         assertThat(service.mySubmissions(1L, 10L))
-                .extracting(row -> row.notes(), row -> row.assignmentId())
-                .containsExactly(tuple("ready", 1L));
-        when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.of(existing));
+                .extracting(row -> row.notes(), row -> row.assignmentId(), row -> row.attempt())
+                .containsExactly(tuple("ready", 1L, 1));
         assertThat(service.mySubmission(1L, Fixtures.principal(Role.STUDENT), 1L).notes()).isEqualTo("ready");
+        AssignmentSubmissionAttachment extra = new AssignmentSubmissionAttachment();
+        extra.setId(12L);
+        extra.setFileName("scan.pdf");
+        extra.setContentType("application/pdf");
+        extra.setSubmission(existing);
+        when(submissionAttachmentRepository.saveAndFlush(any(AssignmentSubmissionAttachment.class))).thenAnswer(inv -> {
+            AssignmentSubmissionAttachment saved = inv.getArgument(0);
+            saved.setId(12L);
+            return saved;
+        });
+        when(submissionAttachmentRepository.findBySubmission_IdOrderByIdAsc(3L)).thenReturn(List.of(extra));
+        when(submissionAttachmentRepository.findBySubmission_IdInOrderByIdAsc(org.mockito.ArgumentMatchers.anyCollection()))
+                .thenReturn(List.of(extra));
+        assertThat(service.attachMyFile(1L, Fixtures.principal(Role.STUDENT), 1L, file).attachments())
+                .extracting(row -> row.fileName())
+                .contains("scan.pdf");
+        assertThat(existing.getNotes()).isEqualTo("ready");
         existing.setSchoolId(2L);
         assertThat(service.mySubmissions(1L, 10L)).isEmpty();
         when(assignmentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
@@ -445,14 +516,18 @@ class AssignmentServiceTest {
         Assignment published = assignment(1L, Fixtures.schoolClass(), AssignmentStatus.PUBLISHED);
         when(assignmentRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(published));
         when(studentService.require(1L, 1L)).thenReturn(Fixtures.student());
-        when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.empty());
+        when(submissionRepository.findByAssignmentIdAndStudentIdOrderBySubmittedAtDescIdDesc(1L, 1L))
+                .thenReturn(List.of());
         service.submitMarks(1L, 3L, 1L, 1L, BigDecimal.valueOf(75));
         verify(submissionRepository).save(any(AssignmentSubmission.class));
 
         AssignmentSubmission existing = new AssignmentSubmission();
-        when(submissionRepository.findByAssignmentIdAndStudentId(1L, 1L)).thenReturn(Optional.of(existing));
+        existing.setNotes("kept");
+        when(submissionRepository.findByAssignmentIdAndStudentIdOrderBySubmittedAtDescIdDesc(1L, 1L))
+                .thenReturn(List.of(existing));
         service.submitMarks(1L, 3L, 1L, 1L, BigDecimal.valueOf(80));
         assertThat(existing.getMarksObtained()).isEqualByComparingTo("80");
+        assertThat(existing.getNotes()).isEqualTo("kept");
 
         when(assignmentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.submitMarks(1L, 3L, 9L, 1L, BigDecimal.ONE))

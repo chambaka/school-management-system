@@ -598,6 +598,13 @@ class ControllersTest {
         assignments.file(teacher, 1L, 2L);
         assignments.removeFile(teacher, 1L, 2L);
         assignments.submissionFile(teacher, 1L, 1L);
+        when(assignmentService.submissionFile(eq(1L), eq(teacher), eq(1L), eq(1L), eq(3L)))
+                .thenReturn(new tz.co.chambaka.school.management.service.StoredPhoto(java.nio.file.Path.of("v2.pdf"), "application/pdf"));
+        assignments.submissionAttemptFile(teacher, 1L, 1L, 3L);
+        when(assignmentService.submissionFile(eq(1L), eq(teacher), eq(1L), eq(1L), eq(3L), eq(4L)))
+                .thenReturn(new tz.co.chambaka.school.management.service.StoredPhoto(java.nio.file.Path.of("scan.pdf"), "application/pdf"));
+        assignments.submissionAttemptFile(teacher, 1L, 1L, 3L, 4L);
+        assignments.attachMyFile(Fixtures.principal(Role.STUDENT), 1L, file);
         assignments.marks(teacher, 1L, 1L, BigDecimal.TEN);
         assignments.submit(teacher, 1L, "done", file);
         assignments.submissions(1L);

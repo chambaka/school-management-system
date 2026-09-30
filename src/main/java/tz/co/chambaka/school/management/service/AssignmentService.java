@@ -9,6 +9,7 @@ import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.Assignment;
 import tz.co.chambaka.school.management.model.AssignmentAttachment;
 import tz.co.chambaka.school.management.model.AssignmentSubmission;
+import tz.co.chambaka.school.management.model.AssignmentSubmissionAttachment;
 import tz.co.chambaka.school.management.model.SchoolClass;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.Teacher;
@@ -16,6 +17,7 @@ import tz.co.chambaka.school.management.model.enums.AssignmentStatus;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.AssignmentAttachmentRepository;
 import tz.co.chambaka.school.management.repository.AssignmentRepository;
+import tz.co.chambaka.school.management.repository.AssignmentSubmissionAttachmentRepository;
 import tz.co.chambaka.school.management.repository.AssignmentSubmissionRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
 import tz.co.chambaka.school.management.security.UserPrincipal;
@@ -26,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +40,7 @@ public class AssignmentService {
     private final AssignmentRepository assignmentRepository;
     private final AssignmentAttachmentRepository attachmentRepository;
     private final AssignmentSubmissionRepository submissionRepository;
+    private final AssignmentSubmissionAttachmentRepository submissionAttachmentRepository;
     private final TeacherService teacherService;
     private final ClassService classService;
     private final SectionService sectionService;
@@ -51,6 +55,7 @@ public class AssignmentService {
             AssignmentRepository assignmentRepository,
             AssignmentAttachmentRepository attachmentRepository,
             AssignmentSubmissionRepository submissionRepository,
+            AssignmentSubmissionAttachmentRepository submissionAttachmentRepository,
             TeacherService teacherService,
             ClassService classService,
             SectionService sectionService,
@@ -64,6 +69,7 @@ public class AssignmentService {
         this.assignmentRepository = assignmentRepository;
         this.attachmentRepository = attachmentRepository;
         this.submissionRepository = submissionRepository;
+        this.submissionAttachmentRepository = submissionAttachmentRepository;
         this.teacherService = teacherService;
         this.classService = classService;
         this.sectionService = sectionService;
@@ -117,7 +123,22 @@ public class AssignmentService {
         files.forEach(file -> photoStorageService.deleteAssignmentFile(schoolId, id, file.getId()));
         photoStorageService.deleteLegacyAssignmentFile(schoolId, id);
         attachmentRepository.deleteAll(files);
-        submissionRepository.findByAssignmentId(id).forEach(submissionRepository::delete);
+        submissionRepository.findByAssignmentId(id).forEach(submission -> {
+            Long studentId = submission.getStudent() == null ? null : submission.getStudent().getId();
+            if (studentId != null) {
+                photoStorageService.deleteSubmissionFile(schoolId, id, studentId);
+                if (submission.getId() != null) {
+                    photoStorageService.deleteSubmissionFile(schoolId, id, studentId, submission.getId());
+                    submissionFilesOf(submission.getId()).forEach(file ->
+                            photoStorageService.deleteSubmissionFile(
+                                    schoolId, id, studentId, submission.getId(), file.getId()));
+                }
+            }
+            if (submission.getId() != null) {
+                submissionAttachmentRepository.deleteAll(submissionFilesOf(submission.getId()));
+            }
+            submissionRepository.delete(submission);
+        });
         alertService.removeForEntity(schoolId, AlertService.SUBJECT_ASSIGNMENT, id);
         assignmentRepository.delete(assignment);
     }
@@ -200,12 +221,12 @@ public class AssignmentService {
                     .filter(assignment -> statusOf(assignment) == AssignmentStatus.PUBLISHED)
                     .filter(assignment -> assignment.getSchoolClass().getId().equals(classId))
                     .toList();
-            Map<Long, AssignmentSubmission> mine = submissionsByAssignment(me.getId(), visible);
+            Map<Long, List<AssignmentSubmission>> mine = submissionsByAssignment(me.getId(), visible);
             return visible.stream()
                     .map(assignment -> toResponse(
                             assignment,
                             files.getOrDefault(assignment.getId(), List.of()),
-                            mine.get(assignment.getId())))
+                            mine.getOrDefault(assignment.getId(), List.of())))
                     .toList();
         }
         if (principal.getRole() == Role.PARENT) {
@@ -224,47 +245,68 @@ public class AssignmentService {
         Assignment assignment = require(schoolId, assignmentId);
         requirePublished(assignment);
         Student student = studentService.requireByUser(userId);
-        AssignmentSubmission submission = submissionRepository.findByAssignmentIdAndStudentId(assignmentId, student.getId())
-                .orElseGet(AssignmentSubmission::new);
+        AssignmentSubmission submission = new AssignmentSubmission();
         submission.setSchoolId(schoolId);
         submission.setAssignment(assignment);
         submission.setStudent(student);
         submission.setNotes(notes);
         submission.setSubmittedAt(Instant.now());
+        AssignmentSubmission saved = submissionRepository.saveAndFlush(submission);
         if (file != null && !file.isEmpty()) {
-            photoStorageService.storeSubmissionFile(schoolId, assignmentId, student.getId(), file);
-            submission.setAttachmentName(file.getOriginalFilename());
-            submission.setAttachmentPath("/api/v1/assignments/" + assignmentId + "/submissions/" + student.getId() + "/file");
+            addSubmissionFile(schoolId, saved, file);
         }
-        AssignmentSubmission saved = submissionRepository.save(submission);
         alertService.notifyParentsOfStudent(schoolId, student, "Assignment submitted",
                 student.getUser().getName() + " submitted " + assignment.getTitle(), "ASSIGNMENT", false,
                 AlertService.SUBJECT_ASSIGNMENT, assignmentId);
-        return toSubmission(saved);
+        List<AssignmentSubmission> attempts = new ArrayList<>(assignmentAttempts(assignmentId, student.getId()));
+        if (attempts.stream().noneMatch(row -> saved.getId() != null && saved.getId().equals(row.getId()))) {
+            attempts.add(saved);
+        }
+        return latestOf(attempts);
     }
 
     @Transactional(readOnly = true)
     public List<AssignmentSubmissionResponse> submissions(Long schoolId, Long assignmentId) {
         require(schoolId, assignmentId);
-        return submissionRepository.findByAssignmentId(assignmentId).stream().map(this::toSubmission).toList();
+        return toSubmissionHistory(submissionRepository.findByAssignmentIdOrderBySubmittedAtDescIdDesc(assignmentId));
     }
 
     @Transactional(readOnly = true)
     public List<AssignmentSubmissionResponse> mySubmissions(Long schoolId, Long userId) {
         Student me = studentService.requireByUser(userId);
-        return submissionRepository.findMine(me.getId()).stream()
+        return toSubmissionHistory(submissionRepository.findMine(me.getId()).stream()
                 .filter(row -> schoolId.equals(row.getSchoolId()))
-                .map(this::toSubmission)
-                .toList();
+                .toList());
     }
 
     @Transactional(readOnly = true)
     public AssignmentSubmissionResponse mySubmission(Long schoolId, UserPrincipal principal, Long assignmentId) {
         requireVisibleAssignment(schoolId, principal, assignmentId);
         Student me = studentService.requireByUser(principal.getId());
-        return submissionRepository.findByAssignmentIdAndStudentId(assignmentId, me.getId())
-                .map(this::toSubmission)
-                .orElse(null);
+        return latestOf(assignmentAttempts(assignmentId, me.getId()));
+    }
+
+    @Transactional
+    public AssignmentSubmissionResponse attachMyFile(Long schoolId, UserPrincipal principal, Long assignmentId, MultipartFile file) {
+        Assignment assignment = requireVisibleAssignment(schoolId, principal, assignmentId);
+        requirePublished(assignment);
+        Student student = studentService.requireByUser(principal.getId());
+        AssignmentSubmission submission = latestAttempt(assignmentId, student.getId());
+        if (submission == null) {
+            AssignmentSubmission created = new AssignmentSubmission();
+            created.setSchoolId(schoolId);
+            created.setAssignment(assignment);
+            created.setStudent(student);
+            created.setSubmittedAt(Instant.now());
+            submission = submissionRepository.saveAndFlush(created);
+        }
+        AssignmentSubmission current = submission;
+        addSubmissionFile(schoolId, current, file);
+        List<AssignmentSubmission> attempts = new ArrayList<>(assignmentAttempts(assignmentId, student.getId()));
+        if (attempts.stream().noneMatch(row -> current.getId() != null && current.getId().equals(row.getId()))) {
+            attempts.add(current);
+        }
+        return latestOf(attempts);
     }
 
     @Transactional(readOnly = true)
@@ -287,6 +329,29 @@ public class AssignmentService {
 
     @Transactional(readOnly = true)
     public StoredPhoto submissionFile(Long schoolId, UserPrincipal principal, Long assignmentId, Long studentId) {
+        return submissionFile(schoolId, principal, assignmentId, studentId, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public StoredPhoto submissionFile(
+            Long schoolId,
+            UserPrincipal principal,
+            Long assignmentId,
+            Long studentId,
+            Long submissionId
+    ) {
+        return submissionFile(schoolId, principal, assignmentId, studentId, submissionId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public StoredPhoto submissionFile(
+            Long schoolId,
+            UserPrincipal principal,
+            Long assignmentId,
+            Long studentId,
+            Long submissionId,
+            Long fileId
+    ) {
         require(schoolId, assignmentId);
         if (principal.getRole() == Role.STUDENT) {
             Long me = studentService.requireByUser(principal.getId()).getId();
@@ -299,8 +364,12 @@ public class AssignmentService {
                 && principal.getRole() != Role.SCHOOL_ADMIN) {
             throw new BusinessException("Not allowed to view this file");
         }
-        return photoStorageService.findSubmissionFile(schoolId, assignmentId, studentId)
-                .orElseThrow(() -> ResourceNotFoundException.of("Assignment file", assignmentId));
+        AssignmentSubmission row = submissionId == null
+                ? latestAttempt(assignmentId, studentId)
+                : submissionRepository.findByIdAndAssignment_IdAndStudent_IdAndSchoolId(
+                        submissionId, assignmentId, studentId, schoolId)
+                        .orElseThrow(() -> ResourceNotFoundException.of("Assignment file", submissionId));
+        return resolveSubmissionStored(schoolId, assignmentId, studentId, row, fileId);
     }
 
     @Transactional
@@ -309,13 +378,15 @@ public class AssignmentService {
         requirePublished(assignment);
         assertTeachesExisting(schoolId, userId, assignment, "submit marks");
         Student student = studentService.require(schoolId, studentId);
-        AssignmentSubmission submission = submissionRepository.findByAssignmentIdAndStudentId(assignmentId, studentId)
-                .orElseGet(AssignmentSubmission::new);
-        submission.setSchoolId(schoolId);
-        submission.setAssignment(assignment);
-        submission.setStudent(student);
+        AssignmentSubmission submission = latestAttempt(assignmentId, studentId);
+        if (submission == null) {
+            submission = new AssignmentSubmission();
+            submission.setSchoolId(schoolId);
+            submission.setAssignment(assignment);
+            submission.setStudent(student);
+            submission.setSubmittedAt(Instant.now());
+        }
         submission.setMarksObtained(marks);
-        submission.setSubmittedAt(Instant.now());
         submissionRepository.save(submission);
     }
 
@@ -365,13 +436,102 @@ public class AssignmentService {
         return attachmentRepository.findByAssignment_IdOrderByIdAsc(assignmentId);
     }
 
-    private Map<Long, AssignmentSubmission> submissionsByAssignment(Long studentId, List<Assignment> assignments) {
-        Map<Long, AssignmentSubmission> mine = new HashMap<>();
+    private Map<Long, List<AssignmentSubmission>> submissionsByAssignment(Long studentId, List<Assignment> assignments) {
+        Map<Long, List<AssignmentSubmission>> mine = new HashMap<>();
         for (Assignment assignment : assignments) {
-            submissionRepository.findByAssignmentIdAndStudentId(assignment.getId(), studentId)
-                    .ifPresent(row -> mine.put(assignment.getId(), row));
+            mine.put(assignment.getId(), assignmentAttempts(assignment.getId(), studentId));
         }
         return mine;
+    }
+
+    private List<AssignmentSubmission> assignmentAttempts(Long assignmentId, Long studentId) {
+        return submissionRepository.findByAssignmentIdAndStudentIdOrderBySubmittedAtDescIdDesc(assignmentId, studentId);
+    }
+
+    private AssignmentSubmission latestAttempt(Long assignmentId, Long studentId) {
+        List<AssignmentSubmission> rows = assignmentAttempts(assignmentId, studentId);
+        return rows.isEmpty() ? null : rows.getFirst();
+    }
+
+    private List<AssignmentSubmissionAttachment> submissionFilesOf(Long submissionId) {
+        return submissionAttachmentRepository.findBySubmission_IdOrderByIdAsc(submissionId);
+    }
+
+    private Map<Long, List<AssignmentSubmissionAttachment>> submissionFilesBySubmission(List<AssignmentSubmission> rows) {
+        List<Long> ids = rows.stream().map(AssignmentSubmission::getId).filter(id -> id != null).toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return submissionAttachmentRepository.findBySubmission_IdInOrderByIdAsc(ids).stream()
+                .collect(Collectors.groupingBy(row -> row.getSubmission().getId()));
+    }
+
+    private void addSubmissionFile(Long schoolId, AssignmentSubmission submission, MultipartFile file) {
+        AssignmentSubmissionAttachment row = new AssignmentSubmissionAttachment();
+        row.setSchoolId(schoolId);
+        row.setSubmission(submission);
+        row.setFileName(file.getOriginalFilename());
+        row.setContentType(file.getContentType());
+        AssignmentSubmissionAttachment saved = submissionAttachmentRepository.saveAndFlush(row);
+        try {
+            photoStorageService.storeSubmissionFile(
+                    schoolId,
+                    submission.getAssignment().getId(),
+                    submission.getStudent().getId(),
+                    submission.getId(),
+                    saved.getId(),
+                    file);
+        } catch (RuntimeException ex) {
+            submissionAttachmentRepository.delete(saved);
+            throw ex;
+        }
+        List<AssignmentSubmissionAttachment> files = new ArrayList<>(submissionFilesOf(submission.getId()));
+        if (files.stream().noneMatch(existing -> saved.getId().equals(existing.getId()))) {
+            files.add(saved);
+        }
+        syncSubmissionPrimary(submission, files);
+    }
+
+    private void syncSubmissionPrimary(AssignmentSubmission submission, List<AssignmentSubmissionAttachment> files) {
+        if (files.isEmpty()) {
+            return;
+        }
+        AssignmentSubmissionAttachment first = files.getFirst();
+        submission.setAttachmentName(first.getFileName());
+        submission.setAttachmentPath("/api/v1/assignments/" + submission.getAssignment().getId()
+                + "/submissions/" + submission.getStudent().getId()
+                + "/attempts/" + submission.getId()
+                + "/files/" + first.getId());
+    }
+
+    private StoredPhoto resolveSubmissionStored(
+            Long schoolId,
+            Long assignmentId,
+            Long studentId,
+            AssignmentSubmission row,
+            Long fileId
+    ) {
+        if (fileId != null) {
+            if (row == null || row.getId() == null) {
+                throw ResourceNotFoundException.of("Assignment file", fileId);
+            }
+            submissionAttachmentRepository.findByIdAndSubmission_IdAndSchoolId(fileId, row.getId(), schoolId)
+                    .orElseThrow(() -> ResourceNotFoundException.of("Assignment file", fileId));
+            return photoStorageService.findSubmissionFile(schoolId, assignmentId, studentId, row.getId(), fileId)
+                    .orElseThrow(() -> ResourceNotFoundException.of("Assignment file", fileId));
+        }
+        if (row != null && row.getId() != null) {
+            List<AssignmentSubmissionAttachment> files = submissionFilesOf(row.getId());
+            if (!files.isEmpty()) {
+                return photoStorageService.findSubmissionFile(
+                                schoolId, assignmentId, studentId, row.getId(), files.getFirst().getId())
+                        .orElseThrow(() -> ResourceNotFoundException.of("Assignment file", assignmentId));
+            }
+            return photoStorageService.findSubmissionFile(schoolId, assignmentId, studentId, row.getId())
+                    .orElseThrow(() -> ResourceNotFoundException.of("Assignment file", assignmentId));
+        }
+        return photoStorageService.findSubmissionFile(schoolId, assignmentId, studentId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Assignment file", assignmentId));
     }
 
     private Map<Long, List<AssignmentAttachment>> attachmentsByAssignment(List<Assignment> assignments) {
@@ -457,20 +617,21 @@ public class AssignmentService {
     }
 
     private AssignmentResponse toResponse(Assignment assignment) {
-        return toResponse(assignment, attachmentsOf(assignment.getId()), null);
+        return toResponse(assignment, attachmentsOf(assignment.getId()), List.of());
     }
 
     private AssignmentResponse toResponse(Assignment assignment, List<AssignmentAttachment> files) {
-        return toResponse(assignment, files, null);
+        return toResponse(assignment, files, List.of());
     }
 
     private AssignmentResponse toResponse(
             Assignment assignment,
             List<AssignmentAttachment> files,
-            AssignmentSubmission submission
+            List<AssignmentSubmission> submissions
     ) {
         List<AssignmentAttachmentResponse> attachments = toAttachmentResponses(assignment, files);
         String attachmentName = attachments.isEmpty() ? null : attachments.getFirst().fileName();
+        List<AssignmentSubmissionResponse> history = toSubmissionHistory(submissions);
         return new AssignmentResponse(
                 assignment.getId(),
                 assignment.getTeacher().getId(),
@@ -488,7 +649,8 @@ public class AssignmentService {
                 attachments,
                 statusOf(assignment),
                 statusOf(assignment) == AssignmentStatus.PUBLISHED ? assignment.getPublishedAt() : null,
-                submission == null ? null : toSubmission(submission)
+                history.isEmpty() ? null : history.getFirst(),
+                history
         );
     }
 
@@ -507,16 +669,53 @@ public class AssignmentService {
         return List.of();
     }
 
-    private AssignmentSubmissionResponse toSubmission(AssignmentSubmission submission) {
+    private AssignmentSubmissionResponse latestOf(List<AssignmentSubmission> rows) {
+        List<AssignmentSubmissionResponse> history = toSubmissionHistory(rows);
+        return history.isEmpty() ? null : history.getFirst();
+    }
+
+    private List<AssignmentSubmissionResponse> toSubmissionHistory(List<AssignmentSubmission> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return List.of();
+        }
+        List<AssignmentSubmission> oldestFirst = rows.stream().sorted(ATTEMPT_ORDER).toList();
+        Map<Long, List<AssignmentSubmissionAttachment>> files = submissionFilesBySubmission(oldestFirst);
+        List<AssignmentSubmissionResponse> history = new ArrayList<>();
+        for (int index = 0; index < oldestFirst.size(); index++) {
+            AssignmentSubmission row = oldestFirst.get(index);
+            history.add(toSubmission(row, index + 1, files.getOrDefault(row.getId(), List.of())));
+        }
+        history.sort(Comparator.comparing(AssignmentSubmissionResponse::attempt).reversed());
+        return history;
+    }
+
+    private AssignmentSubmissionResponse toSubmission(
+            AssignmentSubmission submission,
+            int attempt,
+            List<AssignmentSubmissionAttachment> files
+    ) {
+        List<AssignmentAttachmentResponse> attachments = files.stream()
+                .map(file -> new AssignmentAttachmentResponse(file.getId(), file.getFileName(), file.getContentType()))
+                .toList();
+        if (attachments.isEmpty() && submission.getAttachmentName() != null && !submission.getAttachmentName().isBlank()) {
+            attachments = List.of(new AssignmentAttachmentResponse(null, submission.getAttachmentName(), null));
+        }
+        String attachmentName = attachments.isEmpty() ? submission.getAttachmentName() : attachments.getFirst().fileName();
         return new AssignmentSubmissionResponse(
                 submission.getId(),
                 submission.getAssignment().getId(),
                 submission.getStudent().getId(),
                 submission.getStudent().getUser().getName(),
                 submission.getNotes(),
-                submission.getAttachmentName(),
+                attachmentName,
                 submission.getMarksObtained(),
-                submission.getSubmittedAt()
+                submission.getSubmittedAt(),
+                attempt,
+                attachments
         );
     }
+
+    private static final Comparator<AssignmentSubmission> ATTEMPT_ORDER = Comparator
+            .comparing(AssignmentSubmission::getSubmittedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparing(AssignmentSubmission::getId, Comparator.nullsLast(Comparator.naturalOrder()));
 }

@@ -89,8 +89,80 @@ public class PhotoStorageService {
         return storeDocument(schoolId, "assignment-submissions", assignmentId + "-" + studentId, file);
     }
 
+    public Path storeSubmissionFile(
+            Long schoolId,
+            Long assignmentId,
+            Long studentId,
+            Long submissionId,
+            MultipartFile file
+    ) {
+        return storeDocument(schoolId, "assignment-submissions", assignmentId + "-" + studentId + "-" + submissionId, file);
+    }
+
     public Optional<StoredPhoto> findSubmissionFile(Long schoolId, Long assignmentId, Long studentId) {
         return findDocument(schoolId, "assignment-submissions", assignmentId + "-" + studentId);
+    }
+
+    public Optional<StoredPhoto> findSubmissionFile(Long schoolId, Long assignmentId, Long studentId, Long submissionId) {
+        Optional<StoredPhoto> stored = findDocument(
+                schoolId, "assignment-submissions", assignmentId + "-" + studentId + "-" + submissionId);
+        if (stored.isPresent()) {
+            return stored;
+        }
+        return findSubmissionFile(schoolId, assignmentId, studentId);
+    }
+
+    public void deleteSubmissionFile(Long schoolId, Long assignmentId, Long studentId) {
+        deleteDocumentExisting(personDir(schoolId, "assignment-submissions"), assignmentId + "-" + studentId);
+    }
+
+    public void deleteSubmissionFile(Long schoolId, Long assignmentId, Long studentId, Long submissionId) {
+        deleteDocumentExisting(
+                personDir(schoolId, "assignment-submissions"), assignmentId + "-" + studentId + "-" + submissionId);
+    }
+
+    public Path storeSubmissionFile(
+            Long schoolId,
+            Long assignmentId,
+            Long studentId,
+            Long submissionId,
+            Long fileId,
+            MultipartFile file
+    ) {
+        return storeDocument(
+                schoolId,
+                "assignment-submissions",
+                assignmentId + "-" + studentId + "-" + submissionId + "-" + fileId,
+                file);
+    }
+
+    public Optional<StoredPhoto> findSubmissionFile(
+            Long schoolId,
+            Long assignmentId,
+            Long studentId,
+            Long submissionId,
+            Long fileId
+    ) {
+        Optional<StoredPhoto> stored = findDocument(
+                schoolId,
+                "assignment-submissions",
+                assignmentId + "-" + studentId + "-" + submissionId + "-" + fileId);
+        if (stored.isPresent()) {
+            return stored;
+        }
+        return findSubmissionFile(schoolId, assignmentId, studentId, submissionId);
+    }
+
+    public void deleteSubmissionFile(
+            Long schoolId,
+            Long assignmentId,
+            Long studentId,
+            Long submissionId,
+            Long fileId
+    ) {
+        deleteDocumentExisting(
+                personDir(schoolId, "assignment-submissions"),
+                assignmentId + "-" + studentId + "-" + submissionId + "-" + fileId);
     }
 
     private Path storePhoto(Long schoolId, String kind, Long personId, MultipartFile file) {

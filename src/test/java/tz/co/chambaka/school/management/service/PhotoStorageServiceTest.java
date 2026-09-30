@@ -144,6 +144,14 @@ class PhotoStorageServiceTest {
                 new byte[]{4});
         assertThat(service.storeSubmissionFile(1L, 8L, 3L, docx).getFileName().toString()).isEqualTo("8-3.docx");
         assertThat(service.findSubmissionFile(1L, 8L, 3L)).isPresent();
+        assertThat(service.storeSubmissionFile(1L, 8L, 3L, 11L, docx).getFileName().toString()).isEqualTo("8-3-11.docx");
+        assertThat(service.findSubmissionFile(1L, 8L, 3L, 11L)).isPresent();
+        assertThat(service.storeSubmissionFile(1L, 8L, 3L, 11L, 4L, docx).getFileName().toString()).isEqualTo("8-3-11-4.docx");
+        assertThat(service.findSubmissionFile(1L, 8L, 3L, 11L, 4L)).isPresent();
+        service.deleteSubmissionFile(1L, 8L, 3L, 11L, 4L);
+        assertThat(service.findSubmissionFile(1L, 8L, 3L, 11L)).isPresent();
+        service.deleteSubmissionFile(1L, 8L, 3L);
+        assertThat(service.findSubmissionFile(1L, 8L, 3L)).isEmpty();
 
         MockMultipartFile byName = new MockMultipartFile("file", "scan.GIF", "application/octet-stream", new byte[]{5});
         assertThat(service.storeAssignmentFile(2L, 1L, byName).getFileName().toString()).isEqualTo("1.gif");

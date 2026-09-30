@@ -135,6 +135,41 @@ public class AssignmentController {
         return toFileResponse(assignmentService.submissionFile(tenantResolver.requireSchoolId(), principal, id, studentId));
     }
 
+    @GetMapping("/{id}/submissions/{studentId}/attempts/{submissionId}/file")
+    @PreAuthorize(Access.ASSIGNMENT)
+    public ResponseEntity<Resource> submissionAttemptFile(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @PathVariable Long studentId,
+            @PathVariable Long submissionId
+    ) {
+        return toFileResponse(assignmentService.submissionFile(
+                tenantResolver.requireSchoolId(), principal, id, studentId, submissionId));
+    }
+
+    @GetMapping("/{id}/submissions/{studentId}/attempts/{submissionId}/files/{fileId}")
+    @PreAuthorize(Access.ASSIGNMENT)
+    public ResponseEntity<Resource> submissionAttemptFile(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @PathVariable Long studentId,
+            @PathVariable Long submissionId,
+            @PathVariable Long fileId
+    ) {
+        return toFileResponse(assignmentService.submissionFile(
+                tenantResolver.requireSchoolId(), principal, id, studentId, submissionId, fileId));
+    }
+
+    @PostMapping(value = "/{id}/mine/files", consumes = "multipart/form-data")
+    @PreAuthorize(Access.ASSIGNMENT_SUBMIT)
+    public AssignmentSubmissionResponse attachMyFile(
+            @CurrentUser UserPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return assignmentService.attachMyFile(tenantResolver.requireSchoolId(), principal, id, file);
+    }
+
     @PostMapping("/{id}/marks")
     @PreAuthorize(Access.ASSIGNMENT_WRITE)
     public void marks(
