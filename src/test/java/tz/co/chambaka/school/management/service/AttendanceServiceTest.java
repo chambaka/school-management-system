@@ -172,7 +172,8 @@ class AttendanceServiceTest {
 
         verify(alertService).notifyParentsOfStudent(
                 1L, student, "Attendance: ABSENT",
-                "User STUDENT was marked absent on 2026-09-16", "ATTENDANCE", true);
+                "User STUDENT was marked absent on 2026-09-16", "ATTENDANCE", true,
+                AlertService.SUBJECT_STUDENT, 1L);
     }
 
     private StudentAttendance studentRow(LocalDate date) {

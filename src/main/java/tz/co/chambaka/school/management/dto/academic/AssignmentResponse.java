@@ -22,6 +22,7 @@ public record AssignmentResponse(
         String attachmentName,
         List<AssignmentAttachmentResponse> attachments,
         AssignmentStatus status,
-        Instant publishedAt
+        Instant publishedAt,
+        AssignmentSubmissionResponse mySubmission
 ) {
 }

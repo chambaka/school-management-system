@@ -157,6 +157,12 @@ public class AssignmentController {
         return assignmentService.submitWork(tenantResolver.requireSchoolId(), principal.getId(), id, notes, file);
     }
 
+    @GetMapping("/mine/submissions")
+    @PreAuthorize(Access.ASSIGNMENT_SUBMIT)
+    public List<AssignmentSubmissionResponse> mySubmissions(@CurrentUser UserPrincipal principal) {
+        return assignmentService.mySubmissions(tenantResolver.requireSchoolId(), principal.getId());
+    }
+
     @GetMapping("/{id}/submissions")
     @PreAuthorize(Access.ASSIGNMENT_WRITE)
     public List<AssignmentSubmissionResponse> submissions(@PathVariable Long id) {

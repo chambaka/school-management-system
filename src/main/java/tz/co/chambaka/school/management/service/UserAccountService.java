@@ -35,7 +35,8 @@ public class UserAccountService {
             "delete from PasswordResetToken t where t.user.id = :id",
             "delete from TwoFactorChallenge c where c.user.id = :id",
             "delete from PushSubscription p where p.user.id = :id",
-            "delete from NotificationPreference n where n.user.id = :id"
+            "delete from NotificationPreference n where n.user.id = :id",
+            "delete from InAppNotification n where n.userId = :id"
     );
 
     private static final List<String> DELETE_LINKS = List.of(
@@ -54,7 +55,8 @@ public class UserAccountService {
             "update StudentAttendance a set a.markedBy = null where a.markedBy.id in :ids",
             "update TeacherAttendance a set a.markedBy = null where a.markedBy.id in :ids",
             "delete from RefreshToken r where r.user.id in :ids",
-            "delete from PasswordResetToken t where t.user.id in :ids"
+            "delete from PasswordResetToken t where t.user.id in :ids",
+            "delete from InAppNotification n where n.userId in :ids"
     );
 
     private final UserRepository userRepository;

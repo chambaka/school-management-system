@@ -24,6 +24,11 @@ public class InAppNotification extends TenantEntity {
     @Column(nullable = false, length = 40)
     private String category = "GENERAL";
 
+    @Column(length = 40)
+    private String entityType;
+
+    private Long entityId;
+
     @Column(nullable = false)
     private boolean readFlag = false;
 }

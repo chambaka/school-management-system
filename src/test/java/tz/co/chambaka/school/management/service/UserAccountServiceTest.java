@@ -122,7 +122,7 @@ class UserAccountServiceTest {
         service.deleteForTenant(10L, List.of(1L));
 
         verify(userRepository).deleteAllById(List.of(2L, 3L));
-        verify(entityManager, times(13)).createQuery(anyString());
+        verify(entityManager, times(14)).createQuery(anyString());
     }
 
     @Test
@@ -182,7 +182,7 @@ class UserAccountServiceTest {
         service.deleteCompletely(teacher);
 
         verify(userRepository).delete(teacher);
-        verify(entityManager, times(18)).createQuery(anyString());
+        verify(entityManager, times(20)).createQuery(anyString());
     }
 
     @Test
@@ -196,7 +196,7 @@ class UserAccountServiceTest {
         service.setEnabled(teacher, false);
 
         assertThat(teacher.isEnabled()).isFalse();
-        verify(entityManager, times(5)).createQuery(anyString());
+        verify(entityManager, times(6)).createQuery(anyString());
         verify(userRepository, never()).delete(any());
     }
 

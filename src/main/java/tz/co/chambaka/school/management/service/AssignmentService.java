@@ -117,6 +117,7 @@ public class AssignmentService {
         photoStorageService.deleteLegacyAssignmentFile(schoolId, id);
         attachmentRepository.deleteAll(files);
         submissionRepository.findByAssignmentId(id).forEach(submissionRepository::delete);
+        alertService.removeForEntity(schoolId, AlertService.SUBJECT_ASSIGNMENT, id);
         assignmentRepository.delete(assignment);
     }
 
@@ -143,7 +144,8 @@ public class AssignmentService {
         Assignment saved = assignmentRepository.save(assignment);
         studentRepository.findBySchoolIdAndSchoolClassId(schoolId, saved.getSchoolClass().getId()).forEach(student ->
                 alertService.notifyParentsOfStudent(schoolId, student, "New assignment",
-                        saved.getTitle() + " is due " + saved.getDueDate(), "ASSIGNMENT", true));
+                        saved.getTitle() + " is due " + saved.getDueDate(), "ASSIGNMENT", true,
+                        AlertService.SUBJECT_ASSIGNMENT, saved.getId()));
         return toResponse(saved);
     }
 
@@ -193,10 +195,16 @@ public class AssignmentService {
         if (principal.getRole() == Role.STUDENT) {
             Student me = studentService.requireByUser(principal.getId());
             Long classId = me.getSchoolClass() != null ? me.getSchoolClass().getId() : -1L;
-            return all.stream()
+            List<Assignment> visible = all.stream()
                     .filter(assignment -> statusOf(assignment) == AssignmentStatus.PUBLISHED)
                     .filter(assignment -> assignment.getSchoolClass().getId().equals(classId))
-                    .map(assignment -> toResponse(assignment, files.getOrDefault(assignment.getId(), List.of())))
+                    .toList();
+            Map<Long, AssignmentSubmission> mine = submissionsByAssignment(me.getId(), visible);
+            return visible.stream()
+                    .map(assignment -> toResponse(
+                            assignment,
+                            files.getOrDefault(assignment.getId(), List.of()),
+                            mine.get(assignment.getId())))
                     .toList();
         }
         if (principal.getRole() == Role.PARENT) {
@@ -229,7 +237,8 @@ public class AssignmentService {
         }
         AssignmentSubmission saved = submissionRepository.save(submission);
         alertService.notifyParentsOfStudent(schoolId, student, "Assignment submitted",
-                student.getUser().getName() + " submitted " + assignment.getTitle(), "ASSIGNMENT", false);
+                student.getUser().getName() + " submitted " + assignment.getTitle(), "ASSIGNMENT", false,
+                AlertService.SUBJECT_ASSIGNMENT, assignmentId);
         return toSubmission(saved);
     }
 
@@ -237,6 +246,15 @@ public class AssignmentService {
     public List<AssignmentSubmissionResponse> submissions(Long schoolId, Long assignmentId) {
         require(schoolId, assignmentId);
         return submissionRepository.findByAssignmentId(assignmentId).stream().map(this::toSubmission).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AssignmentSubmissionResponse> mySubmissions(Long schoolId, Long userId) {
+        Student me = studentService.requireByUser(userId);
+        return submissionRepository.findMine(me.getId()).stream()
+                .filter(row -> schoolId.equals(row.getSchoolId()))
+                .map(this::toSubmission)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -337,6 +355,16 @@ public class AssignmentService {
         return attachmentRepository.findByAssignment_IdOrderByIdAsc(assignmentId);
     }
 
+    private Map<Long, AssignmentSubmission> submissionsByAssignment(Long studentId, List<Assignment> assignments) {
+        var ids = assignments.stream().map(Assignment::getId).collect(Collectors.toSet());
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return submissionRepository.findMine(studentId).stream()
+                .filter(row -> ids.contains(row.getAssignment().getId()))
+                .collect(Collectors.toMap(row -> row.getAssignment().getId(), row -> row, (first, ignored) -> first));
+    }
+
     private Map<Long, List<AssignmentAttachment>> attachmentsByAssignment(List<Assignment> assignments) {
         List<Long> ids = assignments.stream().map(Assignment::getId).toList();
         if (ids.isEmpty()) {
@@ -420,10 +448,18 @@ public class AssignmentService {
     }
 
     private AssignmentResponse toResponse(Assignment assignment) {
-        return toResponse(assignment, attachmentsOf(assignment.getId()));
+        return toResponse(assignment, attachmentsOf(assignment.getId()), null);
     }
 
     private AssignmentResponse toResponse(Assignment assignment, List<AssignmentAttachment> files) {
+        return toResponse(assignment, files, null);
+    }
+
+    private AssignmentResponse toResponse(
+            Assignment assignment,
+            List<AssignmentAttachment> files,
+            AssignmentSubmission submission
+    ) {
         List<AssignmentAttachmentResponse> attachments = toAttachmentResponses(assignment, files);
         String attachmentName = attachments.isEmpty() ? null : attachments.getFirst().fileName();
         return new AssignmentResponse(
@@ -442,7 +478,8 @@ public class AssignmentService {
                 attachmentName,
                 attachments,
                 statusOf(assignment),
-                statusOf(assignment) == AssignmentStatus.PUBLISHED ? assignment.getPublishedAt() : null
+                statusOf(assignment) == AssignmentStatus.PUBLISHED ? assignment.getPublishedAt() : null,
+                submission == null ? null : toSubmission(submission)
         );
     }
 

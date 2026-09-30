@@ -312,6 +312,7 @@ class ExamServiceTest {
 
         verify(examSeatRepository).deleteByExamSubjectId(paper.getId());
         verify(examSubjectRepository).deleteByExamId(1L);
+        verify(alertService).removeForEntity(1L, AlertService.SUBJECT_EXAM, 1L);
         verify(examRepository).delete(exam);
     }
 

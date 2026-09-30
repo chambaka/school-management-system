@@ -31,6 +31,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -113,6 +114,17 @@ class AssignmentServiceTest {
         assertThat(service.list(1L, Fixtures.principal(Role.STUDENT)))
                 .extracting(row -> row.id())
                 .containsExactly(1L, 4L);
+        AssignmentSubmission mine = new AssignmentSubmission();
+        mine.setId(7L);
+        mine.setAssignment(published);
+        mine.setStudent(Fixtures.student());
+        mine.setNotes("done");
+        mine.setAttachmentName("essay.pdf");
+        mine.setSubmittedAt(Instant.parse("2026-09-16T10:00:00Z"));
+        when(submissionRepository.findMine(1L)).thenReturn(List.of(mine));
+        assertThat(service.list(1L, Fixtures.principal(Role.STUDENT)).getFirst().mySubmission())
+                .extracting(row -> row.notes(), row -> row.attachmentName())
+                .containsExactly("done", "essay.pdf");
         assertThat(service.list(1L, Fixtures.principal(Role.HEADMASTER))).hasSize(4);
         assertThat(service.list(1L, Fixtures.principal(Role.PARENT)))
                 .extracting(row -> row.id())
@@ -165,6 +177,7 @@ class AssignmentServiceTest {
         verify(photoStorageService).deleteAssignmentFile(1L, 1L, 21L);
         verify(photoStorageService).deleteLegacyAssignmentFile(1L, 1L);
         verify(attachmentRepository).deleteAll(List.of(leftover));
+        verify(alertService).removeForEntity(1L, AlertService.SUBJECT_ASSIGNMENT, 1L);
         verify(assignmentRepository).delete(draft);
 
         Assignment published = assignment(2L, Fixtures.schoolClass(), AssignmentStatus.PUBLISHED);
@@ -200,7 +213,8 @@ class AssignmentServiceTest {
         when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L)).thenReturn(List.of(Fixtures.student()));
         assertThat(service.publish(1L, academic, 1L).status()).isEqualTo(AssignmentStatus.PUBLISHED);
         assertThat(draft.getPublishedAt()).isNotNull();
-        verify(alertService).notifyParentsOfStudent(any(), any(), eq("New assignment"), any(), eq("ASSIGNMENT"), eq(true));
+        verify(alertService).notifyParentsOfStudent(any(), any(), eq("New assignment"), any(), eq("ASSIGNMENT"), eq(true),
+                eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L));
         assertThatThrownBy(() -> service.publish(1L, academic, 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Lock this assignment");
@@ -388,7 +402,8 @@ class AssignmentServiceTest {
         var submitted = service.submitWork(1L, 10L, 1L, "ready", file);
         assertThat(submitted.attachmentName()).isEqualTo("essay.pdf");
         verify(photoStorageService).storeSubmissionFile(1L, 1L, 1L, file);
-        verify(alertService).notifyParentsOfStudent(eq(1L), any(Student.class), eq("Assignment submitted"), any(), eq("ASSIGNMENT"), eq(false));
+        verify(alertService).notifyParentsOfStudent(eq(1L), any(Student.class), eq("Assignment submitted"), any(), eq("ASSIGNMENT"), eq(false),
+                eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L));
 
         AssignmentSubmission existing = new AssignmentSubmission();
         existing.setId(3L);
@@ -402,6 +417,14 @@ class AssignmentServiceTest {
 
         when(submissionRepository.findByAssignmentId(1L)).thenReturn(List.of(existing));
         assertThat(service.submissions(1L, 1L)).hasSize(1);
+        existing.setSchoolId(1L);
+        existing.setNotes("ready");
+        when(submissionRepository.findMine(1L)).thenReturn(List.of(existing));
+        assertThat(service.mySubmissions(1L, 10L))
+                .extracting(row -> row.notes(), row -> row.assignmentId())
+                .containsExactly(tuple("ready", 1L));
+        existing.setSchoolId(2L);
+        assertThat(service.mySubmissions(1L, 10L)).isEmpty();
         when(assignmentRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.submissions(1L, 9L)).isInstanceOf(ResourceNotFoundException.class);
     }

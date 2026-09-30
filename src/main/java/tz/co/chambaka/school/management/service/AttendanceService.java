@@ -105,7 +105,9 @@ public class AttendanceService {
                             "Attendance: " + row.status(),
                             student.getUser().getName() + " was marked " + row.status().name().toLowerCase() + " on " + request.date(),
                             "ATTENDANCE",
-                            true);
+                            true,
+                            AlertService.SUBJECT_STUDENT,
+                            student.getId());
                 });
         return marked;
     }

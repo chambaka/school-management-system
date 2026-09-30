@@ -226,7 +226,8 @@ public class ExamService {
                     alertService.notifyParentsOfStudent(schoolId, student,
                             "Results published",
                             exam.getName() + " results are now available.",
-                            "RESULTS", true));
+                            "RESULTS", true,
+                            AlertService.SUBJECT_EXAM, exam.getId()));
         } else {
             exam.setPublished(false);
             if (exam.getApprovalStatus() == ExamApprovalStatus.PUBLISHED) {
@@ -489,6 +490,7 @@ public class ExamService {
             examSeatRepository.deleteByExamSubjectId(paper.getId());
         }
         examSubjectRepository.deleteByExamId(id);
+        alertService.removeForEntity(schoolId, AlertService.SUBJECT_EXAM, id);
         examRepository.delete(exam);
     }
 
