@@ -3,6 +3,7 @@ package tz.co.chambaka.school.management.controller;
 import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureRequest;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureResponse;
+import tz.co.chambaka.school.management.dto.finance.UpdateFeeStructureRequest;
 import tz.co.chambaka.school.management.service.FinanceService;
 import tz.co.chambaka.school.management.tenant.TenantResolver;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -10,7 +11,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -41,7 +44,13 @@ public class FeeController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize(Access.FEE_MANAGE)
-    public FeeStructureResponse create(@Valid @RequestBody FeeStructureRequest request) {
+    public List<FeeStructureResponse> create(@Valid @RequestBody FeeStructureRequest request) {
         return financeService.createFee(tenantResolver.requireSchoolId(), request);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize(Access.FEE_MANAGE)
+    public FeeStructureResponse update(@PathVariable Long id, @Valid @RequestBody UpdateFeeStructureRequest request) {
+        return financeService.updateFee(tenantResolver.requireSchoolId(), id, request);
     }
 }

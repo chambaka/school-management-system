@@ -2,12 +2,15 @@ package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.audit.AuditService;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureRequest;
+import tz.co.chambaka.school.management.dto.finance.FeeStructureResponse;
+import tz.co.chambaka.school.management.dto.finance.UpdateFeeStructureRequest;
 import tz.co.chambaka.school.management.dto.finance.GenerateInvoicesRequest;
 import tz.co.chambaka.school.management.dto.finance.InvoiceDiscountRequest;
 import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
 import tz.co.chambaka.school.management.exception.ApiException;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
+import tz.co.chambaka.school.management.model.AcademicTerm;
 import tz.co.chambaka.school.management.model.FeeStructure;
 import tz.co.chambaka.school.management.model.Invoice;
 import tz.co.chambaka.school.management.model.Payment;
@@ -18,6 +21,7 @@ import tz.co.chambaka.school.management.model.enums.FeeType;
 import tz.co.chambaka.school.management.model.enums.InvoiceStatus;
 import tz.co.chambaka.school.management.model.enums.PaymentMethod;
 import tz.co.chambaka.school.management.model.enums.Role;
+import tz.co.chambaka.school.management.repository.AcademicTermRepository;
 import tz.co.chambaka.school.management.repository.FeeStructureRepository;
 import tz.co.chambaka.school.management.repository.InvoiceRepository;
 import tz.co.chambaka.school.management.repository.PaymentRepository;
@@ -54,6 +58,8 @@ class FinanceServiceTest {
     @Mock
     private FeeStructureRepository feeStructureRepository;
     @Mock
+    private AcademicTermRepository academicTermRepository;
+    @Mock
     private InvoiceRepository invoiceRepository;
     @Mock
     private PaymentRepository paymentRepository;
@@ -85,9 +91,11 @@ class FinanceServiceTest {
             saved.setId(1L);
             return saved;
         });
+        when(academicTermRepository.findBySchoolIdAndAcademicYearIdOrderByStartDateAsc(1L, 1L))
+                .thenReturn(List.of(term("Term 1", LocalDate.of(2026, 6, 30))));
         FeeStructureRequest feeReq = new FeeStructureRequest(1L, 1L, "Tuition", FeeType.TUITION,
                 FeeFrequency.TERM, new BigDecimal("250000"), LocalDate.of(2026, 10, 1));
-        assertThat(service.createFee(1L, feeReq).name()).isEqualTo("Tuition");
+        assertThat(service.createFee(1L, feeReq).getFirst().name()).isEqualTo("Tuition");
         verify(auditService).recordFinance(eq(1L), eq(AuditAction.FEE_CREATED), eq("FeeStructure"), eq("1"),
                 contains("Tuition"), contains("amount=250000"));
 
@@ -175,7 +183,7 @@ class FinanceServiceTest {
         when(academicYearService.require(1L, 1L)).thenReturn(Fixtures.year());
         when(feeStructureRepository.save(any(FeeStructure.class))).thenAnswer(inv -> inv.getArgument(0));
         service.createFee(1L, new FeeStructureRequest(1L, null, "Exam", FeeType.EXAM,
-                FeeFrequency.ONE_TIME, BigDecimal.TEN, null));
+                FeeFrequency.ONE_TIME, BigDecimal.TEN, LocalDate.of(2026, 10, 1)));
 
         when(classService.require(1L, 1L)).thenReturn(Fixtures.schoolClass());
         when(feeStructureRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
@@ -274,6 +282,70 @@ class FinanceServiceTest {
         service.applyDiscount(1L, 1L, new InvoiceDiscountRequest(BigDecimal.TEN, "Waiver"),
                 Fixtures.principal(Role.HEADMASTER));
         assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.PAID);
+    }
+
+    @Test
+    void feeLinesFollowFrequencyAndStayEditable() {
+        when(academicYearService.require(1L, 1L)).thenReturn(Fixtures.year());
+        when(academicTermRepository.findBySchoolIdAndAcademicYearIdOrderByStartDateAsc(1L, 1L)).thenReturn(List.of(
+                term("Term 1", LocalDate.of(2026, 6, 30)),
+                term("Term 2", LocalDate.of(2026, 12, 15))));
+        when(feeStructureRepository.save(any(FeeStructure.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<FeeStructureResponse> termFees = service.createFee(1L, new FeeStructureRequest(
+                1L, null, "Tuition", FeeType.TUITION, FeeFrequency.TERM, new BigDecimal("100"), null));
+        assertThat(termFees).extracting(FeeStructureResponse::periodLabel).containsExactly("Term 1", "Term 2");
+        assertThat(termFees).extracting(FeeStructureResponse::dueDate)
+                .containsExactly(LocalDate.of(2026, 6, 30), LocalDate.of(2026, 12, 15));
+
+        when(academicTermRepository.findBySchoolIdAndAcademicYearIdOrderByStartDateAsc(1L, 1L)).thenReturn(List.of());
+        assertThatThrownBy(() -> service.createFee(1L, new FeeStructureRequest(
+                1L, null, "Tuition", FeeType.TUITION, FeeFrequency.TERM, new BigDecimal("100"), null)))
+                .isInstanceOf(BusinessException.class);
+
+        List<FeeStructureResponse> months = service.createFee(1L, new FeeStructureRequest(
+                1L, null, "Transport", FeeType.TRANSPORT, FeeFrequency.MONTHLY, new BigDecimal("20"), null));
+        assertThat(months).hasSize(12);
+        assertThat(months.getFirst().periodLabel()).isEqualTo("January 2026");
+        assertThat(months.getFirst().dueDate()).isEqualTo(LocalDate.of(2026, 1, 31));
+        assertThat(months.get(11).periodLabel()).isEqualTo("December 2026");
+
+        List<FeeStructureResponse> yearly = service.createFee(1L, new FeeStructureRequest(
+                1L, null, "Boarding", FeeType.BOARDING, FeeFrequency.YEARLY, new BigDecimal("500"), LocalDate.of(2026, 3, 1)));
+        assertThat(yearly).hasSize(1);
+        assertThat(yearly.getFirst().dueDate()).isEqualTo(LocalDate.of(2026, 12, 31));
+        assertThat(yearly.getFirst().periodLabel()).isEqualTo("Year");
+
+        assertThatThrownBy(() -> service.createFee(1L, new FeeStructureRequest(
+                1L, null, "Exam", FeeType.EXAM, FeeFrequency.ONE_TIME, BigDecimal.TEN, null)))
+                .isInstanceOf(BusinessException.class);
+
+        FeeStructure yearlyFee = fee();
+        yearlyFee.setFrequency(FeeFrequency.YEARLY);
+        yearlyFee.setPeriodLabel("Year");
+        yearlyFee.setDueDate(LocalDate.of(2026, 12, 31));
+        when(feeStructureRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(yearlyFee));
+        FeeStructureResponse updatedYear = service.updateFee(1L, 1L,
+                new UpdateFeeStructureRequest(new BigDecimal("600"), LocalDate.of(2026, 2, 1)));
+        assertThat(updatedYear.amount()).isEqualByComparingTo("600");
+        assertThat(updatedYear.dueDate()).isEqualTo(LocalDate.of(2026, 12, 31));
+
+        FeeStructure termFee = fee();
+        termFee.setId(2L);
+        termFee.setPeriodLabel("Term 1");
+        termFee.setDueDate(LocalDate.of(2026, 6, 30));
+        when(feeStructureRepository.findByIdAndSchoolId(2L, 1L)).thenReturn(Optional.of(termFee));
+        FeeStructureResponse updatedTerm = service.updateFee(1L, 2L,
+                new UpdateFeeStructureRequest(new BigDecimal("80"), LocalDate.of(2026, 7, 1)));
+        assertThat(updatedTerm.amount()).isEqualByComparingTo("80");
+        assertThat(updatedTerm.dueDate()).isEqualTo(LocalDate.of(2026, 7, 1));
+    }
+
+    private static AcademicTerm term(String name, LocalDate endDate) {
+        AcademicTerm term = new AcademicTerm();
+        term.setName(name);
+        term.setEndDate(endDate);
+        return term;
     }
 
     private FeeStructure fee() {

@@ -25,6 +25,7 @@ import tz.co.chambaka.school.management.dto.auth.VerifyResetCodeRequest;
 import tz.co.chambaka.school.management.dto.auth.VerifyResetCodeResponse;
 import tz.co.chambaka.school.management.dto.auth.VerifyTwoFactorRequest;
 import tz.co.chambaka.school.management.dto.finance.FeeStructureRequest;
+import tz.co.chambaka.school.management.dto.finance.UpdateFeeStructureRequest;
 import tz.co.chambaka.school.management.dto.finance.GenerateInvoicesRequest;
 import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
 import tz.co.chambaka.school.management.dto.notice.NoticeRequest;
@@ -497,6 +498,7 @@ class ControllersTest {
         fees.list(1L);
         fees.list(null);
         fees.create(new FeeStructureRequest(1L, 1L, "T", FeeType.TUITION, FeeFrequency.TERM, BigDecimal.TEN, null));
+        fees.update(1L, new UpdateFeeStructureRequest(BigDecimal.TEN, LocalDate.now()));
 
         InvoiceController invoices = new InvoiceController(financeService, studentService, tenantResolver);
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());

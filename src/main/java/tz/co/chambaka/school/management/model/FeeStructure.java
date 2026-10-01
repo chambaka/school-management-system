@@ -45,4 +45,7 @@ public class FeeStructure extends TenantEntity {
     private BigDecimal amount;
 
     private LocalDate dueDate;
+
+    @Column(name = "period_label", length = 80)
+    private String periodLabel;
 }

@@ -11,9 +11,11 @@ import tz.co.chambaka.school.management.dto.finance.InvoiceResponse;
 import tz.co.chambaka.school.management.dto.finance.PaymentResponse;
 import tz.co.chambaka.school.management.dto.finance.RecordPaymentRequest;
 import tz.co.chambaka.school.management.dto.finance.StudentLedgerResponse;
+import tz.co.chambaka.school.management.dto.finance.UpdateFeeStructureRequest;
 import tz.co.chambaka.school.management.exception.ApiException;
 import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
+import tz.co.chambaka.school.management.model.AcademicTerm;
 import tz.co.chambaka.school.management.model.AcademicYear;
 import tz.co.chambaka.school.management.model.FeeStructure;
 import tz.co.chambaka.school.management.model.Invoice;
@@ -23,10 +25,12 @@ import tz.co.chambaka.school.management.model.SchoolClass;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.model.enums.AuditAction;
+import tz.co.chambaka.school.management.model.enums.FeeFrequency;
 import tz.co.chambaka.school.management.model.enums.FeeType;
 import tz.co.chambaka.school.management.model.enums.InvoiceStatus;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.model.enums.StudentStatus;
+import tz.co.chambaka.school.management.repository.AcademicTermRepository;
 import tz.co.chambaka.school.management.repository.FeeStructureRepository;
 import tz.co.chambaka.school.management.repository.InvoiceRepository;
 import tz.co.chambaka.school.management.repository.PaymentRepository;
@@ -44,11 +48,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.TextStyle;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -59,6 +67,7 @@ public class FinanceService {
     private static final Logger log = LoggerFactory.getLogger(FinanceService.class);
 
     private final FeeStructureRepository feeStructureRepository;
+    private final AcademicTermRepository academicTermRepository;
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
     private final StudentRepository studentRepository;
@@ -72,6 +81,7 @@ public class FinanceService {
 
     public FinanceService(
             FeeStructureRepository feeStructureRepository,
+            AcademicTermRepository academicTermRepository,
             InvoiceRepository invoiceRepository,
             PaymentRepository paymentRepository,
             StudentRepository studentRepository,
@@ -84,6 +94,7 @@ public class FinanceService {
             LedgerService ledgerService
     ) {
         this.feeStructureRepository = feeStructureRepository;
+        this.academicTermRepository = academicTermRepository;
         this.invoiceRepository = invoiceRepository;
         this.paymentRepository = paymentRepository;
         this.studentRepository = studentRepository;
@@ -101,7 +112,11 @@ public class FinanceService {
         List<FeeStructure> rows = academicYearId == null
                 ? feeStructureRepository.findBySchoolId(schoolId)
                 : feeStructureRepository.findBySchoolIdAndAcademicYearId(schoolId, academicYearId);
-        List<FeeStructureResponse> fees = rows.stream().map(this::toFee).toList();
+        List<FeeStructureResponse> fees = rows.stream()
+                .map(this::toFee)
+                .sorted(Comparator.comparing(FeeStructureResponse::dueDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(FeeStructureResponse::id, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
         String yearLabel = academicYearId == null ? "all years" : "academic year " + academicYearId;
         audit(schoolId, AuditAction.FEE_LISTED, "FeeStructure", academicYearId,
                 "Listed " + fees.size() + " fee structures for " + yearLabel,
@@ -111,28 +126,108 @@ public class FinanceService {
     }
 
     @Transactional
-    public FeeStructureResponse createFee(Long schoolId, FeeStructureRequest request) {
-        FeeStructure fee = new FeeStructure();
-        fee.setSchoolId(schoolId);
-        fee.setAcademicYear(academicYearService.require(schoolId, request.academicYearId()));
-        fee.setSchoolClass(request.schoolClassId() == null ? null : classService.require(schoolId, request.schoolClassId()));
-        fee.setName(request.name());
-        fee.setFeeType(request.feeType());
-        fee.setFrequency(request.frequency());
+    public List<FeeStructureResponse> createFee(Long schoolId, FeeStructureRequest request) {
+        AcademicYear year = academicYearService.require(schoolId, request.academicYearId());
+        SchoolClass schoolClass = request.schoolClassId() == null ? null : classService.require(schoolId, request.schoolClassId());
+        List<FeeStructureResponse> created = new ArrayList<>();
+        for (FeeInstallment installment : installments(schoolId, year, request)) {
+            FeeStructure fee = new FeeStructure();
+            fee.setSchoolId(schoolId);
+            fee.setAcademicYear(year);
+            fee.setSchoolClass(schoolClass);
+            fee.setName(request.name());
+            fee.setFeeType(request.feeType());
+            fee.setFrequency(request.frequency());
+            fee.setAmount(request.amount());
+            fee.setDueDate(installment.dueDate());
+            fee.setPeriodLabel(installment.periodLabel());
+            FeeStructure saved = feeStructureRepository.save(fee);
+            log.info("Created fee structure id={} schoolId={} name={} period={}",
+                    saved.getId(), schoolId, saved.getName(), saved.getPeriodLabel());
+            audit(schoolId, AuditAction.FEE_CREATED, "FeeStructure", saved.getId(),
+                    "Created fee " + saved.getName() + " " + saved.getPeriodLabel() + " amount=" + saved.getAmount(),
+                    "name=" + saved.getName()
+                            + " period=" + saved.getPeriodLabel()
+                            + " amount=" + saved.getAmount()
+                            + " type=" + saved.getFeeType()
+                            + " frequency=" + saved.getFrequency()
+                            + " academicYearId=" + request.academicYearId()
+                            + " classId=" + request.schoolClassId()
+                            + " dueDate=" + saved.getDueDate());
+            created.add(toFee(saved));
+        }
+        return created;
+    }
+
+    @Transactional
+    public FeeStructureResponse updateFee(Long schoolId, Long id, UpdateFeeStructureRequest request) {
+        FeeStructure fee = feeStructureRepository.findByIdAndSchoolId(id, schoolId)
+                .orElseThrow(() -> ResourceNotFoundException.of("FeeStructure", id));
         fee.setAmount(request.amount());
-        fee.setDueDate(request.dueDate());
+        if (fee.getFrequency() == FeeFrequency.YEARLY) {
+            if (fee.getDueDate() == null && fee.getAcademicYear() != null) {
+                fee.setDueDate(fee.getAcademicYear().getEndDate());
+            }
+        } else {
+            if (request.dueDate() == null) {
+                throw new BusinessException("Enter a due date");
+            }
+            fee.setDueDate(request.dueDate());
+        }
         FeeStructure saved = feeStructureRepository.save(fee);
-        log.info("Created fee structure id={} schoolId={} name={}", saved.getId(), schoolId, saved.getName());
-        audit(schoolId, AuditAction.FEE_CREATED, "FeeStructure", saved.getId(),
-                "Created fee " + saved.getName() + " amount=" + saved.getAmount(),
-                "name=" + saved.getName()
-                        + " amount=" + saved.getAmount()
-                        + " type=" + saved.getFeeType()
-                        + " frequency=" + saved.getFrequency()
-                        + " academicYearId=" + request.academicYearId()
-                        + " classId=" + request.schoolClassId()
-                        + " dueDate=" + saved.getDueDate());
+        audit(schoolId, AuditAction.FEE_UPDATED, "FeeStructure", saved.getId(),
+                "Updated fee " + saved.getName() + " " + saved.getPeriodLabel() + " amount=" + saved.getAmount(),
+                "amount=" + saved.getAmount() + " dueDate=" + saved.getDueDate() + " period=" + saved.getPeriodLabel());
         return toFee(saved);
+    }
+
+    private List<FeeInstallment> installments(Long schoolId, AcademicYear year, FeeStructureRequest request) {
+        return switch (request.frequency()) {
+            case TERM -> termInstallments(schoolId, year);
+            case MONTHLY -> monthlyInstallments(year);
+            case YEARLY -> List.of(new FeeInstallment("Year", yearEnd(year)));
+            case ONE_TIME -> {
+                if (request.dueDate() == null) {
+                    throw new BusinessException("Enter a due date for a one-time fee");
+                }
+                yield List.of(new FeeInstallment("One time", request.dueDate()));
+            }
+            case QUARTERLY -> throw new BusinessException("Choose term, monthly, yearly, or one time");
+        };
+    }
+
+    private List<FeeInstallment> termInstallments(Long schoolId, AcademicYear year) {
+        List<AcademicTerm> terms = academicTermRepository.findBySchoolIdAndAcademicYearIdOrderByStartDateAsc(schoolId, year.getId());
+        if (terms.isEmpty()) {
+            throw new BusinessException("Add terms for this year before creating a term fee");
+        }
+        return terms.stream()
+                .map(term -> new FeeInstallment(term.getName(), term.getEndDate()))
+                .toList();
+    }
+
+    private static List<FeeInstallment> monthlyInstallments(AcademicYear year) {
+        if (year.getStartDate() == null) {
+            throw new BusinessException("This academic year has no start date");
+        }
+        YearMonth start = YearMonth.from(year.getStartDate());
+        List<FeeInstallment> lines = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            YearMonth month = start.plusMonths(i);
+            String label = month.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + month.getYear();
+            lines.add(new FeeInstallment(label, month.atEndOfMonth()));
+        }
+        return lines;
+    }
+
+    private static LocalDate yearEnd(AcademicYear year) {
+        if (year.getEndDate() == null) {
+            throw new BusinessException("This academic year has no end date");
+        }
+        return year.getEndDate();
+    }
+
+    private record FeeInstallment(String periodLabel, LocalDate dueDate) {
     }
 
     @Transactional
@@ -190,7 +285,7 @@ public class FinanceService {
                     item.setSchoolId(schoolId);
                     item.setInvoice(invoice);
                     item.setFeeStructure(fee);
-                    item.setDescription(fee.getName() + " (Q" + quarter + ")");
+                    item.setDescription(feeLineLabel(fee, quarter));
                     item.setAmount(fee.getAmount());
                     invoice.getItems().add(item);
                     total = total.add(fee.getAmount());
@@ -217,7 +312,7 @@ public class FinanceService {
         }
         if (created.isEmpty()) {
             if (skipped > 0) {
-                throw new BusinessException("Quarterly invoices already exist for the selected class and quarter");
+                throw new BusinessException("Term invoices already exist for the selected class and quarter");
             }
             if (studentCount == 0) {
                 throw new BusinessException("No students found in this class");
@@ -248,14 +343,27 @@ public class FinanceService {
         return feeClassId == null || Objects.equals(feeClassId, classId);
     }
 
+    private static String installmentKey(FeeStructure fee) {
+        String period = fee.getPeriodLabel() == null ? "" : fee.getPeriodLabel();
+        return fee.getFeeType().name() + "|" + period;
+    }
+
+    private static String feeLineLabel(FeeStructure fee, int quarter) {
+        String period = fee.getPeriodLabel();
+        if (period != null && !period.isBlank()) {
+            return fee.getName() + " · " + period;
+        }
+        return fee.getName() + " (Q" + quarter + ")";
+    }
+
     private static List<FeeStructure> preferClassFees(List<FeeStructure> fees, Long classId) {
-        Map<FeeType, FeeStructure> byType = new LinkedHashMap<>();
+        Map<String, FeeStructure> byType = new LinkedHashMap<>();
         for (FeeStructure fee : fees) {
             Long feeClassId = fee.getSchoolClass() == null ? null : fee.getSchoolClass().getId();
-            FeeStructure existing = byType.get(fee.getFeeType());
+            FeeStructure existing = byType.get(installmentKey(fee));
             if (existing == null || (Objects.equals(feeClassId, classId)
                     && (existing.getSchoolClass() == null || !Objects.equals(existing.getSchoolClass().getId(), classId)))) {
-                byType.put(fee.getFeeType(), fee);
+                byType.put(installmentKey(fee), fee);
             }
         }
         return List.copyOf(byType.values());
@@ -541,7 +649,8 @@ public class FinanceService {
                 fee.getFeeType(),
                 fee.getFrequency(),
                 fee.getAmount(),
-                fee.getDueDate()
+                fee.getDueDate(),
+                fee.getPeriodLabel()
         );
     }
 

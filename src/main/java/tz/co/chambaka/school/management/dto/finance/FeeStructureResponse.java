@@ -15,6 +15,7 @@ public record FeeStructureResponse(
         FeeType feeType,
         FeeFrequency frequency,
         BigDecimal amount,
-        LocalDate dueDate
+        LocalDate dueDate,
+        String periodLabel
 ) {
 }
