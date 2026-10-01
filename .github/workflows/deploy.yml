@@ -197,9 +197,17 @@ jobs:
 
             fi
 
+            svc() {
+              if [ "$(id -u)" -eq 0 ]; then
+                systemctl "$@"
+              else
+                sudo -n systemctl "$@"
+              fi
+            }
+
             echo "Stopping old service..."
 
-            systemctl stop shule-hub.service || true
+            svc stop shule-hub.service || true
 
             echo "Removing old JAR..."
 
@@ -225,11 +233,17 @@ jobs:
 
             echo "Reloading systemd..."
 
-            systemctl daemon-reload
+            if ! svc daemon-reload; then
+              echo "ERROR: $(id -un) can write the jar, but cannot restart shule-hub.service."
+              echo "On the server, allow these commands with the SSH key user and no password:"
+              echo "  echo \"$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl, /usr/bin/journalctl\" | sudo tee /etc/sudoers.d/shule-hub"
+              echo "  sudo chmod 440 /etc/sudoers.d/shule-hub"
+              exit 1
+            fi
 
             echo "Starting service..."
 
-            systemctl start shule-hub.service
+            svc start shule-hub.service
 
             echo "Waiting for startup..."
 
@@ -237,18 +251,19 @@ jobs:
 
             echo "Checking service status..."
 
-            systemctl status shule-hub.service --no-pager || true
+            svc status shule-hub.service --no-pager || true
 
-            if ! systemctl is-active --quiet shule-hub.service; then
+            if ! svc is-active --quiet shule-hub.service; then
 
               echo "ERROR: Service failed to start."
 
               echo "Showing recent logs..."
 
-              journalctl \
-                -u shule-hub.service \
-                -n 100 \
-                --no-pager || true
+              if [ "$(id -u)" -eq 0 ]; then
+                journalctl -u shule-hub.service -n 100 --no-pager || true
+              else
+                sudo -n journalctl -u shule-hub.service -n 100 --no-pager || true
+              fi
 
               exit 1
 
