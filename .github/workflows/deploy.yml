@@ -169,12 +169,13 @@ jobs:
             echo "Found JAR:"
             echo "$JAR_FILE"
 
+            if [ -z "${SUDO_PASSWORD:-}" ]; then
+              echo "ERROR: VPS_SUDO_PASSWORD is empty. Add that repository secret with the sudo password for ${USER}."
+              exit 1
+            fi
+
             run_root() {
-              if [ -n "${SUDO_PASSWORD:-}" ]; then
-                printf '%s\n' "$SUDO_PASSWORD" | sudo -S -p '' "$@"
-              else
-                sudo -n "$@"
-              fi
+              printf '%s\n' "$SUDO_PASSWORD" | sudo -S -p '' "$@"
             }
 
             echo "Creating application directories..."
@@ -263,13 +264,18 @@ jobs:
 
             export SUDO_PASSWORD="${{ secrets.VPS_SUDO_PASSWORD }}"
 
+            {
+              printf 'SUDO_PASSWORD=%q\n' "$SUDO_PASSWORD"
+              cat deploy.sh
+            } > deploy-remote.sh
+
             ssh \
               -o StrictHostKeyChecking=no \
               -o ServerAliveInterval=60 \
               -o ServerAliveCountMax=10 \
               -i ~/.ssh/id_rsa \
               ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} \
-              "SUDO_PASSWORD=$(printf '%q' "$SUDO_PASSWORD") bash -s" < deploy.sh
+              'bash -s' < deploy-remote.sh
 
       # =====================================================
       # SUCCESS MESSAGE
