@@ -168,26 +168,15 @@ jobs:
 
             echo "Found JAR:"
             echo "$JAR_FILE"
-
-            as_root() {
-              if [ "$(id -u)" -eq 0 ]; then
-                "$@"
-                return
-              fi
-              if ! sudo -n true >/dev/null 2>&1; then
-                echo "ERROR: SSH key login worked, but sudo on the server still asks for a password."
-                echo "From a normal SSH session, add passwordless sudo once:"
-                echo "  echo \"$USER ALL=(ALL) NOPASSWD:ALL\" | sudo tee /etc/sudoers.d/school-management"
-                echo "  sudo chmod 440 /etc/sudoers.d/school-management"
-                exit 1
-              fi
-              sudo -n "$@"
-            }
+            echo "Logged in as $(id -un) ($(id -u))"
 
             echo "Creating application directories..."
 
-            as_root mkdir -p $APP_DIR
-            as_root mkdir -p $BACKUP_DIR
+            if ! mkdir -p "$APP_DIR" "$BACKUP_DIR"; then
+              echo "ERROR: $(id -un) cannot create $APP_DIR."
+              echo "SSH key login is working. Set the VPS_USERNAME secret to root if this key is in /root/.ssh/authorized_keys."
+              exit 1
+            fi
 
             echo "Backing up existing JAR if present..."
 
@@ -195,9 +184,9 @@ jobs:
 
               TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-              as_root cp \
-                $APP_DIR/$JAR_NAME \
-                $BACKUP_DIR/school-management-$TIMESTAMP.jar
+              cp \
+                "$APP_DIR/$JAR_NAME" \
+                "$BACKUP_DIR/school-management-$TIMESTAMP.jar"
 
               echo "Backup created:"
               echo "$BACKUP_DIR/school-management-$TIMESTAMP.jar"
@@ -210,33 +199,33 @@ jobs:
 
             echo "Stopping old service..."
 
-            as_root systemctl stop school-management.service || true
+            systemctl stop school-management.service || true
 
             echo "Removing old JAR..."
 
-            as_root rm -f $APP_DIR/$JAR_NAME
+            rm -f "$APP_DIR/$JAR_NAME"
 
             echo "Copying new JAR..."
 
-            as_root cp "$JAR_FILE" "$APP_DIR/$JAR_NAME"
+            cp "$JAR_FILE" "$APP_DIR/$JAR_NAME"
 
             echo "Setting permissions..."
 
-            as_root chown -R lupo:lupo $APP_DIR
+            chown -R "$(id -un):$(id -gn)" "$APP_DIR" || true
 
-            as_root chmod 755 $APP_DIR/$JAR_NAME
+            chmod 755 "$APP_DIR/$JAR_NAME"
 
             echo "Cleaning temporary files..."
 
-            as_root rm -rf /tmp/school-management
+            rm -rf /tmp/school-management
 
             echo "Reloading systemd..."
 
-            as_root systemctl daemon-reload
+            systemctl daemon-reload
 
             echo "Starting service..."
 
-            as_root systemctl start school-management.service
+            systemctl start school-management.service
 
             echo "Waiting for startup..."
 
@@ -244,18 +233,18 @@ jobs:
 
             echo "Checking service status..."
 
-            as_root systemctl status school-management.service --no-pager || true
+            systemctl status school-management.service --no-pager || true
 
-            if ! as_root systemctl is-active --quiet school-management.service; then
+            if ! systemctl is-active --quiet school-management.service; then
 
               echo "ERROR: Service failed to start."
 
               echo "Showing recent logs..."
 
-              as_root journalctl \
+              journalctl \
                 -u school-management.service \
                 -n 100 \
-                --no-pager
+                --no-pager || true
 
               exit 1
 
