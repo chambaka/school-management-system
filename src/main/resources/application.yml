@@ -83,6 +83,7 @@ sms:
     enabled: ${SMS_INVOICE_REMINDER_ENABLED:true}
     cron: ${SMS_INVOICE_REMINDER_CRON:0 0 8 * * *}
     zone: ${SMS_INVOICE_REMINDER_ZONE:Africa/Dar_es_Salaam}
+  platform-hosts: ${SMS_PLATFORM_HOSTS:shulehub.apexglobe.co.tz}
   tenancy:
     mode: ${SMS_TENANCY_MODE:multi}
     default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:ShuleHub}

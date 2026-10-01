@@ -239,13 +239,16 @@ class ControllersTest {
         verify(authService).me(10L);
         verify(passwordResetService).resetPassword(org.mockito.ArgumentMatchers.any());
 
-        BrandingController branding = new BrandingController(schoolService);
+        BrandingController branding = new BrandingController(schoolService, java.util.List.of("shulehub.apexglobe.co.tz"));
         branding.bySlug("chambaka");
         when(schoolService.brandingByHost("school.test")).thenReturn(Fixtures.branding());
         assertThat(branding.byHost("school.test").getStatusCode()).isEqualTo(HttpStatus.OK);
         when(schoolService.brandingByHost("localhost:5174"))
                 .thenThrow(new ResourceNotFoundException("No school is mapped to this domain"));
         assertThat(branding.byHost("localhost:5174").getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        when(schoolService.brandingByHost("shulehub.apexglobe.co.tz"))
+                .thenThrow(new ResourceNotFoundException("No school is mapped to this domain"));
+        assertThat(branding.byHost("shulehub.apexglobe.co.tz").getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         when(schoolService.brandingByHost("missing.school"))
                 .thenThrow(new ResourceNotFoundException("No school is mapped to this domain"));
         org.junit.jupiter.api.Assertions.assertThrows(
