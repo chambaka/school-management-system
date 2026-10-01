@@ -216,7 +216,7 @@ public class AlertService {
         if (userId == null) {
             return false;
         }
-        if (entityType != null && !entityType.isBlank() && entityId != null && title != null) {
+        if (!eachSubmission(title) && entityType != null && !entityType.isBlank() && entityId != null && title != null) {
             List<InAppNotification> existing = notificationRepository
                     .findBySchoolIdAndUserIdAndEntityTypeAndEntityIdAndTitleAndReadFlagFalseOrderByIdAsc(
                             schoolId, userId, entityType, entityId, title);
@@ -255,15 +255,21 @@ public class AlertService {
         }
     }
 
+    private static boolean eachSubmission(String title) {
+        return "Assignment submitted".equals(title);
+    }
+
     private static String unreadKey(InAppNotification notification) {
-        if (notification.isReadFlag()
-                || notification.getEntityType() == null
-                || notification.getEntityType().isBlank()
-                || notification.getEntityId() == null
-                || notification.getTitle() == null) {
+        if (notification.isReadFlag() || notification.getTitle() == null || eachSubmission(notification.getTitle())) {
             return null;
         }
-        return notification.getEntityType() + ":" + notification.getEntityId() + ":" + notification.getTitle();
+        if (notification.getEntityType() != null
+                && !notification.getEntityType().isBlank()
+                && notification.getEntityId() != null) {
+            return notification.getEntityType() + ":" + notification.getEntityId() + ":" + notification.getTitle();
+        }
+        String body = notification.getBody() == null ? "" : notification.getBody();
+        return "copy:" + notification.getTitle() + ":" + body;
     }
 
     private boolean subjectExists(InAppNotification notification) {

@@ -283,7 +283,7 @@ public class AssignmentService {
         String body = student.getUser().getName() + " submitted " + assignment.getTitle();
         alertService.notifyParentsOfStudent(schoolId, student, "Assignment submitted",
                 body, "ASSIGNMENT", false,
-                AlertService.SUBJECT_ASSIGNMENT, assignmentId, false);
+                AlertService.SUBJECT_ASSIGNMENT, assignmentId, true);
         if (assignment.getTeacher() != null && assignment.getTeacher().getUser() != null) {
             alertService.notifyUser(
                     schoolId,

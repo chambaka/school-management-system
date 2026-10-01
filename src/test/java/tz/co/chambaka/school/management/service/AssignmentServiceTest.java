@@ -470,7 +470,7 @@ class AssignmentServiceTest {
         assertThat(submitted.attempt()).isEqualTo(1);
         verify(photoStorageService).storeSubmissionFile(1L, 1L, 1L, 3L, 11L, file);
         verify(alertService).notifyParentsOfStudent(eq(1L), any(Student.class), eq("Assignment submitted"), any(), eq("ASSIGNMENT"), eq(false),
-                eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L), eq(false));
+                eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L), eq(true));
         verify(alertService).notifyUser(eq(1L), eq(3L), eq("Assignment submitted"), any(), eq("ASSIGNMENT"),
                 eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L));
 

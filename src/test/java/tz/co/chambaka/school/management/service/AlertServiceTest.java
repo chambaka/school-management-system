@@ -157,15 +157,9 @@ class AlertServiceTest {
                 "ASSIGNMENT", false, AlertService.SUBJECT_ASSIGNMENT, 8L, true);
         verify(notificationRepository, times(4)).save(any(InAppNotification.class));
 
-        InAppNotification existing = notification(9L, false);
-        InAppNotification extra = notification(10L, false);
-        when(notificationRepository.findBySchoolIdAndUserIdAndEntityTypeAndEntityIdAndTitleAndReadFlagFalseOrderByIdAsc(
-                1L, 4L, AlertService.SUBJECT_ASSIGNMENT, 8L, "Assignment submitted"))
-                .thenReturn(List.of(existing, extra));
         service.notifyUser(1L, 4L, "Assignment submitted", "Latest attempt", "ASSIGNMENT",
                 AlertService.SUBJECT_ASSIGNMENT, 8L);
-        assertThat(existing.getBody()).isEqualTo("Latest attempt");
-        verify(notificationRepository).deleteAll(List.of(extra));
+        verify(notificationRepository, times(5)).save(any(InAppNotification.class));
 
         service.notifyUser(1L, null, "Ignored", "Body", "ASSIGNMENT", AlertService.SUBJECT_ASSIGNMENT, 8L);
         service.notifyHouseholds(1L, List.of(), "New assignment", "Due", "ASSIGNMENT", false,
@@ -175,7 +169,7 @@ class AlertServiceTest {
     }
 
     @Test
-    void inboxKeepsNewestUnreadAlertForTheSameAssignment() {
+    void inboxKeepsEachSubmissionAlert() {
         InAppNotification newest = notification(10L, false);
         newest.setSchoolId(1L);
         newest.setEntityType(AlertService.SUBJECT_ASSIGNMENT);
@@ -195,7 +189,24 @@ class AlertServiceTest {
                 .thenReturn(List.of(newest, older, read));
         when(assignmentRepository.findByIdAndSchoolId(8L, 1L)).thenReturn(Optional.of(new tz.co.chambaka.school.management.model.Assignment()));
 
-        assertThat(service.inbox(1L, 4L)).extracting(row -> row.id()).containsExactly(10L, 12L);
+        assertThat(service.inbox(1L, 4L)).extracting(row -> row.id()).containsExactly(10L, 11L, 12L);
+    }
+
+    @Test
+    void inboxCollapsesIdenticalUnreadCopiesThatAreNotLinkedToAnAssignment() {
+        InAppNotification newest = notification(21L, false);
+        newest.setTitle("New assignment");
+        newest.setBody("Algebra is due 2026-10-01");
+        InAppNotification older = notification(22L, false);
+        older.setTitle("New assignment");
+        older.setBody("Algebra is due 2026-10-01");
+        InAppNotification other = notification(23L, false);
+        other.setTitle("New assignment");
+        other.setBody("Essay is due 2026-10-03");
+        when(notificationRepository.findBySchoolIdAndUserIdOrderByCreatedAtDesc(1L, 4L))
+                .thenReturn(List.of(newest, older, other));
+
+        assertThat(service.inbox(1L, 4L)).extracting(row -> row.id()).containsExactly(21L, 23L);
         verify(notificationRepository).deleteAll(List.of(older));
     }
 
