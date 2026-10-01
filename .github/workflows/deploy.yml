@@ -149,7 +149,7 @@ jobs:
             APP_DIR="/opt/apps/school-management"
             BACKUP_DIR="/opt/apps/school-management/backup"
             TEMP_DIR="/tmp/school-management"
-            JAR_NAME="school-management.jar"
+            JAR_NAME="shule-hub.jar"
 
             echo "========================================="
             echo "STARTING DEPLOYMENT"
@@ -186,10 +186,10 @@ jobs:
 
               cp \
                 "$APP_DIR/$JAR_NAME" \
-                "$BACKUP_DIR/school-management-$TIMESTAMP.jar"
+                "$BACKUP_DIR/shule-hub-$TIMESTAMP.jar"
 
               echo "Backup created:"
-              echo "$BACKUP_DIR/school-management-$TIMESTAMP.jar"
+              echo "$BACKUP_DIR/shule-hub-$TIMESTAMP.jar"
 
             else
 
