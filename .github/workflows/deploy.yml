@@ -199,7 +199,7 @@ jobs:
 
             echo "Stopping old service..."
 
-            systemctl stop school-management.service || true
+            systemctl stop shule-hub.service || true
 
             echo "Removing old JAR..."
 
@@ -229,7 +229,7 @@ jobs:
 
             echo "Starting service..."
 
-            systemctl start school-management.service
+            systemctl start shule-hub.service
 
             echo "Waiting for startup..."
 
@@ -237,16 +237,16 @@ jobs:
 
             echo "Checking service status..."
 
-            systemctl status school-management.service --no-pager || true
+            systemctl status shule-hub.service --no-pager || true
 
-            if ! systemctl is-active --quiet school-management.service; then
+            if ! systemctl is-active --quiet shule-hub.service; then
 
               echo "ERROR: Service failed to start."
 
               echo "Showing recent logs..."
 
               journalctl \
-                -u school-management.service \
+                -u shule-hub.service \
                 -n 100 \
                 --no-pager || true
 
