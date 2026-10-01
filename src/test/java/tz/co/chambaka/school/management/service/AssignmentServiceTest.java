@@ -245,8 +245,10 @@ class AssignmentServiceTest {
         when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L)).thenReturn(List.of(Fixtures.student()));
         assertThat(service.publish(1L, academic, 1L).status()).isEqualTo(AssignmentStatus.PUBLISHED);
         assertThat(draft.getPublishedAt()).isNotNull();
-        verify(alertService).notifyHouseholds(eq(1L), any(), eq("New assignment"), any(), eq("ASSIGNMENT"), eq(true),
+        verify(alertService).notifyHouseholds(eq(1L), any(), eq("Assignment posted"), any(), eq("ASSIGNMENT"), eq(true),
                 eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L), eq(true));
+        verify(alertService).notifyUser(eq(1L), eq(3L), eq("Assignment posted"), any(), eq("ASSIGNMENT"),
+                eq(AlertService.SUBJECT_ASSIGNMENT), eq(1L));
         assertThatThrownBy(() -> service.publish(1L, academic, 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Lock this assignment");

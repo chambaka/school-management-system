@@ -273,6 +273,9 @@ public class AlertService {
     }
 
     private boolean subjectExists(InAppNotification notification) {
+        if (isAssignmentNotice(notification)) {
+            return assignmentStillListed(notification);
+        }
         String type = notification.getEntityType();
         Long entityId = notification.getEntityId();
         if (type == null || type.isBlank() || entityId == null) {
@@ -280,10 +283,48 @@ public class AlertService {
         }
         Long schoolId = notification.getSchoolId();
         return switch (type) {
-            case SUBJECT_ASSIGNMENT -> assignmentRepository.findByIdAndSchoolId(entityId, schoolId).isPresent();
             case SUBJECT_EXAM -> examRepository.findByIdAndSchoolId(entityId, schoolId).isPresent();
             case SUBJECT_STUDENT -> studentRepository.findByIdAndSchoolId(entityId, schoolId).isPresent();
             default -> true;
         };
+    }
+
+    private boolean isAssignmentNotice(InAppNotification notification) {
+        String title = notification.getTitle();
+        return SUBJECT_ASSIGNMENT.equals(notification.getEntityType())
+                || "ASSIGNMENT".equals(notification.getCategory())
+                || "New assignment".equals(title)
+                || "Assignment posted".equals(title)
+                || "Assignment submitted".equals(title);
+    }
+
+    private boolean assignmentStillListed(InAppNotification notification) {
+        Long schoolId = notification.getSchoolId();
+        if (SUBJECT_ASSIGNMENT.equals(notification.getEntityType()) && notification.getEntityId() != null) {
+            return schoolId != null && assignmentRepository.findByIdAndSchoolId(notification.getEntityId(), schoolId).isPresent();
+        }
+        String title = assignmentTitle(notification);
+        if (schoolId == null || title == null || title.isBlank()) {
+            return false;
+        }
+        return assignmentRepository.findBySchoolIdOrderByDueDateDesc(schoolId).stream()
+                .anyMatch(assignment -> assignment.getTitle() != null && title.equals(assignment.getTitle().trim()));
+    }
+
+    private static String assignmentTitle(InAppNotification notification) {
+        String body = notification.getBody();
+        if (body == null) {
+            return null;
+        }
+        String title = notification.getTitle();
+        if ("New assignment".equals(title) || "Assignment posted".equals(title)) {
+            int due = body.indexOf(" is due ");
+            return due > 0 ? body.substring(0, due).trim() : null;
+        }
+        if ("Assignment submitted".equals(title)) {
+            int submitted = body.lastIndexOf(" submitted ");
+            return submitted >= 0 ? body.substring(submitted + " submitted ".length()).trim() : null;
+        }
+        return null;
     }
 }

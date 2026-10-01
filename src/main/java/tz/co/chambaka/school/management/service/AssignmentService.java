@@ -170,16 +170,28 @@ public class AssignmentService {
         assignment.setStatus(AssignmentStatus.PUBLISHED);
         assignment.setPublishedAt(Instant.now());
         Assignment saved = assignmentRepository.save(assignment);
+        String title = "Assignment posted";
+        String body = saved.getTitle() + " is due " + saved.getDueDate();
         alertService.notifyHouseholds(
                 schoolId,
                 audienceOf(schoolId, saved),
-                "New assignment",
-                saved.getTitle() + " is due " + saved.getDueDate(),
+                title,
+                body,
                 "ASSIGNMENT",
                 true,
                 AlertService.SUBJECT_ASSIGNMENT,
                 saved.getId(),
                 true);
+        if (saved.getTeacher() != null && saved.getTeacher().getUser() != null) {
+            alertService.notifyUser(
+                    schoolId,
+                    saved.getTeacher().getUser().getId(),
+                    title,
+                    body,
+                    "ASSIGNMENT",
+                    AlertService.SUBJECT_ASSIGNMENT,
+                    saved.getId());
+        }
         return toResponse(saved);
     }
 

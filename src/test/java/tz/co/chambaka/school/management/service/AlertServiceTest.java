@@ -203,11 +203,39 @@ class AlertServiceTest {
         InAppNotification other = notification(23L, false);
         other.setTitle("New assignment");
         other.setBody("Essay is due 2026-10-03");
+        newest.setSchoolId(1L);
+        older.setSchoolId(1L);
+        other.setSchoolId(1L);
+        tz.co.chambaka.school.management.model.Assignment algebra = new tz.co.chambaka.school.management.model.Assignment();
+        algebra.setTitle("Algebra");
+        tz.co.chambaka.school.management.model.Assignment essay = new tz.co.chambaka.school.management.model.Assignment();
+        essay.setTitle("Essay");
         when(notificationRepository.findBySchoolIdAndUserIdOrderByCreatedAtDesc(1L, 4L))
                 .thenReturn(List.of(newest, older, other));
+        when(assignmentRepository.findBySchoolIdOrderByDueDateDesc(1L)).thenReturn(List.of(algebra, essay));
 
         assertThat(service.inbox(1L, 4L)).extracting(row -> row.id()).containsExactly(21L, 23L);
         verify(notificationRepository).deleteAll(List.of(older));
+    }
+
+    @Test
+    void inboxDropsAlertsWhenTheAssignmentIsNoLongerListed() {
+        InAppNotification gone = notification(31L, false);
+        gone.setSchoolId(1L);
+        gone.setTitle("New assignment");
+        gone.setBody("Pure Maths is due 2026-10-02");
+        InAppNotification live = notification(32L, false);
+        live.setSchoolId(1L);
+        live.setTitle("New assignment");
+        live.setBody("Calculas is due 2026-10-09");
+        tz.co.chambaka.school.management.model.Assignment calculas = new tz.co.chambaka.school.management.model.Assignment();
+        calculas.setTitle("Calculas");
+        when(notificationRepository.findBySchoolIdAndUserIdOrderByCreatedAtDesc(1L, 4L))
+                .thenReturn(List.of(gone, live));
+        when(assignmentRepository.findBySchoolIdOrderByDueDateDesc(1L)).thenReturn(List.of(calculas));
+
+        assertThat(service.inbox(1L, 4L)).extracting(row -> row.id()).containsExactly(32L);
+        verify(notificationRepository).deleteAll(List.of(gone));
     }
 
     @Test
