@@ -169,10 +169,18 @@ jobs:
             echo "Found JAR:"
             echo "$JAR_FILE"
 
+            run_root() {
+              if [ -n "${SUDO_PASSWORD:-}" ]; then
+                printf '%s\n' "$SUDO_PASSWORD" | sudo -S -p '' "$@"
+              else
+                sudo -n "$@"
+              fi
+            }
+
             echo "Creating application directories..."
 
-            sudo mkdir -p $APP_DIR
-            sudo mkdir -p $BACKUP_DIR
+            run_root mkdir -p $APP_DIR
+            run_root mkdir -p $BACKUP_DIR
 
             echo "Backing up existing JAR if present..."
 
@@ -180,7 +188,7 @@ jobs:
 
               TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-              sudo cp \
+              run_root cp \
                 $APP_DIR/$JAR_NAME \
                 $BACKUP_DIR/school-management-$TIMESTAMP.jar
 
@@ -195,33 +203,33 @@ jobs:
 
             echo "Stopping old service..."
 
-            sudo systemctl stop school-management.service || true
+            run_root systemctl stop school-management.service || true
 
             echo "Removing old JAR..."
 
-            sudo rm -f $APP_DIR/$JAR_NAME
+            run_root rm -f $APP_DIR/$JAR_NAME
 
             echo "Copying new JAR..."
 
-            sudo cp "$JAR_FILE" "$APP_DIR/$JAR_NAME"
+            run_root cp "$JAR_FILE" "$APP_DIR/$JAR_NAME"
 
             echo "Setting permissions..."
 
-            sudo chown -R lupo:lupo $APP_DIR
+            run_root chown -R lupo:lupo $APP_DIR
 
-            sudo chmod 755 $APP_DIR/$JAR_NAME
+            run_root chmod 755 $APP_DIR/$JAR_NAME
 
             echo "Cleaning temporary files..."
 
-            sudo rm -rf /tmp/school-management
+            run_root rm -rf /tmp/school-management
 
             echo "Reloading systemd..."
 
-            sudo systemctl daemon-reload
+            run_root systemctl daemon-reload
 
             echo "Starting service..."
 
-            sudo systemctl start school-management.service
+            run_root systemctl start school-management.service
 
             echo "Waiting for startup..."
 
@@ -229,15 +237,15 @@ jobs:
 
             echo "Checking service status..."
 
-            sudo systemctl status school-management.service --no-pager
+            run_root systemctl status school-management.service --no-pager || true
 
-            if ! sudo systemctl is-active --quiet school-management.service; then
+            if ! run_root systemctl is-active --quiet school-management.service; then
 
               echo "ERROR: Service failed to start."
 
               echo "Showing recent logs..."
 
-              sudo journalctl \
+              run_root journalctl \
                 -u school-management.service \
                 -n 100 \
                 --no-pager
@@ -253,13 +261,15 @@ jobs:
 
             chmod +x deploy.sh
 
+            export SUDO_PASSWORD="${{ secrets.VPS_SUDO_PASSWORD }}"
+
             ssh \
               -o StrictHostKeyChecking=no \
               -o ServerAliveInterval=60 \
               -o ServerAliveCountMax=10 \
               -i ~/.ssh/id_rsa \
               ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} \
-              'bash -s' < deploy.sh
+              "SUDO_PASSWORD=$(printf '%q' "$SUDO_PASSWORD") bash -s" < deploy.sh
 
       # =====================================================
       # SUCCESS MESSAGE
