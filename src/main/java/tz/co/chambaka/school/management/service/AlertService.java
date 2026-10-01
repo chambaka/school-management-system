@@ -9,9 +9,11 @@ import tz.co.chambaka.school.management.model.StudentParent;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.notification.NotificationChannel;
 import tz.co.chambaka.school.management.notification.NotificationSettingsService;
+import tz.co.chambaka.school.management.model.enums.InvoiceStatus;
 import tz.co.chambaka.school.management.repository.AssignmentRepository;
 import tz.co.chambaka.school.management.repository.ExamRepository;
 import tz.co.chambaka.school.management.repository.InAppNotificationRepository;
+import tz.co.chambaka.school.management.repository.InvoiceRepository;
 import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.StudentParentRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
@@ -36,6 +38,7 @@ public class AlertService {
     public static final String SUBJECT_ASSIGNMENT = "ASSIGNMENT";
     public static final String SUBJECT_EXAM = "EXAM";
     public static final String SUBJECT_STUDENT = "STUDENT";
+    public static final String SUBJECT_INVOICE = "INVOICE";
 
     private static final Logger log = LoggerFactory.getLogger(AlertService.class);
 
@@ -49,6 +52,7 @@ public class AlertService {
     private final SmsProperties smsProperties;
     private final NotificationSettingsService notificationSettings;
     private final UserRepository userRepository;
+    private final InvoiceRepository invoiceRepository;
 
     public AlertService(
             InAppNotificationRepository notificationRepository,
@@ -60,7 +64,8 @@ public class AlertService {
             SmsGateway smsGateway,
             SmsProperties smsProperties,
             NotificationSettingsService notificationSettings,
-            UserRepository userRepository
+            UserRepository userRepository,
+            InvoiceRepository invoiceRepository
     ) {
         this.notificationRepository = notificationRepository;
         this.studentParentRepository = studentParentRepository;
@@ -72,6 +77,7 @@ public class AlertService {
         this.smsProperties = smsProperties;
         this.notificationSettings = notificationSettings;
         this.userRepository = userRepository;
+        this.invoiceRepository = invoiceRepository;
     }
 
     @Transactional
@@ -163,6 +169,25 @@ public class AlertService {
     }
 
     @Transactional
+    public void remindHousehold(Long schoolId, Student student, String title, String body, Long invoiceId) {
+        if (student == null || student.getId() == null) {
+            return;
+        }
+        Set<Long> notified = new LinkedHashSet<>();
+        for (StudentParent link : studentParentRepository.findByStudentId(student.getId())) {
+            Parent parent = link.getParent();
+            User user = parent == null ? null : parent.getUser();
+            if (user == null || user.getId() == null || !notified.add(user.getId())) {
+                continue;
+            }
+            deliverReminder(schoolId, user.getId(), user, title, body, invoiceId);
+        }
+        if (student.getUser() != null && student.getUser().getId() != null && notified.add(student.getUser().getId())) {
+            deliverReminder(schoolId, student.getUser().getId(), student.getUser(), title, body, invoiceId);
+        }
+    }
+
+    @Transactional
     public void removeForEntity(Long schoolId, String entityType, Long entityId) {
         if (entityType == null || entityType.isBlank() || entityId == null) {
             return;
@@ -230,6 +255,26 @@ public class AlertService {
         boolean text = choice.isPresent() ? choice.get() == NotificationChannel.SMS : smsRequested;
         boolean created = inApp && putNotice(schoolId, userId, title, body, category, entityType, entityId);
         if (!text || (inApp && !created)) {
+            return;
+        }
+        User recipient = user != null ? user : userRepository.findById(userId).orElse(null);
+        if (recipient == null || recipient.getPhone() == null || recipient.getPhone().isBlank()) {
+            return;
+        }
+        sendSms(schoolId, recipient, body);
+    }
+
+    private void deliverReminder(Long schoolId, Long userId, User user, String title, String body, Long invoiceId) {
+        if (userId == null) {
+            return;
+        }
+        Optional<NotificationChannel> choice = notificationSettings.preferredChannel(userId);
+        boolean inApp = choice.isEmpty() || choice.get() == NotificationChannel.IN_APP;
+        boolean text = choice.isEmpty() || choice.get() == NotificationChannel.SMS;
+        if (inApp) {
+            putNotice(schoolId, userId, title, body, "FEES", SUBJECT_INVOICE, invoiceId);
+        }
+        if (!text) {
             return;
         }
         User recipient = user != null ? user : userRepository.findById(userId).orElse(null);
@@ -307,6 +352,18 @@ public class AlertService {
         return "copy:" + notification.getTitle() + ":" + body;
     }
 
+    private boolean invoiceStillOpen(Long invoiceId, Long schoolId) {
+        if (invoiceId == null || schoolId == null) {
+            return false;
+        }
+        return invoiceRepository.findByIdAndSchoolId(invoiceId, schoolId)
+                .filter(invoice -> invoice.getStatus() == InvoiceStatus.PENDING
+                        || invoice.getStatus() == InvoiceStatus.PARTIAL
+                        || invoice.getStatus() == InvoiceStatus.OVERDUE)
+                .filter(invoice -> invoice.getBalance() != null && invoice.getBalance().signum() > 0)
+                .isPresent();
+    }
+
     private boolean subjectExists(InAppNotification notification) {
         if (isAssignmentNotice(notification)) {
             return assignmentStillListed(notification);
@@ -320,6 +377,7 @@ public class AlertService {
         return switch (type) {
             case SUBJECT_EXAM -> examRepository.findByIdAndSchoolId(entityId, schoolId).isPresent();
             case SUBJECT_STUDENT -> studentRepository.findByIdAndSchoolId(entityId, schoolId).isPresent();
+            case SUBJECT_INVOICE -> invoiceStillOpen(entityId, schoolId);
             default -> true;
         };
     }

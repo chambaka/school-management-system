@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub accountant — user guide</title>
+  <style>
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10.5pt;
+      line-height: 1.45;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 22px 24px 18px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    header.cover h1 { margin: 0 0 8px; font-size: 22pt; letter-spacing: 0.01em; }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 4px; color: #c9d4e3; font-size: 11pt; }
+    header.cover .tagline { margin-top: 12px; color: #F5C451; font-weight: 700; font-size: 11pt; }
+    h2 {
+      margin: 18px 0 8px;
+      font-size: 14pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 { margin: 12px 0 4px; font-size: 12pt; color: #06101F; page-break-after: avoid; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 4px 0 10px; padding-left: 18px; }
+    li { margin: 3px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 6px 0 12px; page-break-inside: avoid; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 6px 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 9pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      page-break-inside: avoid;
+    }
+    footer { margin-top: 14px; font-size: 8.5pt; color: #5b6b7c; }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">accountant</span></h1>
+    <p>What you can open after an accountant signs in: the finance home, fee structures, invoices, payments, the student ledger, and the reports that belong to the bursar.</p>
+    <p class="tagline">Accountant login · October 2026</p>
+  </header>
+
+  <h2>Sign in</h2>
+  <ol>
+    <li>Open the school portal.</li>
+    <li>Enter the <strong>email, phone, or username</strong> the school gave you.</li>
+    <li>Enter your <strong>password</strong>.</li>
+    <li>Click <strong>Login</strong>.</li>
+  </ol>
+  <p>A correct accountant login opens <strong>Home</strong>. The gold line above the greeting says Finance home. The heading is “Good day” and your name. Under it is the school name and “live snapshot.”</p>
+  <p>Five wrong passwords lock the account for 15 minutes. <strong>Forgot password</strong> sends an SMS code to the phone on the account.</p>
+  <div class="note">
+    This guide is for an accountant login. You keep the money side of the school. You do not open Academics, Timetable, Exams, Grades, Assignments, or Attendance. You do not admit students or promote them.
+  </div>
+
+  <h2>The side menu</h2>
+  <table>
+    <thead>
+      <tr><th>Menu</th><th>What it is for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Home</td><td>Student count, invoice count, notices, fees outstanding, today’s tasks, and your alerts.</td></tr>
+      <tr><td>Students</td><td>The student directory. Search and sort. You read the list. You do not admit or promote.</td></tr>
+      <tr><td>Finance</td><td>Fee structures, invoices, payments, discounts, and the student ledger. Opening Finance lands on Fee structures.</td></tr>
+      <tr><td>Reports</td><td>Enrolment history, fee defaulters, and collections. Show a report on the page before you download it.</td></tr>
+      <tr><td>Messages</td><td>A note on a student’s thread. Parents can read it and reply. The SMS tick is not on this login.</td></tr>
+      <tr><td>Notices</td><td>The school board. You can publish a notice. Readers must be signed in.</td></tr>
+      <tr><td>Audit</td><td>The school audit trail, including the full correction ID for each row.</td></tr>
+      <tr><td>Security</td><td>Change your password, and choose in-app or SMS for your own alerts.</td></tr>
+    </tbody>
+  </table>
+  <p>Your name is at the top. <strong>Sign out</strong> is at the bottom and asks you to confirm. On a phone, the first items stay on the bottom bar and the rest sit under More.</p>
+  <p>Under <strong>Finance</strong> the leaves are:</p>
+  <ul>
+    <li><strong>Fees → Fee structures</strong></li>
+    <li><strong>Invoices</strong></li>
+    <li><strong>Payments → Record payment</strong> and <strong>Discount</strong></li>
+    <li><strong>Student Ledger</strong></li>
+  </ul>
+
+  <h2>Home</h2>
+  <p>The snapshot cards are Students, Invoices, Notices, and Fees outstanding. Fees outstanding is the money still owed across open invoices.</p>
+  <p><strong>Today’s tasks</strong> lists what the school snapshot says is waiting. If nothing is waiting, it says “Nothing waiting right now.” The link under the list is <strong>Finance</strong>, which opens Fee structures.</p>
+  <p><strong>Alerts</strong> on Home shows your in-app notices, including fee reminders when you have chosen in-app. Each line has a date. <strong>All alerts</strong> opens Reports. The Reports page for an accountant is the enrolment history, defaulters, and collections. It does not list the full alert inbox.</p>
+
+  <h2>How fees become invoices</h2>
+  <p>A fee structure is the price list. Saving a fee does not bill anyone. An invoice is created only when you click <strong>Generate invoices</strong> and pick that fee line.</p>
+  <ol>
+    <li>Add the fee lines for the year: one line per term, twelve monthly lines, one yearly line, or one one-time line.</li>
+    <li>Open <strong>Invoices</strong> and click <strong>Generate invoices</strong>.</li>
+    <li>Choose the year, the class, and the fee line. The due date shown is the due date on that line.</li>
+    <li>Confirm. The portal creates one invoice per student in that class for that fee.</li>
+  </ol>
+  <p>The amount is copied onto the invoice line at that moment. Editing the fee structure later does not change a bill that has already been issued. Generating the same fee again for the same student is skipped while that invoice is still open. The message is “Invoices already exist for this fee structure.”</p>
+  <p>A class price replaces the all-classes price for the same type and the same period. Term 1 tuition for Form 1 does not replace Term 2, and it does not replace transport.</p>
+
+  <h2>Fee structures</h2>
+  <p>The list columns are Type, Line, Class, Frequency, Due, and Amount. <strong>Add fee structure</strong> opens the form. There is no name field. The type is the name of the fee.</p>
+  <h3>Type</h3>
+  <p>Pick a type by its icon. The same icon later sits on the invoice line.</p>
+  <table>
+    <thead>
+      <tr><th>Type</th><th>Icon</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Tuition</td><td>Graduation cap</td></tr>
+      <tr><td>Transport</td><td>Bus</td></tr>
+      <tr><td>Exam</td><td>Clipboard with a check</td></tr>
+      <tr><td>Library</td><td>Stack of books</td></tr>
+      <tr><td>Sports</td><td>Ball</td></tr>
+      <tr><td>Uniform</td><td>Shirt</td></tr>
+      <tr><td>Meals</td><td>Fork and knife</td></tr>
+      <tr><td>Boarding</td><td>Bed</td></tr>
+      <tr><td>Other</td><td>Tag</td></tr>
+    </tbody>
+  </table>
+  <h3>Frequency</h3>
+  <p>Frequency decides how many lines are created, and whether you type the due date.</p>
+  <table>
+    <thead>
+      <tr><th>Frequency</th><th>What is created</th><th>Due date</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Term</td><td>One line for each term already on that academic year. A school with two terms gets two lines. A school with four terms gets four. The line label is the term name, such as Term 1.</td><td>The end of that term. If the year has no terms, the form stops and asks you to add terms first.</td></tr>
+      <tr><td>Monthly</td><td>Twelve lines, starting from the first month of the academic year. Labels look like January 2026.</td><td>The last day of each month.</td></tr>
+      <tr><td>Yearly</td><td>One line, labelled Year.</td><td>The end of the academic year. On edit, the due date stays calculated and cannot be typed.</td></tr>
+      <tr><td>One time</td><td>One line, labelled One time.</td><td>You type the due date. The field is required.</td></tr>
+    </tbody>
+  </table>
+  <p>Leave <strong>Class</strong> as All classes to use the same amount for every class. Pick a class when that level should pay a different amount for the same type and period.</p>
+  <p><strong>Edit</strong> changes one line: the amount, and the due date except on a yearly line. <strong>Delete</strong> (the trash icon) removes a line that is not yet on an invoice. If a student has already been billed for it, the portal says “This fee is already on an invoice” and keeps the line.</p>
+  <div class="note">
+    Frequency is not a multiplier. A term fee of 150,000 is 150,000 on that term’s line. It is not doubled because the school has two terms. Each term is its own line, and you generate invoices from the line you want to bill.
+  </div>
+
+  <h2>Invoices</h2>
+  <p>Invoices is a list of cards, not a table. Each card shows the invoice number, the student, the admission number, the status, the total, the amount paid, the balance, and the due date.</p>
+  <p><strong>Generate invoices</strong> opens the form: Year, Class, and Fee structure. The fee list is limited to lines for that year. If you pick a class, you see all-classes lines and lines for that class. The icon beside the list is the type of the fee you selected. Under the form, the due date is the due date on that fee line. Confirm with “Generate invoices for the selected fee structure?”</p>
+  <p>Each line on the card shows the fee type icon, the description (for example “Tuition · Term 1”), the amount, a payment icon, and a trash icon.</p>
+  <table>
+    <thead>
+      <tr><th>Payment icon</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Green check</td><td>That line is fully paid.</td></tr>
+      <tr><td>Gold circle</td><td>That line is partly paid.</td></tr>
+      <tr><td>Red circle</td><td>That line is not paid.</td></tr>
+    </tbody>
+  </table>
+  <p>Money received, and any discount, is applied from the first line downward. A partial payment can fully cover an earlier line and leave a later line unpaid.</p>
+  <p>The trash icon removes one line and reduces the invoice total. You cannot remove a line that payments and discounts already cover. The message is “Payments already cover this line.” If you remove the last line and nothing has been paid, the invoice is cancelled and the total becomes 0. A cancelled invoice cannot be changed. Otherwise the status becomes Paid when the balance is zero, Partial when something has been paid, or Pending when nothing has been paid.</p>
+
+  <h2>Payments and discounts</h2>
+  <h3>Record payment</h3>
+  <ol>
+    <li>Open <strong>Payments → Record payment</strong>.</li>
+    <li>Choose the invoice. The list shows the invoice number and the student name.</li>
+    <li>Enter the amount.</li>
+    <li>Choose the method: CASH, CARD, BANK, or MOBILE_MONEY.</li>
+    <li>Enter a reference if you have one. It can be left blank.</li>
+    <li>Click <strong>Record</strong> and confirm.</li>
+  </ol>
+  <p>The payment sits on the invoice. It is not stored as a separate payment against each fee line. The line icons then show how far that money reaches.</p>
+  <h3>Discount</h3>
+  <p>Open <strong>Payments → Discount</strong>. Choose the invoice, enter the amount, and a reason if you want one. Confirm “Apply this discount?” A discount reduces the balance in the same way as a payment when the line icons are calculated.</p>
+
+  <h2>Student ledger</h2>
+  <p>Open <strong>Student Ledger</strong> and choose one student. The page shows invoiced, discounts, paid, and outstanding. Under that is the entry list, then each payment with a <strong>Receipt PDF</strong> button.</p>
+  <p>Parents see a ledger for their own children. They cannot record a payment, add a fee, or generate an invoice.</p>
+
+  <h2>Fee reminders</h2>
+  <p>Every day at <strong>08:00</strong> (Africa/Dar es Salaam) the portal reminds the student and the linked parents about invoices that are still pending, partly paid, or overdue.</p>
+  <p>The message names the student, the amount still owed, and each fee that is unpaid or only partly paid, including the term or period. A line that is already fully covered is left out. An example is: “Asha Juma owes TZS 150000.00. Partly paid: Transport · Term 2 TZS 150000.00.”</p>
+  <p>The channel follows the person’s own choice on Security:</p>
+  <ul>
+    <li><strong>In-app</strong> keeps one notice and updates the amount each morning.</li>
+    <li><strong>SMS</strong> sends the text each morning while the invoice is still open.</li>
+    <li>If the person has not chosen yet, both go out.</li>
+  </ul>
+  <p>When the invoice is paid, that reminder drops out of the inbox. Suspended and archived schools are not reminded.</p>
+
+  <h2>Students</h2>
+  <p>The gold label above the heading is <strong>Directory and admission</strong>. Search the directory, and sort with the Name, Email, and Status controls.</p>
+  <p>This login is for looking up who to bill. Admit, edit, link a parent, promote, unlock, and reset password stay with the headmaster, school admin, and academic master. Enrolment history on Reports is how you see who was promoted, repeated, graduated, or transferred.</p>
+
+  <h2>Reports</h2>
+  <p>The page subtitle is “Fee defaulters, collections, and enrolment history.” Download stays locked until the list on the screen matches the filters you are looking at. Change a filter and you must click <strong>Show</strong> again before PDF, CSV, or Excel will run.</p>
+  <h3>Enrolment history</h3>
+  <p>This is a log written when Promote is applied. Admitting a student does not add a row. Columns are the date, the student, the action (promoted, repeated, graduated, or transferred), the year, class, and section at the time of the action, and any notes. Filter by student, year, or action, then Show. PDF and CSV / Excel use that same list.</p>
+  <h3>School reports</h3>
+  <table>
+    <thead>
+      <tr><th>Report</th><th>What you see</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Defaulters</td><td>Students with an open balance. This is the report selected when you open the page.</td></tr>
+      <tr><td>Collections</td><td>Money recorded between the From and To dates you set.</td></tr>
+    </tbody>
+  </table>
+  <p>Choose CSV, Excel, or PDF, click <strong>Show</strong>, read the rows, then <strong>Download</strong>.</p>
+  <p>Term result, report card, merit list, attendance, and the alerts card are not on the accountant Reports page. Those stay with the academic roles.</p>
+
+  <h2>Messages</h2>
+  <p>Open a student and write on that student’s thread. Parents of the student can read the note and reply. The checkbox that texts parents is not shown for an accountant. Use Notices, or the daily fee reminder, when the message should go out by SMS.</p>
+
+  <h2>Notices</h2>
+  <p>Notices are the school board. They are not the same as alerts, and publishing one does not send SMS or email.</p>
+  <ol>
+    <li>Enter a title and a body.</li>
+    <li>Choose the audience: ALL, TEACHERS, STUDENTS, PARENTS, or STAFF.</li>
+    <li>Click <strong>Publish notice</strong> and confirm.</li>
+  </ol>
+  <p>A person must be signed in to read notices. There is no edit or delete on the board after you publish. Search filters the list you are looking at.</p>
+
+  <h2>Audit</h2>
+  <p>Audit lists what changed at the school, including fee created, fee updated, fee deleted, invoices generated, and an invoice line removed. The <strong>Correction ID</strong> column shows the full id for that change. It wraps so the whole value can be read. Use it when you need to point at one save.</p>
+
+  <h2>Security</h2>
+  <p>Change your password here. Notification channels are a choice of one: <strong>In-app</strong> or <strong>SMS</strong>. Click the one you want. Email and push are not offered. The choice applies to your own alerts, including fee reminders if a reminder is addressed to you. Until you click one, the portal still uses both in-app and SMS where a phone exists.</p>
+
+  <h2>A normal billing week</h2>
+  <ol>
+    <li>Confirm the academic year and its terms exist. Term fees need those terms.</li>
+    <li>Add fee structures for the types you bill. Check the line labels and due dates.</li>
+    <li>Generate invoices for each fee line you want to collect now.</li>
+    <li>Record payments and discounts as money comes in. Open the invoice card and check the line icons.</li>
+    <li>Use the student ledger when a parent asks for a receipt.</li>
+    <li>Use Defaulters for who still owes, and Collections for what was received in a date range.</li>
+    <li>Leave the morning reminder to tell students and parents the amount and the fee or term that is still open.</li>
+  </ol>
+
+  <footer>ShuleHub accountant user guide · October 2026</footer>
+</body>
+</html>

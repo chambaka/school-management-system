@@ -79,6 +79,10 @@ sms:
   push:
     vapid-public: ${SMS_PUSH_VAPID_PUBLIC:}
     vapid-private: ${SMS_PUSH_VAPID_PRIVATE:}
+  invoice-reminder:
+    enabled: ${SMS_INVOICE_REMINDER_ENABLED:true}
+    cron: ${SMS_INVOICE_REMINDER_CRON:0 0 8 * * *}
+    zone: ${SMS_INVOICE_REMINDER_ZONE:Africa/Dar_es_Salaam}
   tenancy:
     mode: ${SMS_TENANCY_MODE:multi}
     default-tenant-name: ${SMS_DEFAULT_TENANT_NAME:ShuleHub}

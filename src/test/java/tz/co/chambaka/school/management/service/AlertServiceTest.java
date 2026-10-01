@@ -17,6 +17,7 @@ import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.AssignmentRepository;
 import tz.co.chambaka.school.management.repository.ExamRepository;
 import tz.co.chambaka.school.management.repository.InAppNotificationRepository;
+import tz.co.chambaka.school.management.repository.InvoiceRepository;
 import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.StudentParentRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -50,6 +52,7 @@ class AlertServiceTest {
     @Mock SmsProperties smsProperties;
     @Mock NotificationSettingsService notificationSettings;
     @Mock UserRepository userRepository;
+    @Mock InvoiceRepository invoiceRepository;
     @InjectMocks AlertService service;
 
     @BeforeEach
@@ -280,6 +283,44 @@ class AlertServiceTest {
         service.removeForEntity(1L, null, 8L);
         service.removeForEntity(1L, AlertService.SUBJECT_ASSIGNMENT, null);
         verify(notificationRepository, times(1)).deleteBySchoolIdAndEntityTypeAndEntityId(any(), any(), any());
+    }
+
+    @Test
+    void feeReminderTextsStudentAndParentAgainWhenTheNoticeIsAlreadyUnread() {
+        Student student = Fixtures.student();
+        StudentParent link = new StudentParent();
+        link.setParent(Fixtures.parent());
+        when(studentParentRepository.findByStudentId(1L)).thenReturn(List.of(link));
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
+        InAppNotification existing = notification(9L, false);
+        when(notificationRepository.findBySchoolIdAndUserIdAndEntityTypeAndEntityIdAndTitleAndReadFlagFalseOrderByIdAsc(
+                eq(1L), any(), eq(AlertService.SUBJECT_INVOICE), eq(44L), eq("Fee reminder")))
+                .thenReturn(List.of(existing));
+
+        String body = "User STUDENT owes TZS 100.00. Unpaid: Tuition · Term 1 TZS 100.00.";
+        service.remindHousehold(1L, student, "Fee reminder", body, 44L);
+
+        verify(smsGateway, times(2)).send(eq("+255700000000"), eq("Chambaka Se"), eq(body));
+        verify(notificationRepository, times(2)).save(existing);
+    }
+
+    @Test
+    void inboxDropsFeeReminderWhenTheInvoiceIsPaid() {
+        InAppNotification reminder = notification(40L, false);
+        reminder.setSchoolId(1L);
+        reminder.setEntityType(AlertService.SUBJECT_INVOICE);
+        reminder.setEntityId(7L);
+        reminder.setTitle("Fee reminder");
+        when(notificationRepository.findBySchoolIdAndUserIdOrderByCreatedAtDesc(1L, 4L)).thenReturn(List.of(reminder));
+        tz.co.chambaka.school.management.model.Invoice paid = new tz.co.chambaka.school.management.model.Invoice();
+        paid.setStatus(tz.co.chambaka.school.management.model.enums.InvoiceStatus.PAID);
+        paid.setTotalAmount(new java.math.BigDecimal("10"));
+        paid.setPaidAmount(new java.math.BigDecimal("10"));
+        paid.setDiscountAmount(java.math.BigDecimal.ZERO);
+        when(invoiceRepository.findByIdAndSchoolId(7L, 1L)).thenReturn(Optional.of(paid));
+
+        assertThat(service.inbox(1L, 4L)).isEmpty();
+        verify(notificationRepository).deleteAll(List.of(reminder));
     }
 
     @Test

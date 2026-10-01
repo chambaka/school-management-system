@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,18 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findBySchoolId(Long schoolId);
 
     List<Invoice> findBySchoolIdAndStatusIn(Long schoolId, List<InvoiceStatus> statuses);
+
+    @Query("""
+            select distinct i from Invoice i
+            join fetch i.student s
+            left join fetch s.user
+            left join fetch i.items item
+            left join fetch item.feeStructure
+            where i.schoolId = :schoolId and i.status in :statuses
+            """)
+    List<Invoice> findOpenForReminder(
+            @Param("schoolId") Long schoolId,
+            @Param("statuses") Collection<InvoiceStatus> statuses);
 
     List<Invoice> findBySchoolIdAndStudentId(Long schoolId, Long studentId);
 
