@@ -1,0 +1,270 @@
+name: Deploy School Management
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  push:
+    branches:
+      - dev_branch
+
+jobs:
+  build-and-deploy:
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 45
+
+    steps:
+
+      # =====================================================
+      # CHECKOUT SOURCE CODE
+      # =====================================================
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # =====================================================
+      # SETUP JAVA
+      # =====================================================
+      - name: Setup Java
+        uses: actions/setup-java@v4
+
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      # =====================================================
+      # BUILD APPLICATION WITH RETRIES
+      # =====================================================
+      - name: Build Application
+
+        uses: nick-fields/retry@v3
+
+        with:
+          timeout_minutes: 20
+          max_attempts: 3
+          retry_wait_seconds: 15
+
+          command: |
+            mvn clean package -DskipTests
+
+      # =====================================================
+      # VERIFY JAR EXISTS
+      # =====================================================
+      - name: Verify JAR
+
+        run: |
+
+          echo "Listing target directory..."
+
+          ls -la target/
+
+          JAR_FILE=$(find target -maxdepth 1 -name "*.jar" ! -name "*-plain.jar" | head -n 1)
+
+          if [ -z "$JAR_FILE" ]; then
+            echo "ERROR: No JAR file found."
+            exit 1
+          fi
+
+          echo "Found JAR:"
+          echo "$JAR_FILE"
+
+      # =====================================================
+      # PREPARE SSH KEY
+      # =====================================================
+      - name: Prepare SSH Key
+
+        run: |
+
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+
+          chmod 600 ~/.ssh/id_rsa
+
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      # =====================================================
+      # CREATE REMOTE TEMP DIRECTORY
+      # =====================================================
+      - name: Prepare VPS Temp Directory
+
+        uses: nick-fields/retry@v3
+
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_wait_seconds: 10
+
+          command: |
+
+            ssh \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=60 \
+              -o ServerAliveCountMax=10 \
+              -i ~/.ssh/id_rsa \
+              ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} \
+              "mkdir -p /tmp/school-management"
+
+      # =====================================================
+      # UPLOAD JAR TO VPS WITH RETRIES
+      # =====================================================
+      - name: Upload JAR to VPS
+
+        uses: nick-fields/retry@v3
+
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          retry_wait_seconds: 20
+
+          command: |
+
+            scp \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=60 \
+              -o ServerAliveCountMax=10 \
+              -i ~/.ssh/id_rsa \
+              target/*.jar \
+              ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:/tmp/school-management/
+
+      # =====================================================
+      # DEPLOY APPLICATION WITH SSH RETRIES
+      # =====================================================
+      - name: Deploy Application
+
+        uses: nick-fields/retry@v3
+
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 20
+
+          command: |
+
+            cat > deploy.sh << 'EOF'
+            set -e
+
+            APP_DIR="/opt/apps/school-management"
+            BACKUP_DIR="/opt/apps/school-management/backup"
+            TEMP_DIR="/tmp/school-management"
+            JAR_NAME="school-management.jar"
+
+            echo "========================================="
+            echo "STARTING DEPLOYMENT"
+            echo "========================================="
+
+            echo "Checking uploaded JAR..."
+
+            ls -la $TEMP_DIR
+
+            JAR_FILE=$(find $TEMP_DIR -maxdepth 1 -name "*.jar" ! -name "*-plain.jar" | head -n 1)
+
+            if [ -z "$JAR_FILE" ]; then
+              echo "ERROR: No JAR file found."
+              exit 1
+            fi
+
+            echo "Found JAR:"
+            echo "$JAR_FILE"
+
+            echo "Creating application directories..."
+
+            sudo mkdir -p $APP_DIR
+            sudo mkdir -p $BACKUP_DIR
+
+            echo "Backing up existing JAR if present..."
+
+            if [ -f "$APP_DIR/$JAR_NAME" ]; then
+
+              TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+
+              sudo cp \
+                $APP_DIR/$JAR_NAME \
+                $BACKUP_DIR/school-management-$TIMESTAMP.jar
+
+              echo "Backup created:"
+              echo "$BACKUP_DIR/school-management-$TIMESTAMP.jar"
+
+            else
+
+              echo "No existing JAR found."
+
+            fi
+
+            echo "Stopping old service..."
+
+            sudo systemctl stop school-management.service || true
+
+            echo "Removing old JAR..."
+
+            sudo rm -f $APP_DIR/$JAR_NAME
+
+            echo "Copying new JAR..."
+
+            sudo cp "$JAR_FILE" "$APP_DIR/$JAR_NAME"
+
+            echo "Setting permissions..."
+
+            sudo chown -R lupo:lupo $APP_DIR
+
+            sudo chmod 755 $APP_DIR/$JAR_NAME
+
+            echo "Cleaning temporary files..."
+
+            sudo rm -rf /tmp/school-management
+
+            echo "Reloading systemd..."
+
+            sudo systemctl daemon-reload
+
+            echo "Starting service..."
+
+            sudo systemctl start school-management.service
+
+            echo "Waiting for startup..."
+
+            sleep 10
+
+            echo "Checking service status..."
+
+            sudo systemctl status school-management.service --no-pager
+
+            if ! sudo systemctl is-active --quiet school-management.service; then
+
+              echo "ERROR: Service failed to start."
+
+              echo "Showing recent logs..."
+
+              sudo journalctl \
+                -u school-management.service \
+                -n 100 \
+                --no-pager
+
+              exit 1
+
+            fi
+
+            echo "========================================="
+            echo "DEPLOYMENT COMPLETED SUCCESSFULLY"
+            echo "========================================="
+            EOF
+
+            chmod +x deploy.sh
+
+            ssh \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=60 \
+              -o ServerAliveCountMax=10 \
+              -i ~/.ssh/id_rsa \
+              ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} \
+              'bash -s' < deploy.sh
+
+      # =====================================================
+      # SUCCESS MESSAGE
+      # =====================================================
+      - name: Deployment Success
+
+        run: |
+          echo "Deployment completed successfully."
