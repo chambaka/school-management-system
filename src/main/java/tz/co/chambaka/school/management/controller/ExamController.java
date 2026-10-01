@@ -41,7 +41,7 @@ public class ExamController {
     }
 
     @GetMapping
-    @PreAuthorize(Access.ACADEMIC_VIEW)
+    @PreAuthorize(Access.ACADEMIC_VIEW + " or hasRole('ACCOUNTANT')")
     public List<ExamResponse> list(@CurrentUser UserPrincipal principal, @RequestParam(required = false) Long academicYearId) {
         return examService.list(tenantResolver.requireSchoolId(), academicYearId, principal.getRole());
     }

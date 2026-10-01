@@ -42,6 +42,7 @@ public final class AuditActionCatalog {
             case FEE_DELETED -> new Meta(action, GROUP_FINANCE, "Fee deleted", "Fee structure line deleted");
             case FEE_LISTED -> new Meta(action, GROUP_FINANCE, "Fee listed", "Fee structures listed");
             case INVOICE_GENERATED -> new Meta(action, GROUP_FINANCE, "Invoice generated", "Invoices generated for a class");
+            case INVOICE_ITEM_REMOVED -> new Meta(action, GROUP_FINANCE, "Invoice line removed", "A line was removed from an invoice");
             case INVOICE_LISTED -> new Meta(action, GROUP_FINANCE, "Invoice listed", "Invoices listed");
             case INVOICE_VIEWED -> new Meta(action, GROUP_FINANCE, "Invoice viewed", "A single invoice opened");
             case PAYMENT_RECORDED -> new Meta(action, GROUP_FINANCE, "Payment posted", "A payment was recorded against an invoice");

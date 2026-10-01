@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -89,6 +90,12 @@ public class InvoiceController {
     public tz.co.chambaka.school.management.dto.finance.StudentLedgerResponse ledger(
             @CurrentUser UserPrincipal principal, @PathVariable Long studentId) {
         return financeService.ledger(tenantResolver.requireSchoolId(), studentId, principal);
+    }
+
+    @DeleteMapping("/{id}/items/{itemId}")
+    @PreAuthorize(Access.INVOICE_MANAGE)
+    public InvoiceResponse removeItem(@PathVariable Long id, @PathVariable Long itemId) {
+        return financeService.removeInvoiceItem(tenantResolver.requireSchoolId(), id, itemId);
     }
 
     @PostMapping("/{id}/discount")

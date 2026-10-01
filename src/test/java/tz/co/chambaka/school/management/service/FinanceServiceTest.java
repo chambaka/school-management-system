@@ -12,6 +12,7 @@ import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.AcademicTerm;
 import tz.co.chambaka.school.management.model.FeeStructure;
+import tz.co.chambaka.school.management.model.InvoiceItem;
 import tz.co.chambaka.school.management.model.Invoice;
 import tz.co.chambaka.school.management.model.Payment;
 import tz.co.chambaka.school.management.model.Student;
@@ -351,6 +352,32 @@ class FinanceServiceTest {
         verify(feeStructureRepository).delete(any(FeeStructure.class));
         verify(auditService).recordFinance(eq(1L), eq(AuditAction.FEE_DELETED), eq("FeeStructure"), eq("3"),
                 contains("Deleted fee"), any());
+    }
+
+    @Test
+    void removeInvoiceItemUpdatesTheTotal() {
+        Invoice invoice = invoice(InvoiceStatus.PENDING, new BigDecimal("300"), BigDecimal.ZERO);
+        invoice.getItems().add(line(1L, "Tuition · Term 1", new BigDecimal("100")));
+        invoice.getItems().add(line(2L, "Transport · Term 1", new BigDecimal("200")));
+        when(invoiceRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(invoice));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var updated = service.removeInvoiceItem(1L, 1L, 2L);
+        assertThat(updated.totalAmount()).isEqualByComparingTo("100");
+        assertThat(updated.items()).extracting(item -> item.description()).containsExactly("Tuition · Term 1");
+        assertThat(updated.status()).isEqualTo(InvoiceStatus.PENDING);
+
+        invoice.setPaidAmount(new BigDecimal("100"));
+        assertThatThrownBy(() -> service.removeInvoiceItem(1L, 1L, 1L))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    private static InvoiceItem line(Long id, String description, BigDecimal amount) {
+        InvoiceItem item = new InvoiceItem();
+        item.setId(id);
+        item.setDescription(description);
+        item.setAmount(amount);
+        return item;
     }
 
     private static AcademicTerm term(String name, LocalDate endDate) {

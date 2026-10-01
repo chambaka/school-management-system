@@ -557,6 +557,47 @@ public class FinanceService {
         return toInvoice(invoice);
     }
 
+    @Transactional
+    public InvoiceResponse removeInvoiceItem(Long schoolId, Long invoiceId, Long itemId) {
+        Invoice invoice = requireInvoice(schoolId, invoiceId);
+        if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
+            throw new BusinessException("Cannot change a cancelled invoice");
+        }
+        InvoiceItem item = invoice.getItems().stream()
+                .filter(row -> itemId.equals(row.getId()))
+                .findFirst()
+                .orElseThrow(() -> ResourceNotFoundException.of("InvoiceItem", itemId));
+        BigDecimal discount = invoice.getDiscountAmount() == null ? BigDecimal.ZERO : invoice.getDiscountAmount();
+        BigDecimal paid = invoice.getPaidAmount() == null ? BigDecimal.ZERO : invoice.getPaidAmount();
+        BigDecimal nextTotal = invoice.getTotalAmount().subtract(item.getAmount());
+        if (nextTotal.compareTo(discount.add(paid)) < 0) {
+            throw new BusinessException("Payments already cover this line");
+        }
+        invoice.getItems().remove(item);
+        invoice.setTotalAmount(nextTotal.max(BigDecimal.ZERO));
+        if (invoice.getItems().isEmpty()) {
+            invoice.setTotalAmount(BigDecimal.ZERO);
+            invoice.setStatus(InvoiceStatus.CANCELLED);
+        } else if (invoice.getBalance().compareTo(BigDecimal.ZERO) <= 0) {
+            invoice.setStatus(InvoiceStatus.PAID);
+        } else if (paid.compareTo(BigDecimal.ZERO) > 0) {
+            invoice.setStatus(InvoiceStatus.PARTIAL);
+        } else {
+            invoice.setStatus(InvoiceStatus.PENDING);
+        }
+        ledgerService.reverseInvoiceLine(invoice, item.getAmount(),
+                "Removed " + item.getDescription() + " from " + invoice.getInvoiceNumber());
+        invoiceRepository.save(invoice);
+        audit(schoolId, AuditAction.INVOICE_ITEM_REMOVED, "Invoice", invoice.getId(),
+                "Removed " + item.getDescription() + " from " + invoice.getInvoiceNumber(),
+                "invoiceNumber=" + invoice.getInvoiceNumber()
+                        + " itemId=" + itemId
+                        + " amount=" + item.getAmount()
+                        + " total=" + invoice.getTotalAmount()
+                        + " status=" + invoice.getStatus());
+        return toInvoice(invoice);
+    }
+
     @Transactional(readOnly = true)
     public StudentLedgerResponse ledger(Long schoolId, Long studentId, UserPrincipal principal) {
         requireStudentFinanceAccess(principal, studentId);

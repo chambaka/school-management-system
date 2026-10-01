@@ -506,6 +506,7 @@ class ControllersTest {
         when(financeService.outstandingBalance(eq(1L), eq(1L), any())).thenReturn(BigDecimal.TEN);
         invoices.list(PageRequest.of(0, 10));
         invoices.generate(new GenerateInvoicesRequest(1L, 1L, List.of(1L), null));
+        invoices.removeItem(1L, 2L);
         invoices.get(Fixtures.principal(Role.HEADMASTER), 1L);
         invoices.byStudent(Fixtures.principal(Role.PARENT), 1L);
         assertThat(invoices.balance(Fixtures.principal(Role.PARENT), 1L)).containsEntry("outstanding", BigDecimal.TEN);

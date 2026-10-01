@@ -37,6 +37,12 @@ public class LedgerService {
                 LedgerEntryType.ADJUSTMENT, amount, "Discount on " + invoice.getInvoiceNumber());
     }
 
+    @Transactional
+    public LedgerEntry reverseInvoiceLine(Invoice invoice, BigDecimal amount, String description) {
+        return record(invoice.getSchoolId(), invoice.getStudent(), invoice, null,
+                LedgerEntryType.ADJUSTMENT, amount, description);
+    }
+
     @Transactional(readOnly = true)
     public List<LedgerEntryResponse> list(Long schoolId, Long studentId) {
         return ledgerEntryRepository.findBySchoolIdAndStudentIdOrderByOccurredAtDesc(schoolId, studentId)
