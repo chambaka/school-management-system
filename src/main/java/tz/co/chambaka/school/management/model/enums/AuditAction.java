@@ -17,6 +17,7 @@ public enum AuditAction {
     REGISTER_TENANT,
     FEE_CREATED,
     FEE_UPDATED,
+    FEE_DELETED,
     FEE_LISTED,
     INVOICE_GENERATED,
     INVOICE_LISTED,

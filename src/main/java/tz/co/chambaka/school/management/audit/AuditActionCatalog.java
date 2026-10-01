@@ -39,6 +39,7 @@ public final class AuditActionCatalog {
             case REGISTER_TENANT -> new Meta(action, GROUP_AUTH, "Register organization", "New tenant and tenant admin");
             case FEE_CREATED -> new Meta(action, GROUP_FINANCE, "Fee created", "Fee structure created");
             case FEE_UPDATED -> new Meta(action, GROUP_FINANCE, "Fee updated", "Fee structure line updated");
+            case FEE_DELETED -> new Meta(action, GROUP_FINANCE, "Fee deleted", "Fee structure line deleted");
             case FEE_LISTED -> new Meta(action, GROUP_FINANCE, "Fee listed", "Fee structures listed");
             case INVOICE_GENERATED -> new Meta(action, GROUP_FINANCE, "Invoice generated", "Invoices generated for a class");
             case INVOICE_LISTED -> new Meta(action, GROUP_FINANCE, "Invoice listed", "Invoices listed");

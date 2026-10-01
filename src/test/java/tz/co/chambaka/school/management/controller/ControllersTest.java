@@ -499,12 +499,13 @@ class ControllersTest {
         fees.list(null);
         fees.create(new FeeStructureRequest(1L, 1L, "T", FeeType.TUITION, FeeFrequency.TERM, BigDecimal.TEN, null));
         fees.update(1L, new UpdateFeeStructureRequest(BigDecimal.TEN, LocalDate.now()));
+        fees.delete(1L);
 
         InvoiceController invoices = new InvoiceController(financeService, studentService, tenantResolver);
         when(studentService.requireByUser(10L)).thenReturn(Fixtures.student());
         when(financeService.outstandingBalance(eq(1L), eq(1L), any())).thenReturn(BigDecimal.TEN);
         invoices.list(PageRequest.of(0, 10));
-        invoices.generate(new GenerateInvoicesRequest(1L, 1L, List.of(1L), 1, null));
+        invoices.generate(new GenerateInvoicesRequest(1L, 1L, List.of(1L), null));
         invoices.get(Fixtures.principal(Role.HEADMASTER), 1L);
         invoices.byStudent(Fixtures.principal(Role.PARENT), 1L);
         assertThat(invoices.balance(Fixtures.principal(Role.PARENT), 1L)).containsEntry("outstanding", BigDecimal.TEN);

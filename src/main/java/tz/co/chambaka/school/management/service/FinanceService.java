@@ -50,7 +50,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
-import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -181,6 +180,22 @@ public class FinanceService {
         return toFee(saved);
     }
 
+    @Transactional
+    public void deleteFee(Long schoolId, Long id) {
+        FeeStructure fee = feeStructureRepository.findByIdAndSchoolId(id, schoolId)
+                .orElseThrow(() -> ResourceNotFoundException.of("FeeStructure", id));
+        if (invoiceRepository.existsItemForFeeStructure(id)) {
+            throw new BusinessException("This fee line is already on an invoice");
+        }
+        feeStructureRepository.delete(fee);
+        audit(schoolId, AuditAction.FEE_DELETED, "FeeStructure", id,
+                "Deleted fee " + fee.getName() + " " + fee.getPeriodLabel(),
+                "name=" + fee.getName()
+                        + " period=" + fee.getPeriodLabel()
+                        + " amount=" + fee.getAmount()
+                        + " type=" + fee.getFeeType());
+    }
+
     private List<FeeInstallment> installments(Long schoolId, AcademicYear year, FeeStructureRequest request) {
         return switch (request.frequency()) {
             case TERM -> termInstallments(schoolId, year);
@@ -233,14 +248,13 @@ public class FinanceService {
     @Transactional
     public List<InvoiceResponse> generateInvoices(Long schoolId, GenerateInvoicesRequest request) {
         AcademicYear year = academicYearService.require(schoolId, request.academicYearId());
-        if (request.feeStructureIds() != null) {
-            for (Long feeId : request.feeStructureIds()) {
-                feeStructureRepository.findByIdAndSchoolId(feeId, schoolId)
-                        .orElseThrow(() -> ResourceNotFoundException.of("FeeStructure", feeId));
-            }
+        if (request.feeStructureIds() == null || request.feeStructureIds().isEmpty()) {
+            throw new BusinessException("Choose a fee structure");
         }
-        int quarter = request.quarter() != null ? request.quarter() : currentQuarter();
-        LocalDate dueDate = request.dueDate() != null ? request.dueDate() : quarterDueDate(year, quarter);
+        for (Long feeId : request.feeStructureIds()) {
+            feeStructureRepository.findByIdAndSchoolId(feeId, schoolId)
+                    .orElseThrow(() -> ResourceNotFoundException.of("FeeStructure", feeId));
+        }
         List<SchoolClass> classes = request.schoolClassId() == null
                 ? classService.listEntities(schoolId, year.getId())
                 : List.of(classService.require(schoolId, request.schoolClassId()));
@@ -262,9 +276,13 @@ public class FinanceService {
                     .toList();
             studentCount += students.size();
             String feeNames = fees.stream().map(FeeStructure::getName).collect(Collectors.joining(","));
+            LocalDate dueDate = request.dueDate() != null ? request.dueDate() : earliestDue(fees);
+            if (dueDate == null) {
+                throw new BusinessException("This fee structure has no due date");
+            }
             for (Student student : students) {
-                if (invoiceRepository.existsBySchoolIdAndStudentIdAndAcademicYearIdAndBillingQuarterAndStatusNot(
-                        schoolId, student.getId(), year.getId(), quarter, InvoiceStatus.CANCELLED)) {
+                if (fees.stream().anyMatch(fee -> invoiceRepository.existsOpenItemForStudentFee(
+                        schoolId, student.getId(), year.getId(), fee.getId(), InvoiceStatus.CANCELLED))) {
                     skipped++;
                     continue;
                 }
@@ -275,7 +293,6 @@ public class FinanceService {
                 invoice.setInvoiceNumber(nextInvoiceNumber(schoolId));
                 invoice.setIssuedAt(Instant.now());
                 invoice.setDueDate(dueDate);
-                invoice.setBillingQuarter(quarter);
                 invoice.setPaidAmount(BigDecimal.ZERO);
                 invoice.setDiscountAmount(BigDecimal.ZERO);
                 invoice.setStatus(InvoiceStatus.PENDING);
@@ -285,7 +302,7 @@ public class FinanceService {
                     item.setSchoolId(schoolId);
                     item.setInvoice(invoice);
                     item.setFeeStructure(fee);
-                    item.setDescription(feeLineLabel(fee, quarter));
+                    item.setDescription(feeLineLabel(fee));
                     item.setAmount(fee.getAmount());
                     invoice.getItems().add(item);
                     total = total.add(fee.getAmount());
@@ -303,7 +320,6 @@ public class FinanceService {
                                 + " studentName=" + student.getUser().getName()
                                 + " total=" + saved.getTotalAmount()
                                 + " dueDate=" + saved.getDueDate()
-                                + " quarter=" + quarter
                                 + " academicYearId=" + year.getId()
                                 + " classId=" + schoolClass.getId()
                                 + " feeIds=" + fees.stream().map(FeeStructure::getId).toList()
@@ -312,15 +328,15 @@ public class FinanceService {
         }
         if (created.isEmpty()) {
             if (skipped > 0) {
-                throw new BusinessException("Term invoices already exist for the selected class and quarter");
+                throw new BusinessException("Invoices already exist for this fee structure");
             }
             if (studentCount == 0) {
                 throw new BusinessException("No students found in this class");
             }
-            throw new BusinessException("No tuition or transport fees apply to students in this class");
+            throw new BusinessException("That fee structure does not apply to students in this class");
         }
-        log.info("Generated {} invoices schoolId={} classId={} yearId={} quarter={} skipped={}",
-                created.size(), schoolId, request.schoolClassId(), request.academicYearId(), quarter, skipped);
+        log.info("Generated {} invoices schoolId={} classId={} yearId={} feeIds={} skipped={}",
+                created.size(), schoolId, request.schoolClassId(), request.academicYearId(), request.feeStructureIds(), skipped);
         return created;
     }
 
@@ -348,12 +364,20 @@ public class FinanceService {
         return fee.getFeeType().name() + "|" + period;
     }
 
-    private static String feeLineLabel(FeeStructure fee, int quarter) {
+    private static String feeLineLabel(FeeStructure fee) {
         String period = fee.getPeriodLabel();
         if (period != null && !period.isBlank()) {
             return fee.getName() + " · " + period;
         }
-        return fee.getName() + " (Q" + quarter + ")";
+        return fee.getName();
+    }
+
+    private static LocalDate earliestDue(List<FeeStructure> fees) {
+        return fees.stream()
+                .map(FeeStructure::getDueDate)
+                .filter(Objects::nonNull)
+                .min(Comparator.naturalOrder())
+                .orElse(null);
     }
 
     private static List<FeeStructure> preferClassFees(List<FeeStructure> fees, Long classId) {
@@ -367,15 +391,6 @@ public class FinanceService {
             }
         }
         return List.copyOf(byType.values());
-    }
-
-    private static int currentQuarter() {
-        return (LocalDate.now().getMonthValue() - 1) / 3 + 1;
-    }
-
-    private static LocalDate quarterDueDate(AcademicYear year, int quarter) {
-        int calendarYear = year.getStartDate() != null ? year.getStartDate().getYear() : LocalDate.now().getYear();
-        return LocalDate.of(calendarYear, quarter * 3, 1).with(TemporalAdjusters.lastDayOfMonth());
     }
 
     @Transactional(readOnly = true)

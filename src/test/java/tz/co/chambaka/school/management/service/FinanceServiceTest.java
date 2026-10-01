@@ -119,16 +119,18 @@ class FinanceServiceTest {
             saved.getItems().forEach(item -> item.setId(1L));
             return saved;
         });
-        var invoices = service.generateInvoices(1L, new GenerateInvoicesRequest(1L, 1L, List.of(1L), 4, LocalDate.of(2026, 10, 1)));
+        var invoices = service.generateInvoices(1L, new GenerateInvoicesRequest(1L, 1L, List.of(1L), LocalDate.of(2026, 10, 1)));
         assertThat(invoices.getFirst().invoiceNumber()).isEqualTo("INV-1-000001");
         assertThat(invoices.getFirst().balance()).isEqualByComparingTo("250000");
         assertThat(invoices.getFirst().academicYearId()).isEqualTo(1L);
         assertThat(invoices.getFirst().academicYearName()).isEqualTo("2026/2027");
-        assertThat(invoices.getFirst().billingQuarter()).isEqualTo(4);
+        assertThat(invoices.getFirst().billingQuarter()).isNull();
+        assertThat(invoices.getFirst().dueDate()).isEqualTo(LocalDate.of(2026, 10, 1));
         verify(auditService).recordFinance(eq(1L), eq(AuditAction.INVOICE_GENERATED), eq("Invoice"), eq("1"),
                 contains("INV-1-000001"), contains("studentId=1"));
 
-        service.generateInvoices(1L, new GenerateInvoicesRequest(1L, 1L, List.of(1L), 4, null));
+        var fromFee = service.generateInvoices(1L, new GenerateInvoicesRequest(1L, 1L, List.of(1L), null));
+        assertThat(fromFee.getFirst().dueDate()).isEqualTo(LocalDate.of(2026, 6, 30));
 
         Invoice invoice = invoice(InvoiceStatus.PENDING, new BigDecimal("250000"), BigDecimal.ZERO);
         when(invoiceRepository.findBySchoolId(1L, PageRequest.of(0, 10)))
@@ -187,13 +189,13 @@ class FinanceServiceTest {
 
         when(classService.require(1L, 1L)).thenReturn(Fixtures.schoolClass());
         when(feeStructureRepository.findByIdAndSchoolId(9L, 1L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.generateInvoices(1L, new GenerateInvoicesRequest(1L, 1L, List.of(9L), null, null)))
+        assertThatThrownBy(() -> service.generateInvoices(1L, new GenerateInvoicesRequest(1L, 1L, List.of(9L), null)))
                 .isInstanceOf(ResourceNotFoundException.class);
 
         when(feeStructureRepository.findByIdAndSchoolId(1L, 1L)).thenReturn(Optional.of(fee()));
         when(feeStructureRepository.findBySchoolIdAndAcademicYearId(1L, 1L)).thenReturn(List.of(fee()));
         when(studentRepository.findBySchoolIdAndSchoolClassId(1L, 1L)).thenReturn(List.of());
-        assertThatThrownBy(() -> service.generateInvoices(1L, new GenerateInvoicesRequest(1L, 1L, List.of(1L), null, null)))
+        assertThatThrownBy(() -> service.generateInvoices(1L, new GenerateInvoicesRequest(1L, 1L, List.of(1L), null)))
                 .isInstanceOf(BusinessException.class);
 
         Invoice cancelled = invoice(InvoiceStatus.CANCELLED, new BigDecimal("10"), BigDecimal.ZERO);
@@ -339,6 +341,16 @@ class FinanceServiceTest {
                 new UpdateFeeStructureRequest(new BigDecimal("80"), LocalDate.of(2026, 7, 1)));
         assertThat(updatedTerm.amount()).isEqualByComparingTo("80");
         assertThat(updatedTerm.dueDate()).isEqualTo(LocalDate.of(2026, 7, 1));
+
+        when(invoiceRepository.existsItemForFeeStructure(2L)).thenReturn(true);
+        assertThatThrownBy(() -> service.deleteFee(1L, 2L)).isInstanceOf(BusinessException.class);
+
+        when(feeStructureRepository.findByIdAndSchoolId(3L, 1L)).thenReturn(Optional.of(fee()));
+        when(invoiceRepository.existsItemForFeeStructure(3L)).thenReturn(false);
+        service.deleteFee(1L, 3L);
+        verify(feeStructureRepository).delete(any(FeeStructure.class));
+        verify(auditService).recordFinance(eq(1L), eq(AuditAction.FEE_DELETED), eq("FeeStructure"), eq("3"),
+                contains("Deleted fee"), any());
     }
 
     private static AcademicTerm term(String name, LocalDate endDate) {
@@ -357,6 +369,7 @@ class FinanceServiceTest {
         fee.setFeeType(FeeType.TUITION);
         fee.setFrequency(FeeFrequency.TERM);
         fee.setAmount(new BigDecimal("250000"));
+        fee.setDueDate(LocalDate.of(2026, 6, 30));
         return fee;
     }
 
