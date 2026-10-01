@@ -7,12 +7,15 @@ import tz.co.chambaka.school.management.model.Parent;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.StudentParent;
 import tz.co.chambaka.school.management.model.User;
+import tz.co.chambaka.school.management.notification.NotificationChannel;
+import tz.co.chambaka.school.management.notification.NotificationSettingsService;
 import tz.co.chambaka.school.management.repository.AssignmentRepository;
 import tz.co.chambaka.school.management.repository.ExamRepository;
 import tz.co.chambaka.school.management.repository.InAppNotificationRepository;
 import tz.co.chambaka.school.management.repository.SchoolRepository;
 import tz.co.chambaka.school.management.repository.StudentParentRepository;
 import tz.co.chambaka.school.management.repository.StudentRepository;
+import tz.co.chambaka.school.management.repository.UserRepository;
 import tz.co.chambaka.school.management.sms.PhoneNumbers;
 import tz.co.chambaka.school.management.sms.SmsGateway;
 import org.slf4j.Logger;
@@ -24,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -43,6 +47,8 @@ public class AlertService {
     private final StudentRepository studentRepository;
     private final SmsGateway smsGateway;
     private final SmsProperties smsProperties;
+    private final NotificationSettingsService notificationSettings;
+    private final UserRepository userRepository;
 
     public AlertService(
             InAppNotificationRepository notificationRepository,
@@ -52,7 +58,9 @@ public class AlertService {
             ExamRepository examRepository,
             StudentRepository studentRepository,
             SmsGateway smsGateway,
-            SmsProperties smsProperties
+            SmsProperties smsProperties,
+            NotificationSettingsService notificationSettings,
+            UserRepository userRepository
     ) {
         this.notificationRepository = notificationRepository;
         this.studentParentRepository = studentParentRepository;
@@ -62,6 +70,8 @@ public class AlertService {
         this.studentRepository = studentRepository;
         this.smsGateway = smsGateway;
         this.smsProperties = smsProperties;
+        this.notificationSettings = notificationSettings;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -79,7 +89,7 @@ public class AlertService {
             String entityType,
             Long entityId
     ) {
-        putNotice(schoolId, userId, title, body, category, entityType, entityId);
+        deliver(schoolId, userId, null, title, body, category, false, entityType, entityId);
     }
 
     @Transactional
@@ -142,14 +152,11 @@ public class AlertService {
                 if (user == null || user.getId() == null || !notified.add(user.getId())) {
                     continue;
                 }
-                boolean created = putNotice(schoolId, user.getId(), title, body, category, entityType, entityId);
-                if (created && sms && user.getPhone() != null) {
-                    sendParentSms(schoolId, parent, student, user, body);
-                }
+                deliver(schoolId, user.getId(), user, title, body, category, sms, entityType, entityId);
             }
             if (includeStudents && student.getUser() != null && student.getUser().getId() != null
                     && notified.add(student.getUser().getId())) {
-                putNotice(schoolId, student.getUser().getId(), title, body, category, entityType, entityId);
+                deliver(schoolId, student.getUser().getId(), student.getUser(), title, body, category, false, entityType, entityId);
             }
             log.info("Email broadcast skipped (logged in-app) schoolId={} studentId={} title={}", schoolId, student.getId(), title);
         }
@@ -204,6 +211,34 @@ public class AlertService {
         notificationRepository.findByIdAndUserId(id, userId).ifPresent(n -> n.setReadFlag(true));
     }
 
+    private void deliver(
+            Long schoolId,
+            Long userId,
+            User user,
+            String title,
+            String body,
+            String category,
+            boolean smsRequested,
+            String entityType,
+            Long entityId
+    ) {
+        if (userId == null) {
+            return;
+        }
+        Optional<NotificationChannel> choice = notificationSettings.preferredChannel(userId);
+        boolean inApp = choice.isEmpty() || choice.get() == NotificationChannel.IN_APP;
+        boolean text = choice.isPresent() ? choice.get() == NotificationChannel.SMS : smsRequested;
+        boolean created = inApp && putNotice(schoolId, userId, title, body, category, entityType, entityId);
+        if (!text || (inApp && !created)) {
+            return;
+        }
+        User recipient = user != null ? user : userRepository.findById(userId).orElse(null);
+        if (recipient == null || recipient.getPhone() == null || recipient.getPhone().isBlank()) {
+            return;
+        }
+        sendSms(schoolId, recipient, body);
+    }
+
     private boolean putNotice(
             Long schoolId,
             Long userId,
@@ -243,7 +278,7 @@ public class AlertService {
         return true;
     }
 
-    private void sendParentSms(Long schoolId, Parent parent, Student student, User user, String body) {
+    private void sendSms(Long schoolId, User user, String body) {
         String sender = schoolRepository.findById(schoolId).map(school -> school.getName()).orElse("SkuliHub");
         if (sender.length() > 11) {
             sender = sender.substring(0, 11);
@@ -251,7 +286,7 @@ public class AlertService {
         try {
             smsGateway.send(PhoneNumbers.toE164Like(user.getPhone()), sender, body);
         } catch (Exception ex) {
-            log.warn("SMS failed parentId={} studentId={}", parent.getId(), student.getId(), ex);
+            log.warn("SMS failed userId={}", user.getId(), ex);
         }
     }
 

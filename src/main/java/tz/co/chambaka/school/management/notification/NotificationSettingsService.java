@@ -8,9 +8,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class NotificationSettingsService {
+
+    public static final String ALL_EVENTS = "ALL";
 
     private final NotificationTemplateRepository templateRepository;
     private final NotificationPreferenceRepository preferenceRepository;
@@ -60,25 +63,35 @@ public class NotificationSettingsService {
 
     @Transactional
     public NotificationPreferenceResponse savePreference(Long userId, NotificationPreferenceRequest request) {
+        if (request.inApp() == request.sms()) {
+            throw new BusinessException("Choose in-app or SMS");
+        }
         User user = userRepository.findById(userId).orElseThrow(() -> ResourceNotFoundException.of("User", userId));
         NotificationPreference pref = preferenceRepository.findByUserIdAndEventKey(userId, request.eventKey())
                 .orElseGet(NotificationPreference::new);
         pref.setUser(user);
         pref.setEventKey(request.eventKey());
-        pref.setInApp(true);
+        pref.setInApp(request.inApp());
         pref.setEmail(false);
-        pref.setSms(true);
+        pref.setSms(request.sms());
         pref.setPush(false);
         NotificationPreference saved = preferenceRepository.save(pref);
         return new NotificationPreferenceResponse(
                 saved.getEventKey(), saved.isInApp(), saved.isEmail(), saved.isSms(), saved.isPush());
     }
 
+    public Optional<NotificationChannel> preferredChannel(Long userId) {
+        return preferenceRepository.findByUserIdAndEventKey(userId, ALL_EVENTS)
+                .map(pref -> pref.isSms() && !pref.isInApp()
+                        ? NotificationChannel.SMS
+                        : NotificationChannel.IN_APP);
+    }
+
     public boolean allow(Long userId, String eventKey, NotificationChannel channel) {
         return preferenceRepository.findByUserIdAndEventKey(userId, eventKey)
                 .map(pref -> switch (channel) {
-                    case IN_APP -> true;
-                    case SMS -> true;
+                    case IN_APP -> pref.isInApp();
+                    case SMS -> pref.isSms();
                     case EMAIL, PUSH -> false;
                 })
                 .orElse(channel == NotificationChannel.IN_APP || channel == NotificationChannel.SMS);

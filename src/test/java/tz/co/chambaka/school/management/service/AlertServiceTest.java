@@ -1,10 +1,14 @@
 package tz.co.chambaka.school.management.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tz.co.chambaka.school.management.notification.NotificationChannel;
+import tz.co.chambaka.school.management.notification.NotificationSettingsService;
+import tz.co.chambaka.school.management.repository.UserRepository;
 import tz.co.chambaka.school.management.config.SmsProperties;
 import tz.co.chambaka.school.management.model.InAppNotification;
 import tz.co.chambaka.school.management.model.Student;
@@ -27,6 +31,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,7 +48,14 @@ class AlertServiceTest {
     @Mock StudentRepository studentRepository;
     @Mock SmsGateway smsGateway;
     @Mock SmsProperties smsProperties;
+    @Mock NotificationSettingsService notificationSettings;
+    @Mock UserRepository userRepository;
     @InjectMocks AlertService service;
+
+    @BeforeEach
+    void noChannelChoice() {
+        lenient().when(notificationSettings.preferredChannel(any())).thenReturn(Optional.empty());
+    }
 
     @Test
     void storesNotificationsAndMapsInboxWithOptionalTimestamp() {
@@ -73,6 +86,27 @@ class AlertServiceTest {
 
         verify(notificationRepository, times(2)).save(any(InAppNotification.class));
         verify(smsGateway).send("+255700000000", "Very Long S", "Student absent");
+    }
+
+    @Test
+    void sendsOnlyTheChannelTheUserChose() {
+        Student student = Fixtures.student();
+        student.setUser(null);
+        StudentParent link = new StudentParent();
+        link.setParent(Fixtures.parent());
+        when(studentParentRepository.findByStudentId(1L)).thenReturn(List.of(link));
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(Fixtures.school()));
+        when(notificationSettings.preferredChannel(5L)).thenReturn(Optional.of(NotificationChannel.SMS));
+
+        service.notifyParentsOfStudent(1L, student, "Absent", "Student absent", "ATTENDANCE", true);
+
+        verify(notificationRepository, never()).save(any());
+        verify(smsGateway).send("+255700000000", "Chambaka Se", "Student absent");
+
+        when(notificationSettings.preferredChannel(5L)).thenReturn(Optional.of(NotificationChannel.IN_APP));
+        service.notifyParentsOfStudent(1L, student, "Absent again", "Still absent", "ATTENDANCE", true);
+        verify(notificationRepository).save(any(InAppNotification.class));
+        verify(smsGateway, times(1)).send(any(), any(), any());
     }
 
     @Test

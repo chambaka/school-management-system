@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.notification;
 
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.repository.UserRepository;
@@ -60,10 +61,23 @@ class NotificationSettingsServiceTest {
         when(preferenceRepository.save(any(NotificationPreference.class))).thenAnswer(inv -> inv.getArgument(0));
         NotificationPreferenceResponse saved = service.savePreference(
                 2L, new NotificationPreferenceRequest("ATTENDANCE", true, true, false, true));
+        assertThat(saved.eventKey()).isEqualTo("ATTENDANCE");
         assertThat(saved.inApp()).isTrue();
         assertThat(saved.email()).isFalse();
-        assertThat(saved.sms()).isTrue();
+        assertThat(saved.sms()).isFalse();
         assertThat(saved.push()).isFalse();
+        assertThatThrownBy(() -> service.savePreference(
+                2L, new NotificationPreferenceRequest("ALL", true, false, true, false)))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.savePreference(
+                2L, new NotificationPreferenceRequest("ALL", false, false, false, false)))
+                .isInstanceOf(BusinessException.class);
+        NotificationPreference smsOnly = new NotificationPreference();
+        smsOnly.setInApp(false);
+        smsOnly.setSms(true);
+        when(preferenceRepository.findByUserIdAndEventKey(2L, NotificationSettingsService.ALL_EVENTS))
+                .thenReturn(Optional.of(smsOnly));
+        assertThat(service.preferredChannel(2L)).contains(NotificationChannel.SMS);
         when(preferenceRepository.findByUserIdAndEventKey(2L, "ATTENDANCE")).thenReturn(Optional.of(pref));
         assertThat(service.allow(2L, "ATTENDANCE", NotificationChannel.IN_APP)).isTrue();
         assertThat(service.allow(2L, "ATTENDANCE", NotificationChannel.EMAIL)).isFalse();
