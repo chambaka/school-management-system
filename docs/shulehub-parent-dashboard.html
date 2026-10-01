@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub parent dashboard — after you sign in</title>
+  <style>
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10.5pt;
+      line-height: 1.45;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 22px 24px 18px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    header.cover h1 { margin: 0 0 8px; font-size: 22pt; letter-spacing: 0.01em; }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 4px; color: #c9d4e3; font-size: 11pt; }
+    header.cover .tagline { margin-top: 12px; color: #F5C451; font-weight: 700; font-size: 11pt; }
+    h2 {
+      margin: 18px 0 8px;
+      font-size: 14pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 { margin: 12px 0 4px; font-size: 12pt; color: #06101F; page-break-after: avoid; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 4px 0 10px; padding-left: 18px; }
+    li { margin: 3px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 6px 0 12px; page-break-inside: avoid; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 6px 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 9pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      page-break-inside: avoid;
+    }
+    footer { margin-top: 14px; font-size: 8.5pt; color: #5b6b7c; }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">parent home</span></h1>
+    <p>What you see after a parent signs in: each child’s card, the gold buttons, and the shared lists below.</p>
+    <p class="tagline">Parent login · Your children · October 2026</p>
+  </header>
+
+  <h2>Sign in</h2>
+  <ol>
+    <li>Open the school portal.</li>
+    <li>Enter the <strong>email, phone, or username</strong> the school gave you.</li>
+    <li>Enter your <strong>password</strong>.</li>
+    <li>Click <strong>Login</strong>.</li>
+  </ol>
+  <p>A correct parent login opens <strong>Your children</strong>. The line under the heading says today’s snapshot is fees, attendance, and alerts. You only see children the school has linked to your account. If no child is linked, the page has no child cards.</p>
+  <p>Five wrong passwords lock the account for 15 minutes. <strong>Forgot password</strong> sends an SMS code to the phone on the account.</p>
+  <div class="note">
+    This home is only for a parent login. A student has their own home. If you do not see Your children, the account is not a parent account, or the school has not linked a child yet.
+  </div>
+
+  <h2>The side menu</h2>
+  <table>
+    <thead>
+      <tr><th>Menu</th><th>What it is</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Home</td><td>The dashboard in this guide.</td></tr>
+      <tr><td>Assignments</td><td>Published homework for your children’s classes. You can read the task and their submissions. You cannot hand work in.</td></tr>
+      <tr><td>Finance</td><td>The fee ledger: invoiced, discounts, paid, outstanding, and receipt PDFs. You cannot record a payment.</td></tr>
+      <tr><td>Messages</td><td>Notes from the school about a child. You can reply.</td></tr>
+      <tr><td>Notices</td><td>The school board. Published notices for All or for Parents.</td></tr>
+      <tr><td>Report</td><td>A child’s report card after the school publishes an exam.</td></tr>
+      <tr><td>Security</td><td>Change your password. Notifications stay in the app and by SMS.</td></tr>
+    </tbody>
+  </table>
+  <p>Your name is at the top. <strong>Sign out</strong> is at the bottom and asks you to confirm. A parent does not get Timetable, Exams, Grades, Attendance, or the staff Reports page.</p>
+
+  <h2>Each child’s card</h2>
+  <p>One card appears for every linked child. The heading is the child’s name. Under it is your relationship to that child, such as mother or guardian.</p>
+  <table>
+    <thead>
+      <tr><th>Line</th><th>What it means</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Outstanding</td>
+        <td>The fee balance still owed for that child, in TZS. A dash means the balance could not be loaded.</td>
+      </tr>
+      <tr>
+        <td>Attendance this week</td>
+        <td>That child’s attendance percentage for the last seven days through today. Present and late both count as attended. A dash means attendance could not be loaded.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Under those lines are four gold buttons. Messages and Report card open that child. Assignments and Fee ledger are shared: they open the same pages from every card, and you pick the child there when more than one is linked.</p>
+
+  <h2>Messages</h2>
+  <p><strong>Messages</strong> on a child’s card opens the thread for that child. The menu item <strong>Messages</strong> opens the same page and starts on the first linked child if you did not come from a card.</p>
+  <p>The page subtitle is “Notes about your children — reply here.” If you have more than one child, a <strong>Child</strong> list switches the thread.</p>
+  <ul>
+    <li>Each note shows who wrote it, whether they are a parent or school staff, the time, and the text.</li>
+    <li>If there are no notes yet, it says “No messages yet.”</li>
+    <li><strong>Write reply</strong> opens a box. Confirm <strong>Send this reply?</strong> to post it. The school sees the reply in the same thread.</li>
+  </ul>
+  <p>You cannot start an SMS from this page. When the school sends a message and chooses to text parents, that SMS is sent by the school. The thread in the portal is where you read and reply.</p>
+
+  <h2>Report card</h2>
+  <p><strong>Report card</strong> on a child’s card opens that child’s results. <strong>Report</strong> in the menu is the same page. If more than one child is linked, a <strong>Child</strong> list at the top switches between them.</p>
+  <ol>
+    <li>Choose an exam. Only published exams are listed.</li>
+    <li>The page shows the child’s name, admission number, class, section, and the exam.</li>
+    <li>The first table is that exam: subject, marks, maximum, and pass or fail, then the overall grade, GPA, class position, and percentage.</li>
+    <li>The second table is the combined term result: midterm, semi-terminal, terminal, the term result, and the grade. A paper that is missing or not published counts as 0 in that combined score.</li>
+  </ol>
+  <p><strong>Download report card</strong> saves the selected exam as a PDF. <strong>Download combined term scores</strong> saves only the combined midterm, semi-terminal, and terminal scores. It does not include the class position.</p>
+  <p>Before the school publishes the exam, the page says no report has been published. A <strong>Results published</strong> alert on Home is the signal that the card is ready. You also get an SMS if your account has a phone number.</p>
+
+  <h2>Assignments</h2>
+  <p><strong>Assignments</strong> lists published homework for the classes of your linked children. A draft that the teacher has not published is hidden. If you have two children in different classes, you see the published work for both.</p>
+  <p>Each card shows the title, subject, class, who posted it, the instructions, and the due date. A <strong>Submitted</strong> mark means at least one of your children has handed it in.</p>
+  <h3>Documents</h3>
+  <p><strong>Documents</strong> opens the files the teacher attached. You can view or download them. The refresh icon reloads the list.</p>
+  <h3>Submissions</h3>
+  <p><strong>Submissions</strong> is a review of your children, not a place to upload work. Each linked child is listed.</p>
+  <ul>
+    <li>If the child has handed work in, you see the number of attempts, the latest time, any notes, the marks when the teacher has saved them, and the files. <strong>View</strong> and <strong>Download</strong> open those files. Older attempts are listed under Previous attempts.</li>
+    <li>If the child has not handed work in, the line says “Not submitted yet.”</li>
+  </ul>
+  <p>You cannot add a submission, edit the assignment, or enter marks. The student does that from their own login.</p>
+
+  <h2>Fee ledger</h2>
+  <p><strong>Fee ledger</strong> on the child card, and <strong>Finance</strong> in the menu, open the student ledger. Choose the child if more than one is linked.</p>
+  <p>The summary line is invoiced, discounts, paid, and outstanding. Under that:</p>
+  <ul>
+    <li>Ledger lines show the entry type, the amount, and a description.</li>
+    <li>Payments show the amount, the method, and the date. <strong>Receipt PDF</strong> downloads that payment’s receipt.</li>
+  </ul>
+  <p>You can read the account. You cannot create an invoice, record a payment, or apply a discount. The Outstanding figure on the home card is the same balance, shown per child without opening the ledger.</p>
+
+  <h2>Due soon</h2>
+  <p>Below the child cards, <strong>Due soon</strong> lists published assignments whose due date is today or later. Each line is the due date, the title, and the subject. At most five lines are shown, soonest first. If none are due, it says “No upcoming assignments.”</p>
+  <p>This list is shared across your children. An assignment stays here until the due date passes, even after a child has submitted it. Open <strong>Assignments</strong> to see whether that child has handed it in.</p>
+
+  <h2>Alerts</h2>
+  <p>Alerts sit beside Due soon. They are messages the platform creates. They are not the same as Notices.</p>
+  <ul>
+    <li><strong>Assignment posted</strong> stays on the card when a teacher publishes homework for a child’s class.</li>
+    <li><strong>Assignment submitted</strong> appears when a child hands work in. Up to five of those are shown, each with its date.</li>
+    <li>Other unread alerts follow, including <strong>Results published</strong>.</li>
+  </ul>
+  <p>Each line is the title, the message, and the date. If nothing is waiting, it says “No notifications.” A parent has no separate Alerts page. This card is the inbox. Some of the same events also send SMS to your phone.</p>
+
+  <h2>Notices</h2>
+  <p>The Notices card lists every matching title, not only the first four. These are published board messages for <strong>All</strong> or for <strong>Parents</strong>. A notice written only for students or only for teachers does not appear.</p>
+  <p>Open <strong>Notices</strong> in the menu to read the full text, the author, and the audience. You cannot publish a notice. A notice does not text you. You see it when you sign in.</p>
+
+  <h2>Security</h2>
+  <p>Open <strong>Security</strong> to change your password. Enter the current password, then a new one that meets the strength rules, and click <strong>Update password</strong>. Other sessions are signed out.</p>
+  <p>Notification channels stay <strong>in the app</strong> and <strong>by SMS</strong>. Email and push are not offered.</p>
+
+  <h2>A normal visit</h2>
+  <ol>
+    <li>Sign in. Read each child’s outstanding fees and attendance.</li>
+    <li>Read Alerts. A new assignment or published results will be there.</li>
+    <li>Open Due soon, then Assignments, and check Submissions if you need to see whether the work was handed in.</li>
+    <li>Use Messages on that child’s card if the school has written a note.</li>
+    <li>Open Report card when results have been published.</li>
+    <li>Open Fee ledger or a receipt when you need the fee history.</li>
+    <li>Read Notices, then sign out on a shared computer.</li>
+  </ol>
+
+  <footer>ShuleHub · Parent home guide · What a parent sees after login · October 2026</footer>
+</body>
+</html>

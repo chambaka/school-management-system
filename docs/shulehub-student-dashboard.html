@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ShuleHub student dashboard — after you sign in</title>
+  <style>
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      color: #122033;
+      font-size: 10.5pt;
+      line-height: 1.45;
+    }
+    header.cover {
+      background: #06101F;
+      color: #fff;
+      padding: 22px 24px 18px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    header.cover h1 { margin: 0 0 8px; font-size: 22pt; letter-spacing: 0.01em; }
+    header.cover .gold { color: #F5C451; }
+    header.cover p { margin: 0 0 4px; color: #c9d4e3; font-size: 11pt; }
+    header.cover .tagline { margin-top: 12px; color: #F5C451; font-weight: 700; font-size: 11pt; }
+    h2 {
+      margin: 18px 0 8px;
+      font-size: 14pt;
+      color: #06101F;
+      border-bottom: 2px solid #F5C451;
+      padding-bottom: 3px;
+      page-break-after: avoid;
+    }
+    h3 { margin: 12px 0 4px; font-size: 12pt; color: #06101F; page-break-after: avoid; }
+    p { margin: 0 0 8px; }
+    ul, ol { margin: 4px 0 10px; padding-left: 18px; }
+    li { margin: 3px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 6px 0 12px; page-break-inside: avoid; }
+    th, td {
+      border: 1px solid #d5dde6;
+      padding: 6px 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    thead th {
+      background: #06101F;
+      color: #fff;
+      font-weight: 600;
+      font-size: 9pt;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    .note {
+      background: #f7f1dc;
+      border-left: 4px solid #F5C451;
+      padding: 8px 10px;
+      margin: 8px 0 12px;
+      page-break-inside: avoid;
+    }
+    footer { margin-top: 14px; font-size: 8.5pt; color: #5b6b7c; }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <h1>ShuleHub <span class="gold">student home</span></h1>
+    <p>What you see after a student signs in: the home cards, the side menu, and what each one is for.</p>
+    <p class="tagline">Student login · Home · October 2026</p>
+  </header>
+
+  <h2>Sign in</h2>
+  <ol>
+    <li>Open the school portal.</li>
+    <li>Enter the <strong>email, phone, or username</strong> the school gave you.</li>
+    <li>Enter your <strong>password</strong>.</li>
+    <li>Click <strong>Login</strong>.</li>
+  </ol>
+  <p>A correct student login opens <strong>Home</strong>. The heading greets you by name. Under the name are your class, section, and admission number, next to your photo if the school has one.</p>
+  <p>Five wrong passwords lock the account for 15 minutes. <strong>Forgot password</strong> sends an SMS code to the phone on the account, then lets you choose a new password.</p>
+  <div class="note">
+    This home is only for a student login. A parent, teacher, or headmaster has a different home. If the menus below are missing, the account is not a student account.
+  </div>
+
+  <h2>The side menu</h2>
+  <p>These are the only pages a student can open. Your name is at the top. <strong>Sign out</strong> is at the bottom and asks you to confirm.</p>
+  <table>
+    <thead>
+      <tr><th>Menu</th><th>What it is</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Home</td><td>The dashboard described in this guide.</td></tr>
+      <tr><td>Invoices</td><td>School fees billed to you. You can read them. You cannot pay inside the portal.</td></tr>
+      <tr><td>Assignments</td><td>Published homework for your class. You can read the task and hand in work.</td></tr>
+      <tr><td>Notices</td><td>The school board. Titles and full text for notices aimed at all, or at students.</td></tr>
+      <tr><td>Report</td><td>Your report card for a published exam, plus the combined term scores.</td></tr>
+      <tr><td>Security</td><td>Change your password. Notifications stay in the app and by SMS.</td></tr>
+    </tbody>
+  </table>
+  <p>A student does not get Timetable, Exams, Grades, Attendance, Finance, Messages, or Reports in the menu. Today’s lessons appear on Home. Marks appear under Report after the school publishes the exam.</p>
+
+  <h2>The three numbers at the top</h2>
+  <table>
+    <thead>
+      <tr><th>Card</th><th>What the number means</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Attendance this week</td>
+        <td>Your attendance percentage for the last seven days through today. Present and late both count as attended. If nothing was marked in that period, the card shows 0%. A dash means the figure could not be loaded.</td>
+      </tr>
+      <tr>
+        <td>Open invoices</td>
+        <td>How many fee invoices are not paid and not cancelled. Click the card to open Invoices.</td>
+      </tr>
+      <tr>
+        <td>Due assignments</td>
+        <td>Published assignments that are still due today or later, and that you have not submitted. The count matches the Due soon list, which shows at most five.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Today’s timetable</h2>
+  <p>This card lists today’s lessons for your section, earliest first. Each line is the start and end time, the subject, the class, and the section.</p>
+  <p>It is empty, with “No classes scheduled today”, when today has no lesson, when today is not a school day on the timetable, or when your record has no section. There is no full-week timetable in the student menu. Only today is shown.</p>
+
+  <h2>Alerts</h2>
+  <p>Alerts are messages the platform creates for you. They are not the same as Notices.</p>
+  <ul>
+    <li>An <strong>Assignment posted</strong> alert stays on the card so a new homework item is not pushed off the list.</li>
+    <li>An <strong>Assignment submitted</strong> alert appears when work is handed in. Up to five of those are shown, each with its own date.</li>
+    <li>Other unread alerts follow, including <strong>Results published</strong> when an exam for your class is published.</li>
+  </ul>
+  <p>Each line shows the title, the message, and the date. If nothing is waiting, the card says “No notifications.” A student has no separate Alerts page and no All alerts link. This card is the inbox.</p>
+  <div class="note">
+    Alerts are inside the portal. Some school events also send SMS to a parent. A student reads alerts here after signing in.
+  </div>
+
+  <h2>Due soon</h2>
+  <p>This list is the homework behind the Due assignments number. Each line is the due date, the title, and the subject.</p>
+  <ul>
+    <li>An assignment you have already submitted is left off this list, even if the due date has not passed.</li>
+    <li>An assignment whose due date is yesterday or earlier is left off.</li>
+    <li>At most five lines are shown, soonest first.</li>
+    <li>If none qualify, the card says “No upcoming assignments.”</li>
+  </ul>
+  <p><strong>All assignments</strong> opens the full Assignments page, including work that is already submitted or past due.</p>
+
+  <h2>Fees</h2>
+  <p>The Fees card lists open invoices: invoice number, balance, and status. Paid and cancelled invoices are not on this card. If every invoice is settled, it says “No open invoices.”</p>
+  <p><strong>All invoices</strong>, or the Open invoices number, opens Invoices.</p>
+  <p>The Invoices page groups fees by quarter (January–March, April–June, July–September, October–December). The current quarter is marked Current. Older quarters are marked Past. Each group shows invoiced, paid, and balance in TZS.</p>
+  <p>Each row is the invoice number, due date, total, paid, balance, and status. Click a row to see the fee items. Search matches the invoice number, status, year, and quarter. You can read the bill. Payment is recorded by the school, not from this page.</p>
+
+  <h2>Notices</h2>
+  <p>The Notices card on Home shows up to four titles. These are published school-board messages for <strong>All</strong> or for <strong>Students</strong>. A notice written only for parents or only for teachers does not appear.</p>
+  <p>Open <strong>Notices</strong> in the menu to read the full text, the author, and the audience. You cannot publish a notice. A notice does not send you an SMS. You see it when you sign in.</p>
+
+  <h2>Assignments</h2>
+  <p>Open <strong>Assignments</strong> from the menu, or <strong>All assignments</strong> from Due soon. You only see published assignments for your class. Drafts and locked assignments that are not yet published stay hidden.</p>
+  <p>Each card shows the title, subject, class, who posted it, the instructions, the due date, and a <strong>Submitted</strong> mark if you have handed it in.</p>
+  <h3>Documents</h3>
+  <p><strong>Documents</strong> opens the files the teacher attached. You can view or download them. A refresh icon reloads the list.</p>
+  <h3>Submissions</h3>
+  <p><strong>Submissions</strong> is your own work, not the whole class. The button count is your number of attempts. If you have not handed anything in, it says you have not submitted yet.</p>
+  <ol>
+    <li>Open <strong>Submissions</strong>.</li>
+    <li>Click <strong>Add submission</strong>.</li>
+    <li>Write notes if you need to, and attach a file.</li>
+    <li>Confirm <strong>Submit this assignment?</strong></li>
+  </ol>
+  <p>The list stays open after you submit. Each attempt is labelled. You can add another submission later. You cannot edit the assignment, lock it, publish it, or enter marks.</p>
+
+  <h2>Report</h2>
+  <p><strong>Report card</strong> at the bottom of Home, and <strong>Report</strong> in the menu, open the same page.</p>
+  <ol>
+    <li>Choose an exam. The list contains published exams only. An unpublished exam is not offered.</li>
+    <li>The page shows your name, admission number, class, section, and the exam.</li>
+    <li>The first table is that exam: subject, marks, maximum, and pass or fail, then the overall grade, GPA, class position, and percentage.</li>
+    <li>The second table is the combined term result: midterm, semi-terminal, terminal, the term result, and the grade. A paper that is missing or not published counts as 0 in that combined score.</li>
+  </ol>
+  <p><strong>Download report card</strong> saves the selected exam as a PDF, including the grade, percentage, GPA, and position.</p>
+  <p><strong>Download combined term scores</strong> saves only the combined midterm, semi-terminal, and terminal scores for that exam’s year and term. It does not include the class position.</p>
+  <p>If nothing is published yet, the page says no report has been published. The <strong>Results published</strong> alert on Home is the signal that a report is ready.</p>
+
+  <h2>Security</h2>
+  <p>Open <strong>Security</strong> to change your password. Enter the current password, then a new one that meets the strength rules on the form, and click <strong>Update password</strong>. Other sessions are signed out.</p>
+  <p>Notification channels for every event stay <strong>in the app</strong> and <strong>by SMS</strong>. Email and push are not offered.</p>
+
+  <h2>A normal visit</h2>
+  <ol>
+    <li>Sign in. Check the three numbers: attendance, open invoices, due assignments.</li>
+    <li>Read today’s timetable.</li>
+    <li>Read Alerts. A posted assignment or published results will be there.</li>
+    <li>Open Due soon, or All assignments, and hand in anything still due.</li>
+    <li>Open Notices if a new title is on the card.</li>
+    <li>Open Report when results have been published.</li>
+    <li>Sign out when you leave a shared computer.</li>
+  </ol>
+
+  <footer>ShuleHub · Student home guide · What a student sees after login · October 2026</footer>
+</body>
+</html>

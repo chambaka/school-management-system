@@ -58,15 +58,21 @@ class NotificationSettingsServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(Fixtures.user(2L, Role.HEADMASTER)));
         when(preferenceRepository.findByUserIdAndEventKey(2L, "ATTENDANCE")).thenReturn(Optional.empty());
         when(preferenceRepository.save(any(NotificationPreference.class))).thenAnswer(inv -> inv.getArgument(0));
-        assertThat(service.savePreference(2L, new NotificationPreferenceRequest("ATTENDANCE", true, true, false, true)).email())
-                .isTrue();
+        NotificationPreferenceResponse saved = service.savePreference(
+                2L, new NotificationPreferenceRequest("ATTENDANCE", true, true, false, true));
+        assertThat(saved.inApp()).isTrue();
+        assertThat(saved.email()).isFalse();
+        assertThat(saved.sms()).isTrue();
+        assertThat(saved.push()).isFalse();
         when(preferenceRepository.findByUserIdAndEventKey(2L, "ATTENDANCE")).thenReturn(Optional.of(pref));
         assertThat(service.allow(2L, "ATTENDANCE", NotificationChannel.IN_APP)).isTrue();
         assertThat(service.allow(2L, "ATTENDANCE", NotificationChannel.EMAIL)).isFalse();
         assertThat(service.allow(2L, "ATTENDANCE", NotificationChannel.SMS)).isTrue();
-        assertThat(service.allow(2L, "ATTENDANCE", NotificationChannel.PUSH)).isTrue();
+        assertThat(service.allow(2L, "ATTENDANCE", NotificationChannel.PUSH)).isFalse();
         when(preferenceRepository.findByUserIdAndEventKey(2L, "X")).thenReturn(Optional.empty());
         assertThat(service.allow(2L, "X", NotificationChannel.EMAIL)).isFalse();
+        assertThat(service.allow(2L, "X", NotificationChannel.PUSH)).isFalse();
+        assertThat(service.allow(2L, "X", NotificationChannel.SMS)).isTrue();
         when(userRepository.findById(9L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.savePreference(9L, new NotificationPreferenceRequest("X", true, false, false, false)))
                 .isInstanceOf(ResourceNotFoundException.class);

@@ -1,5 +1,6 @@
 package tz.co.chambaka.school.management.notification;
 
+import tz.co.chambaka.school.management.exception.BusinessException;
 import tz.co.chambaka.school.management.exception.ResourceNotFoundException;
 import tz.co.chambaka.school.management.model.User;
 import tz.co.chambaka.school.management.repository.UserRepository;
@@ -35,6 +36,9 @@ public class NotificationSettingsService {
     @Transactional
     public NotificationTemplateResponse saveTemplate(Long schoolId, NotificationTemplateRequest request) {
         NotificationChannel channel = request.channel() == null ? NotificationChannel.IN_APP : request.channel();
+        if (channel == NotificationChannel.EMAIL || channel == NotificationChannel.PUSH) {
+            throw new BusinessException("Notifications use in-app and SMS only");
+        }
         NotificationTemplate template = templateRepository
                 .findBySchoolIdAndEventKeyAndChannel(schoolId, request.eventKey(), channel)
                 .orElseGet(NotificationTemplate::new);
@@ -61,10 +65,10 @@ public class NotificationSettingsService {
                 .orElseGet(NotificationPreference::new);
         pref.setUser(user);
         pref.setEventKey(request.eventKey());
-        pref.setInApp(request.inApp());
-        pref.setEmail(request.email());
-        pref.setSms(request.sms());
-        pref.setPush(request.push());
+        pref.setInApp(true);
+        pref.setEmail(false);
+        pref.setSms(true);
+        pref.setPush(false);
         NotificationPreference saved = preferenceRepository.save(pref);
         return new NotificationPreferenceResponse(
                 saved.getEventKey(), saved.isInApp(), saved.isEmail(), saved.isSms(), saved.isPush());
@@ -73,12 +77,11 @@ public class NotificationSettingsService {
     public boolean allow(Long userId, String eventKey, NotificationChannel channel) {
         return preferenceRepository.findByUserIdAndEventKey(userId, eventKey)
                 .map(pref -> switch (channel) {
-                    case IN_APP -> pref.isInApp();
-                    case EMAIL -> pref.isEmail();
-                    case SMS -> pref.isSms();
-                    case PUSH -> pref.isPush();
+                    case IN_APP -> true;
+                    case SMS -> true;
+                    case EMAIL, PUSH -> false;
                 })
-                .orElse(channel != NotificationChannel.EMAIL);
+                .orElse(channel == NotificationChannel.IN_APP || channel == NotificationChannel.SMS);
     }
 
     public String[] render(Long schoolId, String eventKey, String fallbackTitle, String fallbackBody) {
