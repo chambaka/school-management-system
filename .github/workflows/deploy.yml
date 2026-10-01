@@ -169,19 +169,25 @@ jobs:
             echo "Found JAR:"
             echo "$JAR_FILE"
 
-            if [ -z "${SUDO_PASSWORD:-}" ]; then
-              echo "ERROR: VPS_SUDO_PASSWORD is empty. Add that repository secret with the sudo password for ${USER}."
-              exit 1
-            fi
-
-            run_root() {
-              printf '%s\n' "$SUDO_PASSWORD" | sudo -S -p '' "$@"
+            as_root() {
+              if [ "$(id -u)" -eq 0 ]; then
+                "$@"
+                return
+              fi
+              if ! sudo -n true >/dev/null 2>&1; then
+                echo "ERROR: SSH key login worked, but sudo on the server still asks for a password."
+                echo "From a normal SSH session, add passwordless sudo once:"
+                echo "  echo \"$USER ALL=(ALL) NOPASSWD:ALL\" | sudo tee /etc/sudoers.d/school-management"
+                echo "  sudo chmod 440 /etc/sudoers.d/school-management"
+                exit 1
+              fi
+              sudo -n "$@"
             }
 
             echo "Creating application directories..."
 
-            run_root mkdir -p $APP_DIR
-            run_root mkdir -p $BACKUP_DIR
+            as_root mkdir -p $APP_DIR
+            as_root mkdir -p $BACKUP_DIR
 
             echo "Backing up existing JAR if present..."
 
@@ -189,7 +195,7 @@ jobs:
 
               TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-              run_root cp \
+              as_root cp \
                 $APP_DIR/$JAR_NAME \
                 $BACKUP_DIR/school-management-$TIMESTAMP.jar
 
@@ -204,33 +210,33 @@ jobs:
 
             echo "Stopping old service..."
 
-            run_root systemctl stop school-management.service || true
+            as_root systemctl stop school-management.service || true
 
             echo "Removing old JAR..."
 
-            run_root rm -f $APP_DIR/$JAR_NAME
+            as_root rm -f $APP_DIR/$JAR_NAME
 
             echo "Copying new JAR..."
 
-            run_root cp "$JAR_FILE" "$APP_DIR/$JAR_NAME"
+            as_root cp "$JAR_FILE" "$APP_DIR/$JAR_NAME"
 
             echo "Setting permissions..."
 
-            run_root chown -R lupo:lupo $APP_DIR
+            as_root chown -R lupo:lupo $APP_DIR
 
-            run_root chmod 755 $APP_DIR/$JAR_NAME
+            as_root chmod 755 $APP_DIR/$JAR_NAME
 
             echo "Cleaning temporary files..."
 
-            run_root rm -rf /tmp/school-management
+            as_root rm -rf /tmp/school-management
 
             echo "Reloading systemd..."
 
-            run_root systemctl daemon-reload
+            as_root systemctl daemon-reload
 
             echo "Starting service..."
 
-            run_root systemctl start school-management.service
+            as_root systemctl start school-management.service
 
             echo "Waiting for startup..."
 
@@ -238,15 +244,15 @@ jobs:
 
             echo "Checking service status..."
 
-            run_root systemctl status school-management.service --no-pager || true
+            as_root systemctl status school-management.service --no-pager || true
 
-            if ! run_root systemctl is-active --quiet school-management.service; then
+            if ! as_root systemctl is-active --quiet school-management.service; then
 
               echo "ERROR: Service failed to start."
 
               echo "Showing recent logs..."
 
-              run_root journalctl \
+              as_root journalctl \
                 -u school-management.service \
                 -n 100 \
                 --no-pager
@@ -262,20 +268,13 @@ jobs:
 
             chmod +x deploy.sh
 
-            export SUDO_PASSWORD="${{ secrets.VPS_SUDO_PASSWORD }}"
-
-            {
-              printf 'SUDO_PASSWORD=%q\n' "$SUDO_PASSWORD"
-              cat deploy.sh
-            } > deploy-remote.sh
-
             ssh \
               -o StrictHostKeyChecking=no \
               -o ServerAliveInterval=60 \
               -o ServerAliveCountMax=10 \
               -i ~/.ssh/id_rsa \
               ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} \
-              'bash -s' < deploy-remote.sh
+              'bash -s' < deploy.sh
 
       # =====================================================
       # SUCCESS MESSAGE
