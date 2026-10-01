@@ -103,6 +103,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -412,7 +413,9 @@ class ControllersTest {
         students.termReport(Fixtures.principal(Role.HEADMASTER), 1L, 1L, 1L);
         students.termReport(Fixtures.principal(Role.PARENT), 1L, 1L, null);
         students.myTermReport(Fixtures.principal(Role.STUDENT), 1L, null);
+        students.termReports(Fixtures.principal(Role.HEADMASTER), 1L, null);
         verify(gradeService, times(3)).termReport(eq(1L), eq(1L), eq(1L), any(), any());
+        verify(gradeService).termReports(1L, 1L, null, Role.HEADMASTER);
         when(studentService.photoFile(1L, 1L)).thenReturn(new StoredPhoto(Path.of("x.jpg"), "image/jpeg"));
         students.uploadPhoto(1L, new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1}));
         students.deletePhoto(1L);
@@ -646,6 +649,14 @@ class ControllersTest {
         when(reportExportService.meritList(any(), any(), any(), any())).thenReturn(new byte[]{8});
         when(reportExportService.attendanceSummary(any(), any(), any(), any())).thenReturn(new byte[]{9});
         assertThat(reports.reportCardXlsx(headmaster, 1L, 1L).getBody()).containsExactly(5);
+        when(reportExportService.defaulterRows(1L)).thenReturn(List.of());
+        assertThat(reports.defaulterRows()).isEmpty();
+        when(reportExportService.collectionRows(any(), any(), any())).thenReturn(List.of());
+        assertThat(reports.collectionRows(null, null)).isEmpty();
+        when(reportExportService.meritRows(any(), any(), any())).thenReturn(List.of());
+        assertThat(reports.meritRows(headmaster, 1L)).isEmpty();
+        when(reportExportService.attendanceRows(any(), any(), any())).thenReturn(List.of());
+        assertThat(reports.attendanceRows(java.time.LocalDate.now(), java.time.LocalDate.now())).isEmpty();
         assertThat(reports.defaulters("csv").getBody()).containsExactly(6);
         assertThat(reports.collections(null, null, "pdf").getBody()).containsExactly(7);
         assertThat(reports.meritList(headmaster, 1L, "xlsx").getBody()).containsExactly(8);
@@ -653,6 +664,8 @@ class ControllersTest {
         when(reportExportService.termResult(any(), any(), any(), any(), any(), any())).thenReturn(new byte[]{10});
         assertThat(reports.termResult(headmaster, 1L, 1L, 1L, "pdf").getBody()).containsExactly(10);
         assertThat(reports.termResult(Fixtures.principal(Role.STUDENT), null, 1L, null, "csv").getBody()).containsExactly(10);
+        assertThat(reports.termResult(headmaster, null, 1L, null, "csv").getBody()).containsExactly(10);
+        verify(reportExportService).termResult(eq(1L), isNull(), eq(1L), isNull(), eq(Role.HEADMASTER), eq("csv"));
 
         NotificationController notifications = new NotificationController(alertService, tenantResolver);
         notifications.inbox(headmaster);

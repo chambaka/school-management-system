@@ -194,6 +194,17 @@ public class StudentController {
         return gradeService.reportCard(tenantResolver.requireSchoolId(), studentId, examId, principal.getRole());
     }
 
+    @GetMapping("/term-reports")
+    @PreAuthorize(Access.REPORT_CARD)
+    public List<tz.co.chambaka.school.management.dto.academic.TermReportResponse> termReports(
+            @CurrentUser UserPrincipal principal,
+            @RequestParam Long academicYearId,
+            @RequestParam(required = false) Long academicTermId
+    ) {
+        return gradeService.termReports(
+                tenantResolver.requireSchoolId(), academicYearId, academicTermId, principal.getRole());
+    }
+
     @GetMapping("/{id}/term-report")
     @PreAuthorize(Access.REPORT_CARD)
     public tz.co.chambaka.school.management.dto.academic.TermReportResponse termReport(

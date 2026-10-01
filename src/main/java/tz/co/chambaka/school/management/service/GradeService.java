@@ -245,7 +245,29 @@ public class GradeService {
     public TermReportResponse termReport(Long schoolId, Long studentId, Long academicYearId, Long termId, Role role) {
         Student student = studentService.require(schoolId, studentId);
         Long classId = student.getSchoolClass() == null ? null : student.getSchoolClass().getId();
-        List<Exam> exams = visibleExams(schoolId, academicYearId, classId, role);
+        return buildTermReport(schoolId, student, academicYearId, termId, visibleExams(schoolId, academicYearId, classId, role));
+    }
+
+    @Transactional(readOnly = true)
+    public List<TermReportResponse> termReports(Long schoolId, Long academicYearId, Long termId, Role role) {
+        Map<Long, List<Exam>> examsByClass = new HashMap<>();
+        return studentRepository.findBySchoolIdOrderByAdmissionNoAsc(schoolId).stream()
+                .filter(student -> student.getStatus() == null || student.getStatus() == StudentStatus.ACTIVE)
+                .map(student -> {
+                    Long classId = student.getSchoolClass() == null ? null : student.getSchoolClass().getId();
+                    long key = classId == null ? 0L : classId;
+                    List<Exam> exams = examsByClass.computeIfAbsent(
+                            key, ignored -> visibleExams(schoolId, academicYearId, classId, role));
+                    return buildTermReport(schoolId, student, academicYearId, termId, exams);
+                })
+                .sorted(Comparator.comparing(TermReportResponse::className, Comparator.nullsLast(String::compareToIgnoreCase))
+                        .thenComparing(TermReportResponse::admissionNo, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .toList();
+    }
+
+    private TermReportResponse buildTermReport(
+            Long schoolId, Student student, Long academicYearId, Long termId, List<Exam> exams
+    ) {
         List<TermResultResponse> rows = subjectsFor(exams).entrySet().stream()
                 .map(entry -> computeTermResult(schoolId, student, entry.getKey(), entry.getValue(), academicYearId, termId, exams))
                 .sorted(Comparator.comparing(TermResultResponse::subjectName, Comparator.nullsLast(String::compareToIgnoreCase)))

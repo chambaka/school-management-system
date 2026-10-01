@@ -9,6 +9,7 @@ import tz.co.chambaka.school.management.model.Grade;
 import tz.co.chambaka.school.management.model.ResultWeightConfig;
 import tz.co.chambaka.school.management.model.Student;
 import tz.co.chambaka.school.management.model.enums.AssessmentComponent;
+import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.model.enums.StudentStatus;
 import tz.co.chambaka.school.management.repository.ExamRepository;
 import tz.co.chambaka.school.management.repository.ExamSubjectRepository;
@@ -250,6 +251,22 @@ class GradeServiceTest {
                 .isNull();
         assertThat(service.classTermResults(1L, 1L, null, 1L, 99L, tz.co.chambaka.school.management.model.enums.Role.TEACHER)
                 .getFirst().subjectName()).isEqualTo("Subject");
+    }
+
+    @Test
+    void listsTermReportsForActiveStudentsOnly() {
+        Student active = Fixtures.student();
+        Student archived = Fixtures.student();
+        archived.setId(8L);
+        archived.setStatus(StudentStatus.ARCHIVED);
+        when(studentRepository.findBySchoolIdOrderByAdmissionNoAsc(1L)).thenReturn(List.of(archived, active));
+        when(examRepository.findBySchoolIdAndAcademicYearIdOrderByStartDateDesc(1L, 1L)).thenReturn(List.of());
+
+        var rows = service.termReports(1L, 1L, null, Role.HEADMASTER);
+
+        assertThat(rows).hasSize(1);
+        assertThat(rows.getFirst().studentId()).isEqualTo(active.getId());
+        assertThat(rows.getFirst().subjects()).isEmpty();
     }
 
     @Test

@@ -85,6 +85,14 @@ class ReportExportServiceTest {
                         List.of(), BigDecimal.ZERO, "F"));
         assertThat(new String(service.termResult(1L, 1L, 1L, null, Role.STUDENT, "pdf"), StandardCharsets.ISO_8859_1))
                 .contains("No published exam components");
+        when(gradeService.termReports(1L, 1L, null, Role.HEADMASTER)).thenReturn(List.of(report));
+        assertThat(new String(service.termResult(1L, null, 1L, null, Role.HEADMASTER, "csv"), StandardCharsets.UTF_8))
+                .contains("Student,Admission,Class,Subject")
+                .contains("Mathematics")
+                .contains("ADM-001");
+        when(gradeService.termReports(1L, 1L, 1L, Role.HEADMASTER)).thenReturn(List.of());
+        assertThat(new String(service.termResult(1L, null, 1L, 1L, Role.HEADMASTER, "pdf"), StandardCharsets.ISO_8859_1))
+                .contains("No students to show");
     }
 
     @Test
@@ -127,6 +135,7 @@ class ReportExportServiceTest {
         invoice.setDiscountAmount(java.math.BigDecimal.ZERO);
         invoice.setStatus(tz.co.chambaka.school.management.model.enums.InvoiceStatus.PARTIAL);
         when(invoiceRepository.findBySchoolIdAndStatusIn(any(), any())).thenReturn(List.of(invoice));
+        assertThat(service.defaulterRows(1L)).extracting("invoiceNumber").containsExactly("INV-1");
         assertThat(new String(service.defaulters(1L, "csv"), StandardCharsets.UTF_8)).contains("INV-1");
         assertThat(service.defaulters(1L, "pdf")).isNotEmpty();
         assertThat(service.defaulters(1L, "xlsx")).isNotEmpty();
@@ -138,16 +147,19 @@ class ReportExportServiceTest {
         payment.setMethod(tz.co.chambaka.school.management.model.enums.PaymentMethod.CASH);
         payment.setPaidAt(java.time.Instant.parse("2026-09-01T00:00:00Z"));
         when(paymentRepository.findBySchoolIdAndPaidAtBetween(any(), any(), any())).thenReturn(List.of(payment));
+        assertThat(service.collectionRows(1L, null, null)).extracting("receiptNumber").containsExactly("R-1");
         assertThat(new String(service.collections(1L, null, null, "csv"), StandardCharsets.UTF_8)).contains("R-1");
 
         when(gradeService.meritList(1L, 1L, Role.HEADMASTER)).thenReturn(List.of(
                 new tz.co.chambaka.school.management.dto.academic.MeritRowResponse(
                         1, 1L, "Student", "ADM-001", java.math.BigDecimal.TEN, java.math.BigDecimal.TEN, "A")));
+        assertThat(service.meritRows(1L, 1L, Role.HEADMASTER)).hasSize(1);
         assertThat(new String(service.meritList(1L, 1L, Role.HEADMASTER, "csv"), StandardCharsets.UTF_8)).contains("ADM-001");
 
         when(attendanceService.schoolSummaries(any(), any(), any())).thenReturn(List.of(
                 new tz.co.chambaka.school.management.dto.attendance.AttendanceSummaryResponse(
                         1L, "Student", 8, 1, 1, 0, 10, 90.0)));
+        assertThat(service.attendanceRows(1L, java.time.LocalDate.now(), java.time.LocalDate.now())).hasSize(1);
         assertThat(new String(service.attendanceSummary(1L, java.time.LocalDate.now(), java.time.LocalDate.now(), "csv"),
                 StandardCharsets.UTF_8)).contains("Student");
         assertThat(service.attendanceSummary(1L, java.time.LocalDate.now(), java.time.LocalDate.now(), "pdf")).isNotEmpty();

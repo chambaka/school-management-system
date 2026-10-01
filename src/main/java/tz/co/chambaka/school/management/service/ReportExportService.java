@@ -1,6 +1,8 @@
 package tz.co.chambaka.school.management.service;
 
 import tz.co.chambaka.school.management.dto.academic.MeritRowResponse;
+import tz.co.chambaka.school.management.dto.finance.CollectionRowResponse;
+import tz.co.chambaka.school.management.dto.finance.DefaulterRowResponse;
 import tz.co.chambaka.school.management.dto.academic.ReportCardResponse;
 import tz.co.chambaka.school.management.dto.academic.TermReportResponse;
 import tz.co.chambaka.school.management.dto.academic.TermResultResponse;
@@ -137,6 +139,9 @@ public class ReportExportService {
     }
 
     public byte[] termResult(Long schoolId, Long studentId, Long academicYearId, Long termId, Role role, String format) {
+        if (studentId == null) {
+            return termResults(schoolId, academicYearId, termId, role, format);
+        }
         TermReportResponse report = gradeService.termReport(schoolId, studentId, academicYearId, termId, role);
         List<String> headers = List.of("Subject", "Midterm", "Semi exam", "Semi result", "Terminal exam", "Term result", "Grade");
         List<List<String>> table = report.subjects().stream()
@@ -158,42 +163,109 @@ public class ReportExportService {
         return export(title, headers, table, format);
     }
 
-    public byte[] defaulters(Long schoolId, String format) {
-        List<String> headers = List.of("Invoice", "Student", "Total", "Paid", "Discount", "Balance", "Status");
-        List<List<String>> table = invoiceRepository.findBySchoolIdAndStatusIn(
+    private byte[] termResults(Long schoolId, Long academicYearId, Long termId, Role role, String format) {
+        List<String> headers = List.of(
+                "Student", "Admission", "Class", "Subject", "Midterm", "Semi exam", "Semi result",
+                "Terminal exam", "Term result", "Grade");
+        List<List<String>> table = new ArrayList<>();
+        for (TermReportResponse report : gradeService.termReports(schoolId, academicYearId, termId, role)) {
+            if (report.subjects() == null || report.subjects().isEmpty()) {
+                table.add(List.of(
+                        blank(report.studentName()), blank(report.admissionNo()), blank(report.className()),
+                        "", "", "", "", "", "", blank(report.overallGrade())));
+                continue;
+            }
+            for (TermResultResponse row : report.subjects()) {
+                table.add(List.of(
+                        blank(report.studentName()),
+                        blank(report.admissionNo()),
+                        blank(report.className()),
+                        blank(row.subjectName()),
+                        money(row.midterm()),
+                        money(row.semiTerminalExam()),
+                        money(row.semiTerminalResult()),
+                        money(row.terminalExam()),
+                        money(row.terminalResult()),
+                        blank(row.letterGrade())
+                ));
+            }
+        }
+        if (table.isEmpty() && "pdf".equalsIgnoreCase(format)) {
+            return SimpleDocuments.pdf("Term results", List.of("No students to show."));
+        }
+        return export("Term results", headers, table, format);
+    }
+
+    public List<DefaulterRowResponse> defaulterRows(Long schoolId) {
+        return invoiceRepository.findBySchoolIdAndStatusIn(
                         schoolId, List.of(InvoiceStatus.PENDING, InvoiceStatus.PARTIAL, InvoiceStatus.OVERDUE))
                 .stream()
                 .filter(invoice -> invoice.getBalance().signum() > 0)
-                .map(invoice -> List.of(
+                .map(invoice -> new DefaulterRowResponse(
                         invoice.getInvoiceNumber(),
                         invoice.getStudent().getUser().getName(),
-                        money(invoice.getTotalAmount()),
-                        money(invoice.getPaidAmount()),
-                        money(invoice.getDiscountAmount()),
-                        money(invoice.getBalance()),
+                        invoice.getTotalAmount(),
+                        invoice.getPaidAmount(),
+                        invoice.getDiscountAmount(),
+                        invoice.getBalance(),
                         invoice.getStatus().name()
+                ))
+                .toList();
+    }
+
+    public byte[] defaulters(Long schoolId, String format) {
+        List<String> headers = List.of("Invoice", "Student", "Total", "Paid", "Discount", "Balance", "Status");
+        List<List<String>> table = defaulterRows(schoolId).stream()
+                .map(row -> List.of(
+                        blank(row.invoiceNumber()),
+                        blank(row.studentName()),
+                        money(row.total()),
+                        money(row.paid()),
+                        money(row.discount()),
+                        money(row.balance()),
+                        blank(row.status())
                 ))
                 .toList();
         return export("Fee defaulters", headers, table, format);
     }
 
-    public byte[] collections(Long schoolId, Instant from, Instant to, String format) {
+    public List<CollectionRowResponse> collectionRows(Long schoolId, Instant from, Instant to) {
         Instant start = from == null ? Instant.EPOCH : from;
         Instant end = to == null ? Instant.now() : to;
-        List<List<String>> table = paymentRepository.findBySchoolIdAndPaidAtBetween(schoolId, start, end).stream()
-                .map(payment -> List.of(
+        return paymentRepository.findBySchoolIdAndPaidAtBetween(schoolId, start, end).stream()
+                .map(payment -> new CollectionRowResponse(
                         payment.getReceiptNumber(),
                         payment.getStudent().getUser().getName(),
-                        money(payment.getAmount()),
+                        payment.getAmount(),
                         payment.getMethod().name(),
-                        payment.getPaidAt().toString()
+                        payment.getPaidAt()
+                ))
+                .toList();
+    }
+
+    public byte[] collections(Long schoolId, Instant from, Instant to, String format) {
+        List<List<String>> table = collectionRows(schoolId, from, to).stream()
+                .map(row -> List.of(
+                        blank(row.receiptNumber()),
+                        blank(row.studentName()),
+                        money(row.amount()),
+                        blank(row.method()),
+                        row.paidAt() == null ? "" : row.paidAt().toString()
                 ))
                 .toList();
         return export("Collections", List.of("Receipt", "Student", "Amount", "Method", "Paid at"), table, format);
     }
 
+    public List<MeritRowResponse> meritRows(Long schoolId, Long examId, Role role) {
+        return gradeService.meritList(schoolId, examId, role);
+    }
+
+    public List<AttendanceSummaryResponse> attendanceRows(Long schoolId, LocalDate start, LocalDate end) {
+        return attendanceService.schoolSummaries(schoolId, start, end);
+    }
+
     public byte[] meritList(Long schoolId, Long examId, Role role, String format) {
-        List<MeritRowResponse> rows = gradeService.meritList(schoolId, examId, role);
+        List<MeritRowResponse> rows = meritRows(schoolId, examId, role);
         List<List<String>> table = rows.stream()
                 .map(row -> List.of(String.valueOf(row.position()), blank(row.admissionNo()), blank(row.studentName()),
                         money(row.total()), money(row.percentage()), blank(row.grade())))
@@ -202,7 +274,7 @@ public class ReportExportService {
     }
 
     public byte[] attendanceSummary(Long schoolId, LocalDate start, LocalDate end, String format) {
-        List<AttendanceSummaryResponse> rows = attendanceService.schoolSummaries(schoolId, start, end);
+        List<AttendanceSummaryResponse> rows = attendanceRows(schoolId, start, end);
         List<List<String>> table = rows.stream()
                 .map(row -> List.of(blank(row.name()), String.valueOf(row.present()), String.valueOf(row.absent()),
                         String.valueOf(row.late()), String.valueOf(row.excused()), String.valueOf(row.total()),

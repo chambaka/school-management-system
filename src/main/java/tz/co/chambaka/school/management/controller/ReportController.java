@@ -1,6 +1,11 @@
 package tz.co.chambaka.school.management.controller;
 
+import tz.co.chambaka.school.management.dto.academic.MeritRowResponse;
+import tz.co.chambaka.school.management.dto.attendance.AttendanceSummaryResponse;
+import tz.co.chambaka.school.management.dto.finance.CollectionRowResponse;
+import tz.co.chambaka.school.management.dto.finance.DefaulterRowResponse;
 import tz.co.chambaka.school.management.model.enums.PromotionAction;
+import tz.co.chambaka.school.management.model.enums.Role;
 import tz.co.chambaka.school.management.security.Access;
 import tz.co.chambaka.school.management.security.CurrentUser;
 import tz.co.chambaka.school.management.security.UserPrincipal;
@@ -16,6 +21,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/reports")
@@ -82,11 +92,29 @@ public class ReportController {
         return file("report-card.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", body);
     }
 
+    private static final ZoneId SCHOOL_ZONE = ZoneId.of("Africa/Dar_es_Salaam");
+
+    @GetMapping("/fees/defaulters/rows")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public List<DefaulterRowResponse> defaulterRows() {
+        return reportExportService.defaulterRows(tenantResolver.requireSchoolId());
+    }
+
     @GetMapping("/fees/defaulters")
     @PreAuthorize(Access.REPORT_EXPORT)
     public ResponseEntity<byte[]> defaulters(@RequestParam(defaultValue = "csv") String format) {
         return file("defaulters." + extension(format), media(format),
                 reportExportService.defaulters(tenantResolver.requireSchoolId(), format));
+    }
+
+    @GetMapping("/finance/collections/rows")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public List<CollectionRowResponse> collectionRows(
+            @RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to
+    ) {
+        return reportExportService.collectionRows(
+                tenantResolver.requireSchoolId(), startOf(from), endOf(to));
     }
 
     @GetMapping("/finance/collections")
@@ -100,6 +128,12 @@ public class ReportController {
                 reportExportService.collections(tenantResolver.requireSchoolId(), from, to, format));
     }
 
+    @GetMapping("/merit-list/rows")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public List<MeritRowResponse> meritRows(@CurrentUser UserPrincipal principal, @RequestParam Long examId) {
+        return reportExportService.meritRows(tenantResolver.requireSchoolId(), examId, principal.getRole());
+    }
+
     @GetMapping("/merit-list")
     @PreAuthorize(Access.REPORT_EXPORT)
     public ResponseEntity<byte[]> meritList(
@@ -109,6 +143,15 @@ public class ReportController {
     ) {
         return file("merit-list." + extension(format), media(format),
                 reportExportService.meritList(tenantResolver.requireSchoolId(), examId, principal.getRole(), format));
+    }
+
+    @GetMapping("/attendance/rows")
+    @PreAuthorize(Access.REPORT_EXPORT)
+    public List<AttendanceSummaryResponse> attendanceRows(
+            @RequestParam LocalDate start,
+            @RequestParam LocalDate end
+    ) {
+        return reportExportService.attendanceRows(tenantResolver.requireSchoolId(), start, end);
     }
 
     @GetMapping("/attendance")
@@ -131,7 +174,10 @@ public class ReportController {
             @RequestParam(required = false) Long academicTermId,
             @RequestParam(defaultValue = "pdf") String format
     ) {
-        Long id = studentId == null ? studentService.requireByUser(principal.getId()).getId() : studentId;
+        Long id = studentId;
+        if (id == null && (principal.getRole() == Role.STUDENT || principal.getRole() == Role.PARENT)) {
+            id = studentService.requireByUser(principal.getId()).getId();
+        }
         byte[] body = reportExportService.termResult(
                 tenantResolver.requireSchoolId(), id, academicYearId, academicTermId, principal.getRole(), format);
         return file("term-result." + extension(format), media(format), body);
@@ -147,6 +193,14 @@ public class ReportController {
         byte[] body = reportExportService.enrolmentHistoryPdf(
                 tenantResolver.requireSchoolId(), studentId, academicYearId, action);
         return file("enrolment-history.pdf", "application/pdf", body);
+    }
+
+    private static Instant startOf(LocalDate day) {
+        return day == null ? null : day.atStartOfDay(SCHOOL_ZONE).toInstant();
+    }
+
+    private static Instant endOf(LocalDate day) {
+        return day == null ? null : day.plusDays(1).atStartOfDay(SCHOOL_ZONE).toInstant();
     }
 
     private static String extension(String format) {
